@@ -22,13 +22,17 @@
 html,
 body {
   margin: 0;
+  width: 100%;
   min-height: 100%;
+  height: 100%;
   overflow: hidden;
   font-family: "Trebuchet MS", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
   background: #030814;
 }
 
 body {
+  min-height: 100vh;
+  min-height: 100svh;
   min-height: 100dvh;
   color: var(--text);
   display: grid;
@@ -38,6 +42,7 @@ body {
     radial-gradient(circle at 86% 22%, rgba(216, 180, 254, 0.28), transparent 30%),
     radial-gradient(circle at 52% 92%, rgba(113, 255, 212, 0.22), transparent 36%),
     linear-gradient(150deg, var(--bg-a), var(--bg-b) 58%, #091225);
+  background-color: #06111f;
 }
 
 body::before,
@@ -69,12 +74,32 @@ body::after {
 .phone {
   position: relative;
   width: min(100vw, 430px);
+  height: 100vh;
+  height: 100svh;
   height: 100dvh;
   max-height: 932px;
   overflow: auto;
   overscroll-behavior: none;
-  padding: 0 14px calc(env(safe-area-inset-bottom) + 22px);
+  padding: 0 14px max(28px, calc(env(safe-area-inset-bottom) + 22px));
   scrollbar-width: none;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(117, 216, 255, 0.22), transparent 28%),
+    radial-gradient(circle at 86% 92%, rgba(255, 140, 207, 0.16), transparent 34%),
+    linear-gradient(150deg, rgba(6, 17, 31, 0.16), rgba(9, 18, 37, 0.28));
+}
+
+.phone::after {
+  content: "";
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: max(26px, env(safe-area-inset-bottom));
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(6, 17, 31, 0), rgba(6, 17, 31, 0.96)),
+    radial-gradient(circle at 50% 100%, rgba(117, 216, 255, 0.18), transparent 56%);
 }
 
 .phone::-webkit-scrollbar {
@@ -100,8 +125,47 @@ body::after {
 }
 
 .status-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   font-size: 12px;
-  opacity: 0.72;
+  opacity: 0.86;
+}
+
+.battery-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.battery-shell {
+  position: relative;
+  display: inline-flex;
+  width: 24px;
+  height: 12px;
+  padding: 2px;
+  border: 1px solid rgba(244, 251, 255, 0.75);
+  border-radius: 4px;
+}
+
+.battery-shell::after {
+  content: "";
+  position: absolute;
+  right: -4px;
+  top: 3px;
+  width: 2px;
+  height: 5px;
+  border-radius: 0 2px 2px 0;
+  background: rgba(244, 251, 255, 0.75);
+}
+
+#batteryFill {
+  display: block;
+  width: 72%;
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--mint), var(--blue));
+  transition: width 0.3s ease, background 0.3s ease;
 }
 
 .brand-row {

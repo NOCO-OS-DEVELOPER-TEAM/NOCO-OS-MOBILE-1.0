@@ -6,6 +6,9 @@ const toast = document.getElementById("toast");
 const demoList = document.getElementById("demoList");
 const controlTiles = document.querySelectorAll(".control-tile");
 const currentTime = document.getElementById("currentTime");
+const networkStatus = document.getElementById("networkStatus");
+const batteryStatus = document.getElementById("batteryStatus");
+const batteryFill = document.getElementById("batteryFill");
 
 function updateClock() {
   const now = new Date();
@@ -13,6 +16,47 @@ function updateClock() {
     hour: "2-digit",
     minute: "2-digit"
   });
+}
+
+function updateNetworkStatus() {
+  const connection = navigator.connection || navigator.webkitConnection || navigator.mozConnection;
+  if (!connection) {
+    networkStatus.textContent = "5G";
+    return;
+  }
+
+  const type = connection.effectiveType || connection.type || "";
+  const normalized = String(type).toLowerCase();
+  if (normalized.includes("4g")) networkStatus.textContent = "5G";
+  else if (normalized.includes("3g")) networkStatus.textContent = "LTE";
+  else if (normalized.includes("wifi")) networkStatus.textContent = "Wi-Fi";
+  else networkStatus.textContent = "Netz";
+}
+
+function setBatteryUi(level, charging = false) {
+  const percent = Math.max(0, Math.min(100, Math.round(level * 100)));
+  batteryStatus.textContent = charging ? percent + "%+" : percent + "%";
+  batteryFill.style.width = percent + "%";
+  batteryFill.style.background = percent <= 20
+    ? "linear-gradient(90deg, #ff8c8c, #ffd18a)"
+    : "linear-gradient(90deg, var(--mint), var(--blue))";
+}
+
+async function initBatteryStatus() {
+  if (!("getBattery" in navigator)) {
+    setBatteryUi(1, false);
+    return;
+  }
+
+  try {
+    const battery = await navigator.getBattery();
+    const update = () => setBatteryUi(battery.level, battery.charging);
+    update();
+    battery.addEventListener("levelchange", update);
+    battery.addEventListener("chargingchange", update);
+  } catch (_) {
+    setBatteryUi(1, false);
+  }
 }
 
 function showToast(text) {
@@ -96,4 +140,7 @@ if ("serviceWorker" in navigator) {
 
 loadNote();
 updateClock();
+updateNetworkStatus();
+initBatteryStatus();
 window.setInterval(updateClock, 1000);
+window.setInterval(updateNetworkStatus, 5000);

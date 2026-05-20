@@ -20,7 +20,13 @@
     <section class="lock-hero">
       <div class="status-bar">
         <span id="currentTime">--:--</span>
-        <span class="status-icons">5G 100%</span>
+        <span class="status-icons">
+          <span id="networkStatus">5G</span>
+          <span class="battery-pill" aria-label="Akku">
+            <span class="battery-shell"><span id="batteryFill"></span></span>
+            <span id="batteryStatus">--%</span>
+          </span>
+        </span>
       </div>
 
       <div class="brand-row">

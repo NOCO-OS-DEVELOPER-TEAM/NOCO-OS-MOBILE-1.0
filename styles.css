@@ -178,6 +178,7 @@ body.reduce-noco-motion *::after {
   height: 100vh;
   height: 100svh;
   height: 100dvh;
+  min-height: 100dvh;
   margin: 0 auto;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -212,12 +213,9 @@ body.reduce-noco-motion *::after {
   left: 0;
   right: 0;
   bottom: 0;
-  height: max(26px, env(safe-area-inset-bottom));
+  height: env(safe-area-inset-bottom, 0px);
   z-index: 3;
   pointer-events: none;
-  background:
-    linear-gradient(180deg, rgba(6, 17, 31, 0), rgba(6, 17, 31, 0.18)),
-    radial-gradient(circle at 50% 100%, rgba(117, 216, 255, 0.18), transparent 56%);
 }
 
 .mobile-topbar {
@@ -308,13 +306,15 @@ body.reduce-noco-motion *::after {
 }
 
 .edit-button .pencil-icon {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   display: block;
   color: #f4fbff;
   stroke: currentColor;
-  transform: rotate(-14deg);
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.35));
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
   pointer-events: none;
 }
 
@@ -405,9 +405,15 @@ button {
 
 .screen-track {
   position: relative;
+  display: flex;
+  flex-direction: row;
+  width: 100%;
   height: 100%;
   overflow: hidden;
   user-select: none;
+  touch-action: pan-x;
+  will-change: transform;
+  transition: transform 0.42s cubic-bezier(0.22, 0.94, 0.22, 1);
 }
 
 .screen-track.dragging {
@@ -415,30 +421,26 @@ button {
 }
 
 .screen {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  flex: 0 0 100%;
   width: 100%;
   height: 100%;
+  min-height: 0;
   overflow-x: hidden;
-  overflow-y: scroll;
   overflow-y: auto;
   scrollbar-width: none;
   padding: calc(env(safe-area-inset-top) + 98px) 24px max(108px, calc(env(safe-area-inset-bottom) + 92px));
-  overscroll-behavior-y: none;
+  overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
-  opacity: 0;
-  visibility: hidden;
+  opacity: 1;
+  visibility: visible;
   pointer-events: none;
-  z-index: 1;
   scroll-behavior: auto;
 }
 
 .screen.is-active {
-  opacity: 1;
-  visibility: visible;
   pointer-events: auto;
-  z-index: 2;
 }
 
 body.noco-native .screen.is-active {
@@ -451,7 +453,6 @@ body.noco-native .screen.is-active {
 
 .desktop-screen {
   display: block;
-  overflow: visible;
   padding-bottom: max(140px, calc(env(safe-area-inset-bottom) + 118px));
   min-height: min-content;
 }
@@ -460,7 +461,6 @@ body.noco-native .screen.is-active {
   display: block;
   min-height: min-content;
   padding-bottom: max(190px, calc(env(safe-area-inset-bottom) + 156px));
-  overflow: visible;
 }
 
 .home-screen > .widget-card {
@@ -1045,6 +1045,10 @@ body.edit-mode .draggable-widget {
   position: relative;
 }
 
+body.edit-mode .draggable-widget .mini-action[data-widget-remove] {
+  display: none;
+}
+
 body.edit-mode .desktop-block.is-hidden-block {
   display: none;
 }
@@ -1094,7 +1098,7 @@ body.edit-mode.desktop-page .widget-button {
 }
 
 .app-sheet {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 30;
   display: block;
@@ -1109,7 +1113,7 @@ body.edit-mode.desktop-page .widget-button {
 }
 
 .hub-panel {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 28;
   display: grid;
@@ -1125,7 +1129,7 @@ body.edit-mode.desktop-page .widget-button {
 .firstlight-panel,
 .spotlight-panel,
 .lock-screen {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 70;
   display: grid;
@@ -1273,6 +1277,53 @@ body.edit-mode.desktop-page .widget-button {
   display: grid;
   gap: 8px;
   margin-top: 12px;
+}
+
+.beam-section {
+  display: grid;
+  gap: 8px;
+}
+
+.beam-section + .beam-section {
+  margin-top: 4px;
+}
+
+.beam-section-label {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.beam-tool-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.beam-tool {
+  min-height: 58px;
+  display: grid;
+  gap: 4px;
+  align-content: center;
+  padding: 10px 12px;
+  border-radius: 18px;
+  text-align: left;
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05)),
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--mint) 18%, transparent), transparent 48%);
+}
+
+.beam-tool strong {
+  font-size: 14px;
+}
+
+.beam-tool small {
+  color: var(--muted);
+  font-size: 11px;
 }
 
 .spotlight-result {
@@ -1628,14 +1679,6 @@ body.noco-native .spotlight-panel:not(.hidden) .spotlight-card {
   position: static;
   top: auto;
   right: auto;
-}
-
-.spotlight-panel,
-.beam-panel {
-  align-items: center;
-  justify-items: center;
-  padding-left: max(12px, calc((100vw - min(100vw, 430px)) / 2));
-  padding-right: max(12px, calc((100vw - min(100vw, 430px)) / 2));
 }
 
 .beam-card,
@@ -2557,7 +2600,7 @@ body.noco-native .spotlight-panel:not(.hidden) .spotlight-card {
 }
 
 .toast {
-  position: fixed;
+  position: absolute;
   left: 50%;
   bottom: calc(env(safe-area-inset-bottom) + 18px);
   z-index: 40;
@@ -2653,24 +2696,36 @@ body.noco-native .spotlight-panel:not(.hidden) .spotlight-card {
   to { transform: rotate(360deg); }
 }
 
+@media (max-width: 519px) {
+  html,
+  body {
+    background: #06111f;
+  }
+
+  .phone {
+    width: 100%;
+    max-width: none;
+    min-height: 100dvh;
+    height: 100dvh;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
 @media (min-width: 520px) {
   .phone {
     margin: 18px auto;
     height: min(100dvh - 36px, 932px);
+    min-height: 0;
     border-radius: 46px;
     border: 1px solid rgba(255, 255, 255, 0.16);
     box-shadow: 0 30px 90px rgba(0, 0, 0, 0.42);
   }
 
   .app-sheet {
-    left: 50%;
-    top: 18px;
-    right: auto;
-    bottom: auto;
-    width: min(100vw, 430px);
-    height: min(100dvh - 36px, 932px);
     border-radius: 46px;
-    transform: translateX(-50%);
     overflow: hidden;
     background: rgba(2, 7, 16, 0.18);
   }

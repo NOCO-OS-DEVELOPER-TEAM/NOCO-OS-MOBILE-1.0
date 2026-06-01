@@ -183,8 +183,47 @@ const searchIndex = [
   { id: "folder:games", title: "Ordner Spiele", type: "Ordner", keywords: "spiele games arcade dodge tap memory color" },
   { id: "folder:design", title: "Ordner Design", type: "Ordner", keywords: "design themes look farben sketch mood" },
   { id: "folder:workspace", title: "Ordner Workspace", type: "Ordner", keywords: "workspace core sync security pay notizen" },
-  { id: "beam", title: "NOCO Beam", type: "Suche", keywords: "beam suche search finden lokal apps core sync ordner" }
+  { id: "beam", title: "NOCO Beam", type: "Suche", keywords: "beam suche search finden lokal apps core sync ordner" },
+  { id: "beam:home", title: "Zum Home", type: "Navigation", keywords: "home startseite widgets zurueck" },
+  { id: "beam:desktop", title: "Zu Apps", type: "Navigation", keywords: "desktop apps icon grid seite" },
+  { id: "beam:hub", title: "NOCO Hub", type: "Tool", keywords: "hub schnellmenu core security motion glass" },
+  { id: "beam:widgets", title: "Widget-Bibliothek", type: "Tool", keywords: "widgets hinzufuegen home anpassen" },
+  { id: "beam:desktop-blocks", title: "Desktop-Bloecke", type: "Tool", keywords: "desktop hinzufuegen layout bloecke" },
+  { id: "beam:edit-home", title: "Home anpassen", type: "Tool", keywords: "home bearbeiten stift verschieben widgets" },
+  { id: "beam:edit-desktop", title: "Desktop anpassen", type: "Tool", keywords: "desktop bearbeiten stift layout" },
+  { id: "beam:security-scan", title: "Security Scan", type: "Werkzeug", keywords: "security scan schutz pruefen shield" },
+  { id: "beam:sync", title: "Sync oeffnen", type: "Werkzeug", keywords: "sync keycard import export verbinden" },
+  { id: "beam:forge", title: "Forge Store", type: "Werkzeug", keywords: "forge store apps installieren" },
+  { id: "beam:themes", title: "Themes", type: "Werkzeug", keywords: "themes design farben wallpaper look" },
+  { id: "beam:cloud", title: "Cloud", type: "Werkzeug", keywords: "cloud speicher dateien" },
+  { id: "beam:focus", title: "Focus Timer", type: "Werkzeug", keywords: "focus fokus timer konzentration" },
+  { id: "beam:arcade", title: "Mini Arcade", type: "Werkzeug", keywords: "arcade spiele games mini" }
 ];
+
+const BEAM_TOOL_IDS = [
+  "beam:home",
+  "beam:desktop",
+  "beam:hub",
+  "beam:widgets",
+  "beam:edit-home",
+  "beam:security-scan",
+  "beam:sync",
+  "beam:forge"
+];
+
+const BEAM_SUGGEST_IDS = ["settings", "security", "sync", "forge", "notes", "themes", "folder:games", "folder:workspace"];
+
+function initSearchIndex() {
+  forgeApps.forEach((app) => {
+    if (searchIndex.some((entry) => entry.id === app.id)) return;
+    searchIndex.push({
+      id: app.id,
+      title: app.title,
+      type: app.exclusive ? "Exclusive" : "Forge App",
+      keywords: `${app.title} ${app.text} forge mini app ${app.className}`
+    });
+  });
+}
 
 function showToast(text) {
   toast.textContent = text;
@@ -522,21 +561,32 @@ function updatePageToggle() {
   pageToggleBtn.setAttribute("aria-label", onDesktop ? "Zurueck zum Home" : "Desktop Apps oeffnen");
 }
 
+function getTrackWidth() {
+  return screenTrack?.clientWidth || Math.min(window.innerWidth, 430);
+}
+
+function updateScreenTrackPosition(animate = true) {
+  if (!screenTrack) return;
+  const width = getTrackWidth();
+  screenTrack.classList.toggle("dragging", !animate);
+  screenTrack.style.transform = `translate3d(${-currentPage * width}px, 0, 0)`;
+}
+
 function setPage(page) {
   const previousPage = currentPage;
   currentPage = Math.max(0, Math.min(1, page));
-  screenTrack.classList.remove("dragging");
-  screenTrack.style.transform = "";
   document.documentElement.style.setProperty("--page", currentPage);
   screenTrack.style.setProperty("--page", currentPage);
   document.body.classList.toggle("desktop-page", currentPage === 1);
   document.querySelectorAll(".screen-track > .screen").forEach((screen, index) => {
     const active = index === currentPage;
     screen.classList.toggle("is-active", active);
+    screen.setAttribute("aria-hidden", active ? "false" : "true");
     if (active && previousPage !== currentPage) {
       screen.scrollTop = 0;
     }
   });
+  updateScreenTrackPosition(true);
   screenTitle.textContent = currentPage === 0 ? "Home" : "Desktop";
   updatePageToggle();
   if (currentPage === 1) {
@@ -562,33 +612,145 @@ function searchScore(item, query) {
   return normalized.split(/\s+/).filter((part) => part.length && haystack.includes(part)).length * 18;
 }
 
+function resolveBeamTool(id) {
+  closeBeam();
+  if (id === "beam:home") {
+    void goToPage(0);
+    return;
+  }
+  if (id === "beam:desktop") {
+    void goToPage(1);
+    return;
+  }
+  if (id === "beam:hub") {
+    openHub();
+    return;
+  }
+  if (id === "beam:widgets") {
+    void goToPage(0);
+    widgetPanel?.classList.remove("hidden");
+    return;
+  }
+  if (id === "beam:desktop-blocks") {
+    void goToPage(1);
+    desktopPanel?.classList.remove("hidden");
+    return;
+  }
+  if (id === "beam:edit-home") {
+    void goToPage(0);
+    setEditMode(true);
+    return;
+  }
+  if (id === "beam:edit-desktop") {
+    void goToPage(1);
+    setEditMode(true);
+    return;
+  }
+  if (id === "beam:security-scan") {
+    openApp("security");
+    return;
+  }
+  if (id === "beam:sync") {
+    openApp("sync");
+    return;
+  }
+  if (id === "beam:forge") {
+    openApp("forge");
+    return;
+  }
+  if (id === "beam:themes") {
+    openApp("themes");
+    return;
+  }
+  if (id === "beam:cloud") {
+    openApp("cloud");
+    return;
+  }
+  if (id === "beam:focus") {
+    openApp("focus");
+    return;
+  }
+  if (id === "beam:arcade") {
+    openApp("arcade");
+    return;
+  }
+}
+
 function resolveSearchItem(item) {
   if (item.id === "beam") {
     openBeam();
     return;
   }
+  if (item.id.startsWith("beam:")) {
+    resolveBeamTool(item.id);
+    return;
+  }
   if (item.id.startsWith("folder:")) {
+    closeBeam();
     openFolder(item.id.replace("folder:", ""));
     return;
   }
+  closeBeam();
   if (item.id === "settings:shield") settingsActiveSection = "shield";
   if (item.id === "settings:vault") settingsActiveSection = "vault";
   openApp(item.app || item.id.split(":")[0]);
 }
 
-function renderSpotlightResults(query = "") {
-  if (!spotlightResults) return;
-  const results = searchIndex
-    .map((item) => ({ item, score: searchScore(item, query) }))
-    .filter((entry) => query ? entry.score > 0 : ["settings", "sync", "forge", "notes"].includes(entry.item.id))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 8);
-  spotlightResults.innerHTML = results.map(({ item }) => `
+function renderSpotlightResultButton(item) {
+  return `
     <button type="button" class="spotlight-result" data-spotlight-open="${item.id}">
       <span><strong>${item.title}</strong><small>${item.type}</small></span>
       <em>${item.keywords.split(" ").slice(0, 4).join(" ")}</em>
     </button>
-  `).join("") || `<div class="settings-row"><span>NOCO Beam</span><strong>Keine Treffer</strong></div>`;
+  `;
+}
+
+function renderSpotlightResults(query = "") {
+  if (!spotlightResults) return;
+  const trimmed = String(query || "").trim();
+  if (!trimmed) {
+    const tools = BEAM_TOOL_IDS.map((id) => searchIndex.find((entry) => entry.id === id)).filter(Boolean);
+    const suggested = BEAM_SUGGEST_IDS.map((id) => searchIndex.find((entry) => entry.id === id)).filter(Boolean);
+    spotlightResults.innerHTML = `
+      <div class="beam-section">
+        <p class="beam-section-label">Schnellwerkzeuge</p>
+        <div class="beam-tool-grid">
+          ${tools.map((item) => `
+            <button type="button" class="beam-tool" data-spotlight-open="${item.id}">
+              <strong>${item.title}</strong>
+              <small>${item.type}</small>
+            </button>
+          `).join("")}
+        </div>
+      </div>
+      <div class="beam-section">
+        <p class="beam-section-label">Vorschlaege</p>
+        ${suggested.map((item) => renderSpotlightResultButton(item)).join("")}
+      </div>
+    `;
+    return;
+  }
+  const results = searchIndex
+    .map((item) => ({ item, score: searchScore(item, trimmed) }))
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 12);
+  if (!results.length) {
+    spotlightResults.innerHTML = `<div class="settings-row"><span>NOCO Beam</span><strong>Keine Treffer</strong></div>`;
+    return;
+  }
+  const groups = new Map();
+  results.forEach(({ item }) => {
+    const key = item.type || "Treffer";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  });
+  spotlightResults.innerHTML = Array.from(groups.entries()).map(([type, items]) => `
+    <div class="beam-section">
+      <p class="beam-section-label">${type}</p>
+      ${items.map((item) => renderSpotlightResultButton(item)).join("")}
+    </div>
+  `).join("");
 }
 
 function openBeam() {
@@ -770,7 +932,7 @@ function createWidgetElement(id) {
         <p class="eyebrow">Widget</p>
         <h2>${definition.title}</h2>
       </div>
-      <button class="mini-action" data-widget-remove="${id}">Entfernen</button>
+      <button type="button" class="mini-action" data-widget-remove="${id}" hidden>Entfernen</button>
     </div>
     <p>${definition.text}</p>
   `;
@@ -815,6 +977,7 @@ function toggleWidget(id) {
   applyVisibleWidgets();
   renderWidgetLibrary();
   saveMobileOrder();
+  refreshWidgetEditButtons();
   showToast(visible.includes(id) ? "Widget entfernt" : "Widget hinzugefuegt");
 }
 
@@ -1980,10 +2143,6 @@ document.addEventListener("change", async (event) => {
   }
 });
 
-function getTrackWidth() {
-  return Math.min(window.innerWidth, 430);
-}
-
 function desktopNeedsUnlock(nextPage) {
   return false;
 }
@@ -2086,7 +2245,19 @@ async function goToPage(page) {
 }
 
 function canStartPageSwipe(event) {
-  return false;
+  if (editMode) return false;
+  if (document.body.classList.contains("sheet-open")) return false;
+  if (!spotlightPanel?.classList.contains("hidden")) return false;
+  if (!hubPanel?.classList.contains("hidden")) return false;
+  if (!appSheet?.classList.contains("hidden")) return false;
+  if (!lockScreen?.classList.contains("hidden")) return false;
+  if (!firstLightPanel?.classList.contains("hidden")) return false;
+  const target = event.target;
+  if (!target?.closest?.(".screen-track")) return false;
+  if (target.closest(".mobile-topbar, .page-dots")) return false;
+  if (target.closest("textarea, input, select, [contenteditable='true']")) return false;
+  if (target.closest(".edit-remove, .beam-glyph")) return false;
+  return true;
 }
 
 function getGestureIntent(dx, dy, ratio) {
@@ -2186,8 +2357,9 @@ function endPageDrag() {
     next = pageDrag.rawDx < 0 ? base + 1 : base - 1;
   }
   pageDrag = null;
+  screenTrack.classList.remove("dragging");
   if (!wasActive) {
-    setPage(base);
+    updateScreenTrackPosition(true);
     return;
   }
   goToPage(next);
@@ -2246,7 +2418,7 @@ function cancelSheetSwipe() {
   resetSheetGestureTransform();
 }
 
-document.addEventListener("touchstart", startPageDrag, { passive: true });
+screenTrack?.addEventListener("touchstart", startPageDrag, { passive: true });
 document.addEventListener("touchmove", movePageDrag, { passive: false });
 document.addEventListener("touchend", endPageDrag, { passive: true });
 document.addEventListener("touchcancel", endPageDrag, { passive: true });
@@ -3050,23 +3222,32 @@ if ("serviceWorker" in navigator) {
 }
 
 function initNativeScroll() {
-  const scrollAllowed = (target) => target?.closest?.(
-    ".screen.is-active, .app-sheet:not(.hidden) .sheet-card, .spotlight-panel:not(.hidden) .beam-card, .spotlight-panel:not(.hidden) .spotlight-card, .firstlight-panel:not(.hidden) .firstlight-card, textarea, input, select, [contenteditable='true']"
-  );
+  const scrollAllowed = (target) => {
+    if (pageDrag?.active) return false;
+    return target?.closest?.(
+      ".screen-track > .screen, .app-sheet:not(.hidden) .sheet-card, .spotlight-panel:not(.hidden) .beam-card, .spotlight-panel:not(.hidden) .spotlight-card, .hub-panel:not(.hidden) .hub-card, .firstlight-panel:not(.hidden) .firstlight-card, textarea, input, select, [contenteditable='true']"
+    );
+  };
 
   document.addEventListener("touchmove", (event) => {
+    if (pageDrag?.active) return;
     if (!scrollAllowed(event.target)) event.preventDefault();
   }, { passive: false });
 }
 
+initSearchIndex();
 setPage(0);
 
 applySettings();
 initNativeScroll();
+window.addEventListener("resize", () => {
+  if (!pageDrag) updateScreenTrackPosition(false);
+});
 loadNote();
 renderShortcuts();
 ensureBaseDesktopApps();
 applyVisibleWidgets();
+refreshWidgetEditButtons();
 applyMobileOrder();
 ensureBaseDesktopApps();
 applyDesktopLayout();

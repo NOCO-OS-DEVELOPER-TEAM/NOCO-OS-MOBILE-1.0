@@ -175,10 +175,8 @@ body.reduce-noco-motion *::after {
   position: relative;
   z-index: 1;
   width: min(100vw, 430px);
-  height: 100vh;
-  height: 100svh;
-  height: 100dvh;
-  min-height: 100dvh;
+  height: min(100dvh, 932px);
+  max-height: 932px;
   margin: 0 auto;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -409,13 +407,16 @@ button {
   flex-direction: row;
   width: 100%;
   height: 100%;
+  min-height: 0;
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
   overscroll-behavior-x: contain;
+  overscroll-behavior-y: none;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   user-select: none;
+  touch-action: pan-x pan-y;
 }
 
 .screen-track::-webkit-scrollbar {
@@ -940,12 +941,12 @@ textarea:focus {
 }
 
 .app-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px 10px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px 8px;
   padding: 4px 0 16px;
-  justify-content: center;
-  align-items: flex-start;
+  justify-items: center;
+  align-items: start;
   min-height: 104px;
   position: relative;
   z-index: 2;
@@ -954,9 +955,9 @@ textarea:focus {
 
 .app-icon {
   box-sizing: border-box;
-  flex: 0 0 calc(25% - 8px);
-  min-width: 74px;
-  max-width: 92px;
+  width: 100%;
+  max-width: 88px;
+  min-width: 0;
   padding: 10px 6px 8px;
   position: relative;
   z-index: 1;
@@ -1594,25 +1595,21 @@ body.edit-mode.desktop-page .widget-button {
 }
 
 .app-sheet .sheet-card {
-  width: min(100vw, 430px);
-  height: 100vh;
-  height: 100dvh;
-  min-height: 100svh;
-  max-height: none;
-  margin: 0 auto;
-  overflow-y: scroll;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  margin: 0;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: none;
+  overscroll-behavior-y: contain;
   scroll-behavior: auto;
   border-radius: 0;
   padding: calc(env(safe-area-inset-top) + 12px) 22px max(92px, calc(env(safe-area-inset-bottom) + 64px));
   animation: appOpen 0.38s cubic-bezier(0.18, 0.92, 0.18, 1);
   touch-action: pan-y;
-  transform: translate3d(0, 0, 0);
   transition: transform 0.24s cubic-bezier(0.2, 0.88, 0.2, 1), opacity 0.18s ease;
-  will-change: transform;
   scrollbar-width: none;
   position: relative;
 }
@@ -1648,6 +1645,15 @@ body.noco-native .spotlight-panel:not(.hidden) .spotlight-card {
   padding-top: 54px;
   padding-bottom: max(42px, env(safe-area-inset-bottom));
   touch-action: pan-y;
+  overflow: visible;
+}
+
+.mobile-app-body .settings-row,
+.mobile-app-body .toggle-card,
+.mobile-app-body .primary-action,
+.mobile-app-body .widget-choice {
+  width: 100%;
+  max-width: 100%;
 }
 
 .mobile-app-body > * {
@@ -1662,10 +1668,11 @@ body.noco-native .spotlight-panel:not(.hidden) .spotlight-card {
 .app-sheet .compact-sheet {
   height: auto;
   min-height: 0;
-  max-height: min(78dvh, 720px);
+  max-height: calc(100% - env(safe-area-inset-top) - 88px);
   margin-top: calc(env(safe-area-inset-top) + 74px);
   border-radius: 34px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .code-card {
@@ -2723,21 +2730,52 @@ body.noco-native .spotlight-panel:not(.hidden) .spotlight-card {
   to { transform: rotate(360deg); }
 }
 
-@media (max-width: 519px) {
-  html,
-  body {
-    background: #06111f;
-  }
+body.device-handset {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding:
+    max(8px, env(safe-area-inset-top))
+    max(8px, env(safe-area-inset-right))
+    max(8px, env(safe-area-inset-bottom))
+    max(8px, env(safe-area-inset-left));
+}
 
-  .phone {
-    width: 100%;
-    max-width: none;
-    min-height: 100dvh;
-    height: 100dvh;
-    margin: 0;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
+body.device-handset .phone {
+  width: min(calc(100vw - 16px), 430px);
+  height: min(calc(100dvh - 16px), 932px);
+  max-height: calc(100dvh - max(16px, env(safe-area-inset-top) + env(safe-area-inset-bottom)));
+  flex: 0 0 auto;
+  border-radius: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 28px 90px rgba(0, 0, 0, 0.55);
+}
+
+body.device-handset .app-sheet,
+body.device-handset .hub-panel,
+body.device-handset .spotlight-panel,
+body.device-handset .lock-screen,
+body.device-handset .firstlight-panel {
+  border-radius: inherit;
+}
+
+body.device-handset .app-sheet .sheet-card {
+  border-radius: inherit;
+}
+
+body.device-handset .hub-card,
+body.device-handset .beam-card,
+body.device-handset .spotlight-card,
+body.device-handset .firstlight-card {
+  width: min(100%, 396px);
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  body.device-handset .phone {
+    width: min(52vh, 430px);
+    height: min(calc(100dvh - 12px), 932px);
   }
 }
 
@@ -2779,10 +2817,9 @@ body.noco-native .spotlight-panel:not(.hidden) .spotlight-card {
   }
 
   .app-sheet .sheet-card {
-    width: 100vw;
-    height: 100dvh;
-    min-height: 100svh;
-    border-radius: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
     padding: calc(env(safe-area-inset-top) + 10px) 20px max(92px, calc(env(safe-area-inset-bottom) + 62px));
   }
 

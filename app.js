@@ -285,6 +285,7 @@ function applySettings() {
   document.body.classList.toggle("reduce-noco-motion", !settings.motion);
   document.body.classList.toggle("native-feel", settings.nativeFeel !== false);
   document.body.classList.toggle("compact-tiles", !!settings.compactTiles);
+  applyDeviceLayoutClass();
   const showExclusiveBadge = isExclusiveActive() && settings.exclusivePlan !== "trial";
   exclusiveTopBadge?.classList.toggle("hidden", !showExclusiveBadge);
   if (exclusiveTopBadge) exclusiveTopBadge.textContent = "Exclusive";
@@ -3159,14 +3160,9 @@ if ("serviceWorker" in navigator) {
   });
 }
 
-function initNativeScroll() {
-  const scrollAllowed = (target) => target?.closest?.(
-    ".screen-track, .screen-track > .screen, .app-sheet:not(.hidden) .sheet-card, .spotlight-panel:not(.hidden) .beam-card, .spotlight-panel:not(.hidden) .spotlight-card, .hub-panel:not(.hidden) .hub-card, .firstlight-panel:not(.hidden) .firstlight-card, textarea, input, select, [contenteditable='true']"
-  );
-
-  document.addEventListener("touchmove", (event) => {
-    if (!scrollAllowed(event.target)) event.preventDefault();
-  }, { passive: false });
+function applyDeviceLayoutClass() {
+  const handset = window.matchMedia("(max-width: 920px), (hover: none) and (pointer: coarse)").matches;
+  document.body.classList.toggle("device-handset", handset);
 }
 
 initSearchIndex();
@@ -3174,8 +3170,9 @@ initPageScrollSync();
 setPage(0);
 
 applySettings();
-initNativeScroll();
+applyDeviceLayoutClass();
 window.addEventListener("resize", () => {
+  applyDeviceLayoutClass();
   pageScrollLock = true;
   if (screenTrack) screenTrack.scrollLeft = currentPage * getTrackWidth();
   pageScrollLock = false;

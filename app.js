@@ -45,6 +45,7 @@ const codeConfirm = document.getElementById("codeConfirm");
 let currentPage = 0;
 let editMode = false;
 let pageScrollLock = false;
+let pageDrag = null;
 let appSwipe = null;
 let reorderDrag = null;
 let currentApp = null;
@@ -612,13 +613,95 @@ function setPage(page) {
 
 function initPageScrollSync() {
   screenTrack?.addEventListener("scroll", () => {
-    if (pageScrollLock) return;
+    if (pageScrollLock || pageDrag) return;
     const width = getTrackWidth();
     if (!width) return;
     const next = Math.round(screenTrack.scrollLeft / width);
     if (next === currentPage) return;
     applyPageState(next, { scroll: false, haptic: true });
   }, { passive: true });
+}
+
+function canStartPageSwipe(event) {
+  if (editMode || pageDrag) return false;
+  if (document.body.classList.contains("sheet-open")) return false;
+  if (!spotlightPanel?.classList.contains("hidden")) return false;
+  if (!hubPanel?.classList.contains("hidden")) return false;
+  if (!appSheet?.classList.contains("hidden")) return false;
+  if (!lockScreen?.classList.contains("hidden")) return false;
+  if (!firstLightPanel?.classList.contains("hidden")) return false;
+  const target = event.target;
+  if (!target?.closest?.(".screen-track")) return false;
+  if (target.closest(".mobile-topbar, .page-dots")) return false;
+  if (target.closest("textarea, input, select, [contenteditable='true']")) return false;
+  if (target.closest(".edit-remove, .beam-glyph")) return false;
+  return true;
+}
+
+function startPageDrag(event) {
+  if (!canStartPageSwipe(event)) return;
+  const touch = event.touches[0];
+  pageDrag = {
+    x: touch.clientX,
+    y: touch.clientY,
+    at: Date.now(),
+    active: false,
+    cancelled: false,
+    base: currentPage,
+    rawDx: 0
+  };
+}
+
+function movePageDrag(event) {
+  if (!pageDrag || pageDrag.cancelled) return;
+  const touch = event.touches[0];
+  const dx = touch.clientX - pageDrag.x;
+  const dy = touch.clientY - pageDrag.y;
+  pageDrag.rawDx = dx;
+  if (!pageDrag.active) {
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < GESTURE.pageStart) return;
+    const intent = getGestureIntent(dx, dy, GESTURE.pageRatio);
+    if (intent === "vertical") {
+      pageDrag.cancelled = true;
+      pageDrag = null;
+      return;
+    }
+    if (intent !== "horizontal") return;
+    pageDrag.active = true;
+    pageScrollLock = true;
+    screenTrack?.classList.add("page-swiping");
+  }
+  if (event.cancelable) event.preventDefault();
+  suppressClickUntil = Date.now() + GESTURE.clickSuppressMs;
+  const width = getTrackWidth();
+  const atEdge = (pageDrag.base === 0 && dx > 0) || (pageDrag.base === 1 && dx < 0);
+  const easedDx = atEdge ? dx * 0.16 : dx;
+  const left = Math.max(0, Math.min(width, pageDrag.base * width - easedDx));
+  screenTrack.scrollLeft = left;
+}
+
+function endPageDrag() {
+  if (!pageDrag) return;
+  const width = getTrackWidth();
+  const base = pageDrag.base;
+  const wasActive = pageDrag.active;
+  const rawDx = pageDrag.rawDx;
+  const velocity = Math.abs(rawDx) / Math.max(1, Date.now() - pageDrag.at);
+  pageDrag = null;
+  screenTrack?.classList.remove("page-swiping");
+  if (!wasActive) {
+    pageScrollLock = false;
+    scrollTrackToPage(base, false);
+    return;
+  }
+  let next = base;
+  if (Math.abs(rawDx) > width * GESTURE.pageSnap || velocity > GESTURE.pageVelocity) {
+    next = rawDx < 0 ? base + 1 : base - 1;
+  } else {
+    next = Math.round(screenTrack.scrollLeft / Math.max(1, width));
+  }
+  next = Math.max(0, Math.min(1, next));
+  void goToPage(next);
 }
 
 function normalizeSearch(value) {
@@ -2361,6 +2444,11 @@ function cancelSheetSwipe() {
   appSwipe = null;
   resetSheetGestureTransform();
 }
+
+screenTrack?.addEventListener("touchstart", startPageDrag, { passive: true });
+document.addEventListener("touchmove", movePageDrag, { passive: false });
+document.addEventListener("touchend", endPageDrag, { passive: true });
+document.addEventListener("touchcancel", endPageDrag, { passive: true });
 
 appSheet.addEventListener("touchstart", startSheetSwipe, { passive: true });
 appSheet.addEventListener("touchmove", moveSheetSwipe, { passive: false });

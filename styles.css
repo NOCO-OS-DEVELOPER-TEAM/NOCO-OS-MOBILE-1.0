@@ -423,6 +423,16 @@ button {
   display: none;
 }
 
+.screen-track.page-swiping {
+  scroll-snap-type: none;
+}
+
+.screen-track.page-swiping > .screen {
+  overflow-y: hidden;
+  touch-action: none;
+  pointer-events: auto;
+}
+
 .screen {
   position: relative;
   flex: 0 0 100%;

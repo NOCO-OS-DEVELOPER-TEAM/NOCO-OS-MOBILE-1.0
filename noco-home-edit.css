@@ -1,0 +1,160 @@
+/* Home Bearbeiten — fixierte FABs (scrollen nicht mit) */
+
+.phone > .home-edit-chrome {
+  position: absolute;
+  right: 14px;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  z-index: 24;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.phone > .home-edit-chrome > * {
+  pointer-events: auto;
+}
+
+.phone > .home-edit-chrome[hidden] {
+  display: none !important;
+}
+
+.edit-fab {
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background:
+    linear-gradient(155deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.06)),
+    rgba(6, 14, 28, 0.55);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  display: none;
+  place-items: center;
+  color: #f4fbff;
+  transition: transform 0.22s ease, box-shadow 0.28s ease;
+}
+
+.edit-fab:active {
+  transform: scale(0.94);
+}
+
+.widget-add-fab {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  border: 0;
+  font-size: 28px;
+  font-weight: 300;
+  line-height: 1;
+  color: #041018;
+  display: none;
+  place-items: center;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--mint) 90%, white), color-mix(in srgb, var(--blue) 88%, white));
+  box-shadow:
+    0 0 28px color-mix(in srgb, var(--mint) 35%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  transition: transform 0.22s cubic-bezier(0.22, 0.94, 0.22, 1), box-shadow 0.28s ease;
+}
+
+body.edit-mode.home-page .widget-add-fab,
+body.edit-mode.home-page .edit-fab {
+  display: grid;
+  animation: fabPop 0.38s cubic-bezier(0.22, 0.94, 0.22, 1) both;
+}
+
+body.edit-mode.home-page .widget-add-fab {
+  animation-delay: 0.04s;
+}
+
+body.edit-mode.home-page .edit-fab {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--mint) 45%, transparent),
+    0 12px 32px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+@keyframes fabPop {
+  from {
+    opacity: 0;
+    transform: scale(0.6) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+body.edit-mode.home-page .widget-add-fab:active,
+body.edit-mode.home-page .edit-fab:active {
+  transform: scale(0.92);
+}
+
+.phone > .home-edit-hint {
+  position: absolute;
+  left: 14px;
+  right: 88px;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 23;
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--muted);
+  text-align: center;
+  background: rgba(6, 14, 28, 0.75);
+  border: 1px solid color-mix(in srgb, var(--mint) 25%, transparent);
+  backdrop-filter: blur(16px);
+  pointer-events: none;
+  animation: hintFade 0.4s ease both;
+}
+
+@keyframes hintFade {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+body:not(.edit-mode) .home-edit-hint,
+body:not(.home-page) .home-edit-hint {
+  display: none;
+}
+
+body.sheet-open .home-edit-chrome,
+body.sheet-open .home-edit-hint,
+body.hub-open .home-edit-chrome,
+body.island-open .home-edit-chrome {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#widgetPanel .widget-library {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: min(58vh, 420px);
+  overflow-y: auto;
+}
+
+.widget-choice {
+  text-align: left;
+}
+
+.widget-choice strong:last-child {
+  color: color-mix(in srgb, var(--mint) 75%, white);
+  font-size: 11px;
+}
+
+.widget-section-label {
+  margin: 12px 0 6px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--mint) 55%, var(--muted));
+}
+
+.widget-section-label:first-child {
+  margin-top: 0;
+}

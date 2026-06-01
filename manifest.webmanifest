@@ -1,12 +1,12 @@
 {
-  "name": "NOCO OS Mobile 1.1",
+  "name": "NOCO OS Mobile 1.2",
   "short_name": "NOCO Mobile",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#06111f",
-  "theme_color": "#06111f",
+  "theme_color": "#040a14",
   "description": "NOCO OS Mobile als installierbare PWA für iPhone.",
   "icons": [
     {

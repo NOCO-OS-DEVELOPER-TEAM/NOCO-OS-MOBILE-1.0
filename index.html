@@ -3,284 +3,375 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-  <meta name="theme-color" content="#06111f" />
+  <meta name="theme-color" content="#040a14" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="NOCO Mobile" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="format-detection" content="telephone=no" />
-  <title>NOCO OS Mobile 1.1</title>
+  <title>NOCO OS Mobile 1.2</title>
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="apple-touch-icon" href="./icon.svg" />
   <link rel="icon" href="./icon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./ux-v2.css" />
+  <link rel="stylesheet" href="./noco-icons.css" />
+  <link rel="stylesheet" href="./noco-library.css" />
+  <link rel="stylesheet" href="./noco-ai.css" />
+  <link rel="stylesheet" href="./noco-exclusive.css" />
+  <link rel="stylesheet" href="./noco-reminders.css" />
+  <link rel="stylesheet" href="./noco-home-edit.css" />
 </head>
 <body>
-  <main class="phone" aria-label="NOCO OS Mobile">
-    <header class="mobile-topbar liquid-glass-bar">
-      <div>
-        <p class="eyebrow">NOCO OS Mobile 1.1</p>
-        <strong id="screenTitle">Home</strong>
-        <span id="exclusiveTopBadge" class="exclusive-top-badge hidden">Exclusive</span>
-      </div>
-      <div class="top-actions">
-        <button class="hub-button page-toggle" id="pageToggleBtn" data-go-page="1" aria-label="Desktop oeffnen">Apps</button>
-        <button class="hub-button" data-open-hub aria-label="NOCO Hub öffnen">Hub</button>
-        <button id="widgetBtn" class="widget-button" aria-label="Widgets hinzufuegen">+</button>
-        <button type="button" id="editBtn" class="edit-button liquid-glass" aria-label="Layout anpassen">
-          <svg class="pencil-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M4 20h3l9.5-9.5-3-3L4 17v3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-            <path d="M13.5 7.5l3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-        </button>
-      </div>
-    </header>
+  <div class="noco-stage">
+    <p class="stage-caption" aria-hidden="true">NOCO OS Mobile 1.2 · Liquid Glass</p>
 
-    <section class="screen-track" id="screenTrack">
-      <section class="screen home-screen is-active" aria-label="Home Screen">
-        <div class="hero-widget widget-card draggable-widget" data-widget-id="hero">
-          <div class="noco-mark" aria-hidden="true"><span>NO</span></div>
-          <div>
-            <p class="eyebrow">Liquid Glass Home</p>
-            <h1>Willkommen zurück.</h1>
-            <p>Dein NOCO Mobile Startscreen mit Widgets, schnellen Aktionen und App-Swipe.</p>
-          </div>
-        </div>
-
-        <div class="clock-widget widget-card draggable-widget" data-widget-id="clock">
-          <span id="largeClock">--:--</span>
-          <small id="largeDate">NOCO Zeit</small>
-        </div>
-
-        <div class="shortcut-widget widget-card draggable-widget" data-widget-id="shortcuts">
-          <div class="section-title">
-            <div>
-              <p class="eyebrow">Shortcuts</p>
-              <h2>Schnellzugriff</h2>
-            </div>
-            <button class="mini-action" data-open-panel="shortcuts">Anpassen</button>
-          </div>
-          <div class="shortcut-grid" id="shortcutGrid"></div>
-        </div>
-
-        <div class="status-widget widget-card draggable-widget" data-widget-id="status">
-          <div class="section-title">
-            <div>
-              <p class="eyebrow">Mobile Status</p>
-              <h2>Alles bereit</h2>
-            </div>
-            <button class="mini-action" data-app="security">Security</button>
-          </div>
-          <div class="mini-metrics">
-            <span><strong>1.1</strong><small>Version</small></span>
-            <span><strong>Glass</strong><small>Design</small></span>
-            <span><strong>Local</strong><small>Sync</small></span>
-          </div>
-        </div>
-
-        <div class="note-widget widget-card draggable-widget" data-widget-id="notes">
-          <div class="section-title">
-            <div>
-              <p class="eyebrow">Mobile Notiz</p>
-              <h2>Schnellnotiz</h2>
-            </div>
-            <button id="saveBtn" class="mini-action">Speichern</button>
-          </div>
-          <textarea id="noteInput" rows="4" placeholder="Hier etwas schreiben..."></textarea>
-          <small id="saveState">Noch nichts gespeichert.</small>
-        </div>
-
-        <div class="sync-widget widget-card draggable-widget" data-widget-id="sync">
-          <div class="section-title">
-            <div>
-              <p class="eyebrow">NOCO Sync</p>
-              <h2>Keycard verbinden</h2>
-            </div>
-            <button class="mini-action" data-app="sync">Öffnen</button>
-          </div>
-          <p>Exportiere am Desktop eine Keycard und importiere sie hier, damit Mobile und Desktop auf demselben Stand bleiben.</p>
-        </div>
-
-        <div class="feed-widget widget-card draggable-widget" data-widget-id="feed">
-          <div class="section-title">
-            <div>
-              <p class="eyebrow">Heute NOCO</p>
-              <h2>System Feed</h2>
-            </div>
-          </div>
-          <div class="list" id="demoList"></div>
-        </div>
-      </section>
-
-      <section class="screen desktop-screen" aria-label="App Desktop">
-        <div class="desktop-head">
-          <div>
-            <p class="eyebrow">Desktop</p>
-            <h1>Apps</h1>
-          </div>
-          <div class="desktop-head-actions">
-            <button type="button" class="page-pill desktop-action" data-app="forge">Forge</button>
-          </div>
-        </div>
-        <div class="desktop-layout" id="desktopLayout">
-          <div class="desktop-block draggable-desktop" data-desktop-block="beam" id="desktopBlockBeam">
-            <button type="button" class="edit-remove" data-desktop-remove="beam" aria-label="NOCO Beam entfernen">×</button>
-            <div class="beam-strip" data-action="open-beam" role="button" tabindex="0" aria-label="NOCO Beam oeffnen">
-              <span class="beam-glyph" aria-hidden="true">⌕</span>
-              <div class="beam-copy">
-                <span class="beam-label">NOCO Beam</span>
-                <strong>Apps, Core, Sync und Ordner lokal finden</strong>
+    <div class="phone-frame">
+      <main class="phone" id="phoneRoot" aria-label="NOCO OS Mobile">
+        <header class="phone-chrome" aria-label="System Chrome">
+          <div class="chrome-glass-wash" aria-hidden="true"></div>
+          <div class="island-zone" id="islandZone">
+            <button type="button" id="dynamicIsland" class="dynamic-island" aria-expanded="false" aria-label="NOCO Systemleiste">
+              <span class="island-compact" id="islandCompact">
+                <span id="islandClock" class="island-clock">--:--</span>
+                <span class="island-pips" aria-hidden="true">
+                  <span class="island-pip active" data-island-pip="0"></span>
+                  <span class="island-pip" data-island-pip="1"></span>
+                </span>
+                <button type="button" class="island-ai-btn" data-open-nocoai aria-label="NOCO AI öffnen" title="NOCO AI">✧</button>
+                <span id="islandStatus" class="island-status" hidden aria-hidden="true"></span>
+              </span>
+            </button>
+            <div id="islandMenu" class="island-menu hidden" role="menu" aria-label="Schnellaktionen">
+              <div class="island-pages" role="tablist">
+                <button type="button" class="island-page-tab active" data-page="0" role="tab">Home</button>
+                <button type="button" class="island-page-tab" data-page="1" role="tab">Apps</button>
+              </div>
+              <div class="island-actions">
+                <button type="button" class="island-action" data-action="open-beam" role="menuitem">Beam</button>
+                <button type="button" class="island-action" data-open-hub role="menuitem">Hub</button>
+                <button type="button" class="island-action" id="editBtn" role="menuitem">Edit</button>
+                <button type="button" class="island-action" id="widgetBtn" role="menuitem">Widgets</button>
               </div>
             </div>
           </div>
-          <div class="desktop-block draggable-desktop" data-desktop-block="apps" id="desktopBlockApps">
-            <button type="button" class="edit-remove" data-desktop-remove="apps" aria-label="Haupt-Apps entfernen">×</button>
-            <p class="desktop-section-label">Haupt-Apps</p>
-            <div class="app-grid" id="appGrid" aria-label="Desktop Apps">
-              <button type="button" class="app-icon desktop-tile" data-app="settings">
-                <span class="icon-orb core">C</span>
-                <strong>Core</strong>
-              </button>
-              <button type="button" class="app-icon desktop-tile" data-app="security">
-                <span class="icon-orb security">S</span>
-                <strong>Security</strong>
-              </button>
-              <button type="button" class="app-icon desktop-tile" data-app="forge">
-                <span class="icon-orb forge">F</span>
-                <strong>Forge</strong>
-              </button>
-              <button type="button" class="app-icon desktop-tile" data-app="sync">
-                <span class="icon-orb sync">S</span>
-                <strong>Sync</strong>
-              </button>
+
+          <div class="chrome-title-bar mobile-topbar liquid-glass-bar">
+            <div class="title-block">
+              <p class="eyebrow">NOCO OS</p>
+              <strong id="screenTitle">Home</strong>
+            </div>
+            <span id="exclusiveTopBadge" class="exclusive-top-badge hidden">Exclusive</span>
+          </div>
+        </header>
+
+        <div class="page-swipe-hint page-swipe-hint--left" aria-hidden="true">‹</div>
+        <div class="page-swipe-hint page-swipe-hint--right" aria-hidden="true">›</div>
+
+        <section class="screen-track" id="screenTrack">
+          <div class="page-stage" id="pageStage">
+            <section class="screen home-screen is-active" aria-label="Home Screen">
+              <div class="home-bento">
+                <div id="homeTimerLive" class="timer-live-banner timer-live-banner--home hidden" role="status" aria-live="polite"></div>
+                <div id="homeMemoryLive" class="timer-live-banner timer-live-banner--home timer-live-banner--memory hidden" role="status" aria-live="polite"></div>
+                <div class="hero-widget widget-card draggable-widget bento-hero" data-widget-id="hero">
+                  <div class="noco-mark" aria-hidden="true"><span>NO</span></div>
+                  <div>
+                    <p class="eyebrow">Liquid Glass</p>
+                    <h1>Willkommen.</h1>
+                    <p>Alles in einer Hand — Apps, Tools und Notizen.</p>
+                    <div class="hero-actions">
+                      <button type="button" class="hero-cta" data-action="go-apps">Zu den Apps</button>
+                      <button type="button" class="hero-cta ghost" data-action="open-beam">Suchen</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="home-row-duo">
+                  <div class="clock-widget widget-card draggable-widget bento-clock" data-widget-id="clock">
+                    <span id="largeClock">--:--</span>
+                    <small id="largeDate">NOCO Zeit</small>
+                  </div>
+
+                  <div class="status-widget widget-card draggable-widget bento-status" data-widget-id="status">
+                  <div class="section-title">
+                    <div>
+                      <p class="eyebrow">Status</p>
+                      <h2>System</h2>
+                    </div>
+                    <button type="button" class="mini-action" data-app="security">Shield</button>
+                  </div>
+                  <div class="mini-metrics">
+                    <span><strong>1.2</strong><small>Build</small></span>
+                    <span><strong>Glass</strong><small>Look</small></span>
+                    <span><strong>Local</strong><small>Sync</small></span>
+                  </div>
+                  </div>
+                </div>
+
+                <div class="shortcut-widget widget-card draggable-widget bento-shortcuts" data-widget-id="shortcuts">
+                  <div class="section-title section-title-tight">
+                    <div>
+                      <p class="eyebrow">Shortcuts</p>
+                      <h2>Schnellzugriff</h2>
+                    </div>
+                    <button type="button" class="mini-action mini-action-solid" data-open-panel="shortcuts">Anpassen</button>
+                  </div>
+                  <div class="shortcut-grid" id="shortcutGrid"></div>
+                </div>
+
+                <div class="note-widget widget-card draggable-widget bento-note" data-widget-id="notes">
+                  <div class="section-title">
+                    <div>
+                      <p class="eyebrow">Notiz</p>
+                      <h2>Schnell</h2>
+                    </div>
+                    <button type="button" id="saveBtn" class="mini-action">Speichern</button>
+                  </div>
+                  <textarea id="noteInput" rows="3" placeholder="Hier schreiben..."></textarea>
+                  <small id="saveState">Noch nichts gespeichert.</small>
+                </div>
+
+                <div class="sync-widget widget-card draggable-widget bento-sync" data-widget-id="sync">
+                  <div class="section-title">
+                    <div>
+                      <p class="eyebrow">Sync</p>
+                      <h2>Keycard</h2>
+                    </div>
+                    <button type="button" class="mini-action" data-app="sync">Öffnen</button>
+                  </div>
+                  <p>Keycard importieren — Mobile und Desktop bleiben auf einem Stand.</p>
+                </div>
+
+                <div class="feed-widget widget-card draggable-widget bento-feed" data-widget-id="feed">
+                  <div class="section-title">
+                    <div>
+                      <p class="eyebrow">Feed</p>
+                      <h2>Heute</h2>
+                    </div>
+                  </div>
+                  <div class="list" id="demoList"></div>
+                </div>
+              </div>
+
+            </section>
+
+            <section class="screen desktop-screen noco-glass-scroll" aria-label="App Desktop">
+              <div class="desktop-head">
+                <p class="eyebrow">App-Bibliothek</p>
+                <p class="desktop-hint">Schnellzugriff unten · Ordner zum Ausklappen</p>
+              </div>
+
+              <div class="library-quick" id="libraryQuick" aria-label="Schnellzugriff Apps"></div>
+
+              <div class="library-grid" id="libraryGrid" aria-label="NOCO App Bibliothek">
+                <article class="library-card" data-library-root="beam">
+                  <button type="button" class="library-head" data-action="open-beam">
+                    <span class="icon-orb core" data-app-icon="beam"><span class="icon-orb-shine"></span><span class="icon-orb-glyph">⌕</span></span>
+                    <strong>Beam</strong>
+                    <small>Suche &amp; Tools</small>
+                  </button>
+                </article>
+
+                <article class="library-card" data-library-root="forge">
+                  <span class="library-chevron" aria-hidden="true">▾</span>
+                  <button type="button" class="library-head" data-library-folder="forge">
+                    <span class="icon-orb forge" data-app-icon="forge"><span class="icon-orb-shine"></span><span class="icon-orb-glyph">✦</span></span>
+                    <strong>Forge</strong>
+                    <small>Store &amp; installierte Apps</small>
+                  </button>
+                  <div class="library-expand">
+                    <div class="library-expand-inner">
+                      <div class="library-apps" data-library-apps="forge" aria-label="Forge Apps"></div>
+                    </div>
+                  </div>
+                </article>
+
+                <article class="library-card" data-library-root="games">
+                  <span class="library-chevron" aria-hidden="true">▾</span>
+                  <button type="button" class="library-head" data-library-folder="games">
+                    <span class="icon-orb forge" data-app-icon="arcade"><span class="icon-orb-shine"></span><span class="icon-orb-glyph">▣</span></span>
+                    <strong>Spiele</strong>
+                    <small>Arcade &amp; Mini-Games</small>
+                  </button>
+                  <div class="library-expand">
+                    <div class="library-expand-inner">
+                      <div class="library-apps" data-library-apps="games" aria-label="Spiele Apps"></div>
+                    </div>
+                  </div>
+                </article>
+
+                <article class="library-card" data-library-root="core">
+                  <span class="library-chevron" aria-hidden="true">▾</span>
+                  <button type="button" class="library-head" data-library-folder="core">
+                    <span class="icon-orb core" data-app-icon="settings"><span class="icon-orb-shine"></span><span class="icon-orb-glyph">⚙</span></span>
+                    <strong>Core</strong>
+                    <small>System, AI &amp; Workspace</small>
+                  </button>
+                  <div class="library-expand">
+                    <div class="library-expand-inner">
+                      <div class="library-apps" data-library-apps="core" aria-label="Core Apps"></div>
+                    </div>
+                  </div>
+                </article>
+              </div>
+
+              <div id="appGrid" hidden aria-hidden="true"></div>
+              <div class="desktop-layout" id="desktopLayout" hidden aria-hidden="true"></div>
+            </section>
+          </div>
+        </section>
+
+        <div id="coachBanner" class="coach-banner hidden" role="status">
+          <p>Wische nach links für Apps · Island: Home, Apps, Beam, Hub, Edit, Widgets · ✧ für NOCO AI.</p>
+          <button type="button" id="coachDismiss">OK</button>
+        </div>
+
+        <p class="home-edit-hint" id="homeEditHint">Bearbeiten aktiv — Widgets verschieben, × entfernen, + hinzufuegen</p>
+        <div class="home-edit-chrome" id="homeEditChrome" hidden>
+          <button type="button" id="widgetAddFab" class="widget-add-fab" aria-label="Widget hinzufuegen">+</button>
+          <button type="button" id="homeEditFab" class="edit-fab" aria-label="Bearbeiten beenden">
+            <svg class="pencil-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </button>
+        </div>
+
+        <section id="appSheet" class="app-sheet hidden" aria-live="polite">
+          <div class="sheet-card noco-glass-scroll">
+            <div class="sheet-drag-handle" aria-hidden="true"></div>
+            <button type="button" id="closeSheet" class="sheet-close" aria-label="Schliessen">×</button>
+            <div id="sheetContent"></div>
+          </div>
+        </section>
+
+        <section id="firstLightPanel" class="firstlight-panel hidden" aria-live="polite">
+          <div class="firstlight-card">
+            <div id="firstLightContent"></div>
+          </div>
+        </section>
+
+        <section id="spotlightPanel" class="spotlight-panel beam-panel hidden" aria-live="polite">
+          <div class="spotlight-card beam-card">
+            <div class="beam-panel-head">
+              <div>
+                <p class="eyebrow">NOCO Beam</p>
+                <h2>Systemwerkzeuge</h2>
+              </div>
+              <button type="button" class="sheet-close" data-close-spotlight aria-label="NOCO Beam schliessen">×</button>
+            </div>
+            <div class="spotlight-search beam-search">
+              <span class="beam-glyph" aria-hidden="true">⌕</span>
+              <input id="spotlightInput" autocomplete="off" placeholder="Apps, Tools, Core, Sync..." />
+            </div>
+            <div id="spotlightResults" class="spotlight-results beam-results"></div>
+          </div>
+        </section>
+
+        <section id="lockScreen" class="lock-screen hidden" aria-live="polite">
+          <button type="button" id="lockEditBtn" class="lock-edit" aria-label="Sperrbildschirm bearbeiten">✎</button>
+          <div class="lock-orb" aria-hidden="true"></div>
+          <div class="lock-clock">
+            <span id="lockClock">--:--</span>
+            <small id="lockDate">NOCO Mobile</small>
+          </div>
+          <div id="lockTimerLive" class="timer-live-banner hidden" role="status" aria-live="polite"></div>
+          <div id="lockMemoryLive" class="timer-live-banner timer-live-banner--memory hidden" role="status" aria-live="polite"></div>
+          <div id="lockWidgets" class="lock-widgets"></div>
+          <p class="lock-swipe-hint" aria-hidden="true">Nach oben wischen</p>
+          <div class="lock-actions">
+            <button type="button" id="unlockBtn" class="primary-action lock-hold-btn" aria-label="2 Sekunden halten zum Entsperren">2 Sekunden halten</button>
+            <button type="button" id="lockWaitBtn" class="security-action"><strong>1 Minute warten</strong><small>Auto-Lock Demo</small></button>
+          </div>
+        </section>
+
+        <section id="shortcutPanel" class="app-sheet hidden" aria-live="polite">
+          <div class="sheet-card noco-glass-scroll">
+            <button type="button" class="sheet-close" data-close-panel aria-label="Schliessen">×</button>
+            <h2>Shortcuts</h2>
+            <p class="muted">Vier Aktionen fuer den Home-Screen.</p>
+            <div class="shortcut-editor" id="shortcutEditor"></div>
+          </div>
+        </section>
+
+        <section id="widgetPanel" class="app-sheet hidden" aria-live="polite">
+          <div class="sheet-card compact-sheet">
+            <button type="button" class="sheet-close" data-close-widget-panel aria-label="Schliessen">×</button>
+            <h2>Widgets</h2>
+            <p class="muted">Tippe + am Home (im Bearbeiten-Modus) oder waehle hier ein Widget.</p>
+            <div class="widget-library" id="widgetLibrary"></div>
+          </div>
+        </section>
+
+        <section id="desktopPanel" class="app-sheet hidden" aria-live="polite">
+          <div class="sheet-card compact-sheet">
+            <button type="button" class="sheet-close" data-close-desktop-panel aria-label="Schliessen">×</button>
+            <h2>Desktop</h2>
+            <p class="muted">Bereiche wieder einblenden.</p>
+            <div class="widget-library" id="desktopLibrary"></div>
+          </div>
+        </section>
+
+        <section id="codePanel" class="app-sheet hidden code-panel" aria-live="polite">
+          <div class="sheet-card compact-sheet code-card liquid-code-card">
+            <button type="button" class="sheet-close" data-code-cancel aria-label="Schliessen">×</button>
+            <p class="eyebrow">ShieldGate</p>
+            <h2 id="codeTitle">Code</h2>
+            <p id="codeText" class="muted">NOCO Mobile Code eingeben.</p>
+            <div class="code-dots" id="codeDots" aria-hidden="true"></div>
+            <input id="codeInput" class="code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="4" aria-label="Code" />
+            <div class="code-keypad" id="codeKeypad" aria-label="Zifferntastatur"></div>
+            <small id="codeHint">4 Ziffern.</small>
+            <button type="button" id="codeConfirm" class="primary-action">Bestaetigen</button>
+          </div>
+        </section>
+
+        <section id="hubPanel" class="hub-panel hidden" aria-live="polite">
+          <button type="button" class="hub-backdrop" data-close-hub aria-label="Hub schliessen"></button>
+          <div class="hub-card">
+            <div class="hub-head">
+              <div>
+                <p class="eyebrow">NOCO Hub</p>
+                <h2>Schnellmenue</h2>
+              </div>
+              <button type="button" class="sheet-close" data-close-hub aria-label="Schliessen">×</button>
+            </div>
+            <div class="hub-grid">
+              <button type="button" data-hub-app="settings">Core</button>
+              <button type="button" data-hub-app="security">Security</button>
+              <button type="button" data-hub-app="sync">Sync</button>
+              <button type="button" data-hub-app="tasks">Tasks</button>
+              <button type="button" data-hub-app="calculator">Rechner</button>
+              <button type="button" data-hub-app="timer">Timer</button>
+              <button type="button" data-hub-app="memories">Memory</button>
+              <button type="button" data-hub-app="arcade">Arcade</button>
+              <button type="button" data-hub-app="exclusive">Exclusive</button>
+            </div>
+            <div class="hub-actions">
+              <button type="button" data-hub-action="toggle-motion">Motion</button>
+              <button type="button" data-hub-action="toggle-glass">Glass</button>
+              <button type="button" data-hub-action="desktop">Desktop</button>
             </div>
           </div>
-          <div class="desktop-block draggable-desktop" data-desktop-block="folders" id="desktopBlockFolders">
-            <button type="button" class="edit-remove" data-desktop-remove="folders" aria-label="Ordner entfernen">×</button>
-            <p class="desktop-section-label">Ordner</p>
-            <div class="folder-strip" id="folderStrip" aria-label="App Ordner">
-              <button type="button" class="desktop-tile folder-tile" data-folder="games"><span class="icon-orb forge">G</span><strong>Spiele</strong></button>
-              <button type="button" class="desktop-tile folder-tile" data-folder="design"><span class="icon-orb themes">D</span><strong>Design</strong></button>
-              <button type="button" class="desktop-tile folder-tile" data-folder="workspace"><span class="icon-orb core">W</span><strong>Workspace</strong></button>
-            </div>
-          </div>
-        </div>
-      </section>
-    </section>
+        </section>
 
-    <nav class="page-dots liquid-glass-pill" aria-label="Seiten">
-      <button class="dot active" data-page="0" aria-label="Home"></button>
-      <button class="dot" data-page="1" aria-label="Desktop"></button>
-    </nav>
-  </main>
-
-  <section id="appSheet" class="app-sheet hidden" aria-live="polite">
-    <div class="sheet-card">
-      <button id="closeSheet" class="sheet-close" aria-label="Schließen">x</button>
-      <div id="sheetContent"></div>
+        <div id="toast" class="toast" aria-live="polite"></div>
+      </main>
     </div>
-  </section>
+  </div>
 
-  <section id="firstLightPanel" class="firstlight-panel hidden" aria-live="polite">
-    <div class="firstlight-card">
-      <div id="firstLightContent"></div>
-    </div>
-  </section>
-
-  <section id="spotlightPanel" class="spotlight-panel beam-panel hidden" aria-live="polite">
-    <div class="spotlight-card beam-card">
-      <div class="beam-panel-head">
-        <div>
-          <p class="eyebrow">NOCO Beam</p>
-          <h2>Systemwerkzeuge</h2>
-        </div>
-        <button class="sheet-close" data-close-spotlight aria-label="NOCO Beam schliessen">x</button>
-      </div>
-      <div class="spotlight-search beam-search">
-        <span class="beam-glyph" aria-hidden="true">⌕</span>
-        <input id="spotlightInput" autocomplete="off" placeholder="Apps, Tools, Core, Sync, Ordner..." />
-      </div>
-      <div id="spotlightResults" class="spotlight-results beam-results"></div>
-    </div>
-  </section>
-
-  <section id="lockScreen" class="lock-screen hidden" aria-live="polite">
-    <button id="lockEditBtn" class="lock-edit" aria-label="Sperrbildschirm Widgets bearbeiten">✎</button>
-    <div class="lock-orb" aria-hidden="true"></div>
-    <div class="lock-clock">
-      <span id="lockClock">--:--</span>
-      <small id="lockDate">NOCO Mobile</small>
-    </div>
-    <div id="lockWidgets" class="lock-widgets"></div>
-    <div class="lock-actions">
-      <button id="unlockBtn" class="primary-action">Zum Entsperren halten</button>
-      <button id="lockWaitBtn" class="security-action"><strong>1 Minute warten</strong><small>Auto-Lock Demo starten</small></button>
-    </div>
-  </section>
-
-  <section id="shortcutPanel" class="app-sheet hidden" aria-live="polite">
-    <div class="sheet-card">
-      <button class="sheet-close" data-close-panel aria-label="Schließen">x</button>
-      <h2>Shortcuts anpassen</h2>
-      <p class="muted">Wähle vier schnelle Aktionen für deinen Home-Screen.</p>
-      <div class="shortcut-editor" id="shortcutEditor"></div>
-    </div>
-  </section>
-
-  <section id="widgetPanel" class="app-sheet hidden" aria-live="polite">
-    <div class="sheet-card compact-sheet">
-      <button class="sheet-close" data-close-widget-panel aria-label="Schliessen">x</button>
-      <h2>Widgets</h2>
-      <p class="muted">Fuege Home-Widgets hinzu oder entferne sie. Im Stiftmodus kannst du sie danach verschieben.</p>
-      <div class="widget-library" id="widgetLibrary"></div>
-    </div>
-  </section>
-
-  <section id="desktopPanel" class="app-sheet hidden" aria-live="polite">
-    <div class="sheet-card compact-sheet">
-      <button class="sheet-close" data-close-desktop-panel aria-label="Schliessen">x</button>
-      <h2>Desktop hinzufuegen</h2>
-      <p class="muted">Blendet entfernte Desktop-Bereiche wieder ein.</p>
-      <div class="widget-library" id="desktopLibrary"></div>
-    </div>
-  </section>
-
-  <section id="codePanel" class="app-sheet hidden code-panel" aria-live="polite">
-    <div class="sheet-card compact-sheet code-card">
-      <button class="sheet-close" data-code-cancel aria-label="Schliessen">x</button>
-      <p class="eyebrow">NOCO ShieldGate</p>
-      <h2 id="codeTitle">Code eingeben</h2>
-      <p id="codeText" class="muted">Gib deinen NOCO Mobile Code ein.</p>
-      <input id="codeInput" class="code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="••••" />
-      <small id="codeHint">4 bis 8 Zahlen, keine einfachen Reihen.</small>
-      <button id="codeConfirm" class="primary-action">Bestaetigen</button>
-    </div>
-  </section>
-
-  <section id="hubPanel" class="hub-panel hidden" aria-live="polite">
-    <div class="hub-card">
-      <div class="hub-head">
-        <div>
-          <p class="eyebrow">NOCO Hub</p>
-          <h2>Schnellmenü</h2>
-        </div>
-        <button class="sheet-close" data-close-hub aria-label="NOCO Hub schließen">x</button>
-      </div>
-      <div class="hub-grid">
-        <button data-hub-app="settings">Core</button>
-        <button data-hub-app="security">Security</button>
-        <button data-hub-app="sync">Sync</button>
-        <button data-hub-app="exclusive">Exclusive</button>
-      </div>
-      <div class="hub-actions">
-        <button data-hub-action="toggle-motion">Motion</button>
-        <button data-hub-action="toggle-glass">Glass</button>
-        <button data-hub-action="desktop">Desktop</button>
-      </div>
-    </div>
-  </section>
-
-  <div id="toast" class="toast" aria-live="polite"></div>
+  <script src="./noco-ai-chats.js"></script>
+  <script src="./noco-notes.js"></script>
+  <script src="./noco-reminders.js"></script>
+  <script src="./noco-ai-math.js"></script>
+  <script src="./noco-ai-create.js"></script>
+  <script src="./noco-ai-insights.js"></script>
+  <script src="./noco-ai-pro.js"></script>
+  <script src="./noco-ai-time.js"></script>
+  <script src="./noco-ai-ultra.js"></script>
+  <script src="./noco-ai-natural.js"></script>
+  <script src="./noco-ai-limits.js"></script>
+  <script src="./noco-ai-brain.js"></script>
+  <script src="./noco-ai-system.js"></script>
+  <script src="./noco-ai.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>

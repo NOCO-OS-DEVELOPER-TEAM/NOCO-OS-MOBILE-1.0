@@ -6,6 +6,7 @@ const demoList = document.getElementById("demoList");
 const largeClock = document.getElementById("largeClock");
 const largeDate = document.getElementById("largeDate");
 const screenTrack = document.getElementById("screenTrack");
+const pageStage = document.getElementById("pageStage");
 const screenTitle = document.getElementById("screenTitle");
 const exclusiveTopBadge = document.getElementById("exclusiveTopBadge");
 const editBtn = document.getElementById("editBtn");
@@ -31,7 +32,16 @@ const hubPanel = document.getElementById("hubPanel");
 const widgetBtn = document.getElementById("widgetBtn");
 const widgetPanel = document.getElementById("widgetPanel");
 const widgetLibrary = document.getElementById("widgetLibrary");
-const pageToggleBtn = document.getElementById("pageToggleBtn");
+const homeEditChrome = document.getElementById("homeEditChrome");
+const widgetAddFab = document.getElementById("widgetAddFab");
+const homeEditFab = document.getElementById("homeEditFab");
+const dynamicIsland = document.getElementById("dynamicIsland");
+const islandMenu = document.getElementById("islandMenu");
+const islandClock = document.getElementById("islandClock");
+const islandStatus = document.getElementById("islandStatus");
+const islandZone = document.getElementById("islandZone");
+let islandOpen = false;
+let bottomGesture = null;
 const desktopLayout = document.getElementById("desktopLayout");
 const desktopPanel = document.getElementById("desktopPanel");
 const desktopLibrary = document.getElementById("desktopLibrary");
@@ -46,6 +56,17 @@ let currentPage = 0;
 let editMode = false;
 let pageScrollLock = false;
 let pageDrag = null;
+const appCache = new Map();
+let securityScanRunning = false;
+let runnerGame = {
+  running: false,
+  score: 0,
+  playerY: 0,
+  vy: 0,
+  obstacleX: 118,
+  timer: null,
+  best: Number(localStorage.getItem("noco_mobile_runner_best") || 0)
+};
 let appSwipe = null;
 let reorderDrag = null;
 let currentApp = null;
@@ -61,9 +82,29 @@ let lockTimer = null;
 let isLocked = false;
 let lockEditMode = false;
 let tapDashScore = 0;
+let tapDashBest = Number(localStorage.getItem("noco_mobile_tapdash_best") || 0);
 let colorCatchTarget = "Mint";
-let memoryRound = 1;
-let memorySequence = [1, 3, 2];
+let colorCatchCombo = 0;
+let colorCatchBest = Number(localStorage.getItem("noco_mobile_color_best") || 0);
+let memoryState = {
+  round: 1,
+  sequence: [1, 3, 2],
+  playerIndex: 0,
+  phase: "input",
+  playbackLock: false,
+  best: Number(localStorage.getItem("noco_mobile_memory_best") || 0)
+};
+let timerState = {
+  seconds: 5 * 60,
+  totalSeconds: 5 * 60,
+  running: false,
+  mode: "custom",
+  customMinutes: 5,
+  timerId: null,
+  endAt: null
+};
+let memoryPickMinutes = 10;
+let calcState = { display: "0", memory: null, fresh: true };
 let dodgeTimer = null;
 let dodgeGame = {
   running: false,
@@ -73,6 +114,11 @@ let dodgeGame = {
   obstacleX: 50,
   obstacleY: -14
 };
+
+const UNLOCK_HOLD_MS = 2000;
+let unlockHoldRaf = 0;
+let unlockHoldStarted = 0;
+let lockSwipeStart = null;
 
 const GESTURE = {
   pageStart: 18,
@@ -86,6 +132,98 @@ const GESTURE = {
   verticalCancelRatio: 1.08,
   clickSuppressMs: 360
 };
+
+const APP_GLYPHS = {
+  settings: "⚙",
+  security: "⬡",
+  forge: "✦",
+  sync: "↻",
+  hub: "◈",
+  toon: "▤",
+  focus: "◎",
+  cloud: "☁",
+  themes: "◐",
+  exclusive: "✧",
+  web: "⬒",
+  notes: "✎",
+  pay: "◆",
+  pulse: "♡",
+  sketch: "✏",
+  breath: "○",
+  arcade: "▣",
+  tapdash: "⚡",
+  colorcatch: "◉",
+  memorygrid: "▦",
+  dodgerun: "➤",
+  runner: "▸",
+  transit: "⌁",
+  mood: "◑",
+  wallet: "◎",
+  vault: "⛨",
+  glowcam: "◌",
+  tasks: "☑",
+  timer: "◴",
+  memories: "◷",
+  radar: "◎",
+  recipes: "☰",
+  calculator: "⊞",
+  weather: "☁",
+  flashlight: "☼",
+  quotes: "❝",
+  nocoai: "✧",
+  "exclusive-lab": "✧",
+  "deep-scan": "◎",
+  "pro-themes": "◐",
+  beam: "⌕",
+  beam_home: "⌂",
+  beam_desktop: "▣",
+  beam_hub: "◈",
+  beam_widgets: "▦",
+  beam_edit: "✎",
+  beam_scan: "⬡",
+  folder_games: "▣",
+  folder_design: "◐",
+  folder_workspace: "◇"
+};
+
+let gestureSafetyTimer = null;
+
+function getAppGlyph(appId) {
+  if (!appId) return "◆";
+  if (String(appId).startsWith("folder-")) {
+    return APP_GLYPHS[`folder_${String(appId).slice(7)}`] || "◆";
+  }
+  if (String(appId).startsWith("beam:")) {
+    const key = String(appId).slice(5).replace(/-/g, "_");
+    return APP_GLYPHS[`beam_${key}`] || APP_GLYPHS.beam;
+  }
+  return APP_GLYPHS[appId] || "◆";
+}
+
+function renderIconOrb(meta, className = "", size = "") {
+  const id = typeof meta === "object" ? meta.id : meta;
+  const cls = typeof meta === "object" ? (meta.className || className) : className;
+  const glyph = getAppGlyph(id);
+  const sizeClass = size === "sm" ? " icon-orb--sm" : size === "lg" ? " icon-orb--lg" : "";
+  const safeCls = cls || "neutral";
+  return `<span class="icon-orb${sizeClass} ${safeCls}" data-app-icon="${id}" aria-hidden="true"><span class="icon-orb-shine"></span><span class="icon-orb-glyph">${glyph}</span></span>`;
+}
+
+function armGestureSafety(ms = 520) {
+  if (gestureSafetyTimer) window.clearTimeout(gestureSafetyTimer);
+  gestureSafetyTimer = window.setTimeout(cleanupGestureState, ms);
+}
+
+function cleanupGestureState() {
+  gestureSafetyTimer = null;
+  pageDrag = null;
+  appSwipe = null;
+  pageStage?.classList.remove("page-swiping");
+  appSheet?.classList.remove("app-navigating");
+  document.body.classList.remove("noco-transitioning");
+  pageScrollLock = false;
+  resetSheetGestureTransform();
+}
 
 const NOCO_KEY_MAGIC_V2 = "NK3";
 const NOCO_KEY_PEPPER = "noco::key::seal::v2::a9f3c2e17d";
@@ -126,9 +264,14 @@ const forgeApps = [
   { id: "vault", title: "Vault Mini", icon: "V", className: "security", text: "Private Checkliste fuer sensible Mobile-Sachen." },
   { id: "glowcam", title: "GlowCam", icon: "G", className: "explorer", text: "Fake-Kamera-Look mit Lichtstimmung und Profilkarten." },
   { id: "tasks", title: "Tasks", icon: "K", className: "notes", text: "Schnelle Aufgabenliste mit Mobile-Feeling." },
-  { id: "timer", title: "Timer", icon: "Z", className: "focus", text: "Mini-Timer fuer Fokus, Pausen und kurze Sessions." },
+  { id: "timer", title: "Timer", icon: "Z", className: "focus", text: "Countdown mit eigenen Minuten — startet zuverlaessig im Hintergrund." },
+  { id: "memories", title: "Memory", icon: "M", className: "focus", text: "Erinnerungen mit Countdown — z. B. per NOCO AI in 20 Minuten." },
   { id: "radar", title: "Radar", icon: "R", className: "cloud", text: "NOCO Status-Radar fuer Netzwerk, Sync und Systemlaune." },
   { id: "recipes", title: "Recipes", icon: "R", className: "themes", text: "Kleine Rezept- und Ideen-App im Liquid-Glass Look." },
+  { id: "calculator", title: "Rechner", icon: "=", className: "core", text: "Glas-Taschenrechner mit Speicher und sauberer Logik." },
+  { id: "weather", title: "Wetter", icon: "W", className: "cloud", text: "NOCO Wetter mit Live-Refresh und Stunden-Vorschau." },
+  { id: "flashlight", title: "Taschenlampe", icon: "L", className: "explorer", text: "Hellmodus direkt im Phone-Frame." },
+  { id: "quotes", title: "Daily", icon: "Q", className: "focus", text: "Taegliche NOCO Sprueche zum Teilen und Merken." },
   { id: "toon", title: "NOCO Toon", icon: "T", className: "toon", text: "Mobile Zeitung mit kurzen NOCO Updates, Workspace-News und Statusmeldungen." },
   { id: "exclusive-lab", title: "Exclusive Lab", icon: "X", className: "exclusive", text: "Premium-Labor mit neuen Glas-Features zuerst.", exclusive: true },
   { id: "deep-scan", title: "Deep Scan", icon: "D", className: "exclusive", text: "Erweiterter Security-Scan fuer Exclusive Member.", exclusive: true },
@@ -143,6 +286,7 @@ const widgetDefinitions = {
   notes: { title: "Schnellnotiz", text: "Direkt auf Home schreiben." },
   sync: { title: "NOCO Sync", text: "Keycard Import und Export." },
   feed: { title: "Heute NOCO", text: "Kurzer System-Feed." },
+  nocoai: { title: "NOCO AI", text: "Offline-Assistent auf dem Home-Screen — Apps oeffnen und chatten." },
   focusMini: { title: "Focus Mini", text: "Ruhige Schnellsteuerung fuer Fokus." },
   batteryLab: { title: "Akku Labor", text: "Mobile Energie-Uebersicht." },
   forgePick: { title: "Forge Tipp", text: "App-Empfehlung direkt auf Home." },
@@ -153,10 +297,109 @@ const widgetDefinitions = {
 let activeShortcuts = loadShortcuts();
 
 const appFolders = {
-  games: ["tapdash", "colorcatch", "memorygrid", "dodgerun", "arcade"],
-  design: ["themes", "sketch", "mood", "pro-themes", "glowcam"],
-  workspace: ["settings", "security", "sync", "notes", "cloud", "toon", "forge", "pay"]
+  games: ["tapdash", "colorcatch", "memorygrid", "dodgerun", "runner", "arcade"],
+  design: ["themes", "sketch", "mood", "pro-themes", "glowcam", "quotes"],
+  workspace: ["settings", "security", "sync", "nocoai", "notes", "tasks", "memories", "calculator", "timer", "weather", "cloud", "toon", "forge", "pay"]
 };
+
+const LIBRARY_CORE_STANDARD = ["settings", "security", "sync", "nocoai"];
+let expandedLibraryId = null;
+let openAppInFlight = false;
+let pendingOpenAppId = null;
+
+const LIBRARY_QUICK_IDS = ["nocoai", "notes", "tasks", "calculator", "weather", "themes"];
+
+function getLibraryFolderApps(folderId) {
+  const installed = new Set(getInstalledApps());
+  if (folderId === "core") {
+    const ids = [...LIBRARY_CORE_STANDARD];
+    [...appFolders.workspace, ...appFolders.design].forEach((id) => {
+      if (installed.has(id) && !ids.includes(id) && !appFolders.games.includes(id)) ids.push(id);
+    });
+    return [...new Set(ids)];
+  }
+  if (folderId === "forge") {
+    const ids = ["forge"];
+    installed.forEach((id) => {
+      if (!LIBRARY_CORE_STANDARD.includes(id) && !appFolders.games.includes(id) && !ids.includes(id)) ids.push(id);
+    });
+    return ids;
+  }
+  if (folderId === "games") {
+    const ids = [];
+    appFolders.games.forEach((id) => {
+      if (installed.has(id) || id === "arcade") ids.push(id);
+    });
+    return [...new Set(ids)];
+  }
+  return [];
+}
+
+function renderLibraryFolderContent(folderId) {
+  const appsEl = document.querySelector(`[data-library-apps="${folderId}"]`);
+  if (!appsEl) return;
+  const ids = getLibraryFolderApps(folderId);
+  if (!ids.length) {
+    appsEl.innerHTML = `<p class="library-empty">Noch keine Apps hier. Installiere welche in Forge.</p>`;
+    return;
+  }
+  appsEl.innerHTML = ids
+    .map((id) => {
+      const meta = getAppMeta(id);
+      return `<button type="button" class="library-app" data-app="${id}">${renderIconOrb({ id, className: meta.className })}<span>${meta.title}</span></button>`;
+    })
+    .join("");
+}
+
+function toggleLibraryFolder(folderId) {
+  const card = document.querySelector(`[data-library-root="${folderId}"]`);
+  if (!card || editMode) return;
+  const wasOpen = card.classList.contains("is-expanded");
+  document.querySelectorAll(".library-card.is-expanded").forEach((c) => c.classList.remove("is-expanded"));
+  expandedLibraryId = null;
+  if (wasOpen) return;
+  renderLibraryFolderContent(folderId);
+  card.classList.add("is-expanded");
+  expandedLibraryId = folderId;
+  hapticTap();
+}
+
+function refreshLibraryExpand() {
+  if (expandedLibraryId) renderLibraryFolderContent(expandedLibraryId);
+}
+
+function renderLibraryGrid() {
+  renderLibraryQuick();
+  ["core", "forge", "games"].forEach((id) => renderLibraryFolderContent(id));
+}
+
+function renderLibraryQuick() {
+  const el = document.getElementById("libraryQuick");
+  if (!el) return;
+  const installed = new Set(getInstalledApps());
+  const ids = LIBRARY_QUICK_IDS.filter((id) => {
+    if (id === "nocoai" || id === "notes") return true;
+    return installed.has(id);
+  });
+  el.innerHTML = `
+    <p class="library-quick-label">Schnellzugriff</p>
+    <div class="library-quick-grid">
+      ${ids
+        .map((id) => {
+          const meta = getAppMeta(id);
+          return `<button type="button" class="library-quick-app" data-app="${id}">${renderIconOrb({ id, className: meta.className })}<span>${meta.title}</span></button>`;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function syncHomeNoteFromStore() {
+  if (!window.NocoNotes) return;
+  window.NocoNotes.reload();
+  const active = window.NocoNotes.getActiveNote();
+  if (active && noteInput) noteInput.value = active.body;
+}
 
 const DESKTOP_BLOCKS = {
   beam: { title: "NOCO Beam", text: "Lokale Systemsuche auf dem Geraet" },
@@ -167,6 +410,7 @@ const DESKTOP_BLOCKS = {
 const DEFAULT_DESKTOP_LAYOUT = ["beam", "apps", "folders"];
 
 const searchIndex = [
+  { id: "nocoai", title: "NOCO AI", type: "App", keywords: "noco ai ki chat assistent offline fragen oeffnen apps dialog hilfe" },
   { id: "settings", title: "Core", type: "App", keywords: "settings core nococore deck einstellungen system toggle glas motion app handling" },
   { id: "settings:shield", app: "settings", title: "ShieldGate", type: "Einstellung", keywords: "shield shieldgate sh sicherheit passkey code face id freigabe schutz" },
   { id: "settings:vault", app: "settings", title: "SessionVault", type: "Einstellung", keywords: "session vault sessionvault keycard daten apps dev exclusive cache" },
@@ -181,6 +425,17 @@ const searchIndex = [
   { id: "focus", title: "Focus", type: "App", keywords: "focus fokus ruhig timer konzentration" },
   { id: "web", title: "Web", type: "App", keywords: "web explorer browser suche" },
   { id: "dodgerun", title: "Dodge Run", type: "Spiel", keywords: "spiel game ausweichen dodge run orb block" },
+  { id: "runner", title: "NOCO Runner", type: "Spiel", keywords: "runner springen spiel arcade" },
+  { id: "calculator", title: "Rechner", type: "App", keywords: "rechner calculator mathe plus minus" },
+  { id: "weather", title: "Wetter", type: "App", keywords: "wetter wetterbericht grad sonne regen" },
+  { id: "flashlight", title: "Taschenlampe", type: "App", keywords: "licht lampe hell flashlight" },
+  { id: "quotes", title: "Daily", type: "App", keywords: "spruch quote daily motivation" },
+  { id: "tasks", title: "Tasks", type: "App", keywords: "aufgaben todo liste tasks erledigen" },
+  { id: "timer", title: "Timer", type: "App", keywords: "timer countdown fokus pause" },
+  { id: "memories", title: "Memory", type: "App", keywords: "memory erinnerung reminder wecker merken" },
+  { id: "beam:calculator", title: "Rechner", type: "Werkzeug", keywords: "rechner calculator mathe" },
+  { id: "beam:tasks", title: "Tasks", type: "Werkzeug", keywords: "aufgaben todo tasks liste" },
+  { id: "beam:timer", title: "Timer", type: "Werkzeug", keywords: "timer countdown fokus" },
   { id: "folder:games", title: "Ordner Spiele", type: "Ordner", keywords: "spiele games arcade dodge tap memory color" },
   { id: "folder:design", title: "Ordner Design", type: "Ordner", keywords: "design themes look farben sketch mood" },
   { id: "folder:workspace", title: "Ordner Workspace", type: "Ordner", keywords: "workspace core sync security pay notizen" },
@@ -209,7 +464,10 @@ const BEAM_TOOL_IDS = [
   "beam:edit-home",
   "beam:security-scan",
   "beam:sync",
-  "beam:forge"
+  "beam:forge",
+  "beam:calculator",
+  "beam:tasks",
+  "beam:timer"
 ];
 
 const BEAM_SUGGEST_IDS = ["settings", "security", "sync", "forge", "notes", "themes", "folder:games", "folder:workspace"];
@@ -226,11 +484,12 @@ function initSearchIndex() {
   });
 }
 
-function showToast(text) {
+function showToast(text, duration = 1700) {
+  if (!toast) return;
   toast.textContent = text;
   toast.classList.add("show");
   window.clearTimeout(showToast.timer);
-  showToast.timer = window.setTimeout(() => toast.classList.remove("show"), 1700);
+  showToast.timer = window.setTimeout(() => toast.classList.remove("show"), duration);
 }
 
 function hapticTap() {
@@ -257,12 +516,13 @@ function loadSettings() {
       nocoExclusive: false,
       exclusiveTrialUsed: false,
       exclusivePlan: "",
+      nocoAiPlus: false,
       payBalance: 24,
       paymentMethod: false,
       ...JSON.parse(localStorage.getItem("noco_mobile_settings") || "{}")
     };
   } catch (_) {
-    return { theme: "aurora", liveWallpaper: true, glassBoost: true, motion: true, nativeFeel: true, compactTiles: false, strictSecurity: true, autoLock: true, autoLockSeconds: 60, lockWidgets: ["clock", "security", "sync"], codeLock: false, passkeyEnabled: false, mobileCode: "", requireCodeOnLaunch: false, nocoExclusive: false, exclusiveTrialUsed: false, exclusivePlan: "", payBalance: 24, paymentMethod: false };
+    return { theme: "aurora", liveWallpaper: true, glassBoost: true, motion: true, nativeFeel: true, compactTiles: false, keepAppsAlive: true, strictSecurity: true, autoLock: true, autoLockSeconds: 60, lockWidgets: ["clock", "security", "sync"], codeLock: false, passkeyEnabled: false, mobileCode: "", requireCodeOnLaunch: false, nocoExclusive: false, exclusiveTrialUsed: false, exclusivePlan: "", nocoAiPlus: false, payBalance: 24, paymentMethod: false };
   }
 }
 
@@ -270,7 +530,16 @@ function saveSettings() {
   localStorage.setItem("noco_mobile_settings", JSON.stringify(settings));
 }
 
+function syncExclusiveAiBundle() {
+  const wantPlus = isExclusiveActive();
+  if (settings.nocoAiPlus !== wantPlus) {
+    settings.nocoAiPlus = wantPlus;
+    saveSettings();
+  }
+}
+
 function applySettings() {
+  syncExclusiveAiBundle();
   if (settings.codeLock && !settings.mobileCode && !settings.passkeyEnabled) {
     if (!settings.strictSecurity) {
       settings.codeLock = false;
@@ -290,6 +559,20 @@ function applySettings() {
   const showExclusiveBadge = isExclusiveActive() && settings.exclusivePlan !== "trial";
   exclusiveTopBadge?.classList.toggle("hidden", !showExclusiveBadge);
   if (exclusiveTopBadge) exclusiveTopBadge.textContent = "Exclusive";
+  syncCoreToggleStates();
+}
+
+function syncCoreToggleStates() {
+  const root = sheetContent || document;
+  root.querySelectorAll("[data-toggle-setting]").forEach((btn) => {
+    const key = btn.dataset.toggleSetting;
+    const sw = btn.querySelector(".switch");
+    if (key && sw) sw.classList.toggle("active", !!settings[key]);
+  });
+  root.querySelectorAll("[data-lock-time]").forEach((btn) => {
+    const sec = Number(btn.dataset.lockTime || 60);
+    btn.classList.toggle("active", Number(settings.autoLockSeconds || 60) === sec);
+  });
 }
 
 function isExclusiveActive() {
@@ -327,25 +610,131 @@ function changeBalance(amount, title, type = "system") {
 
 function updateClock() {
   const now = new Date();
-  largeClock.textContent = now.toLocaleTimeString("de-DE", {
+  const timeText = now.toLocaleTimeString("de-DE", {
     hour: "2-digit",
     minute: "2-digit"
   });
-  largeDate.textContent = now.toLocaleDateString("de-DE", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long"
+  if (largeClock) largeClock.textContent = timeText;
+  if (islandClock) islandClock.textContent = timeText;
+  if (largeDate) {
+    largeDate.textContent = now.toLocaleDateString("de-DE", {
+      weekday: "long",
+      day: "2-digit",
+      month: "long"
+    });
+  }
+}
+
+function setIslandExpanded(open) {
+  islandOpen = !!open;
+  islandMenu?.classList.toggle("hidden", !islandOpen);
+  dynamicIsland?.classList.toggle("is-expanded", islandOpen);
+  dynamicIsland?.setAttribute("aria-expanded", islandOpen ? "true" : "false");
+  document.body.classList.toggle("island-open", islandOpen);
+  updateIslandUI();
+}
+
+function closeAllOverlays(options = {}) {
+  const { keepApp = false } = options;
+  setIslandExpanded(false);
+  closeBeam();
+  closeHub();
+  shortcutPanel?.classList.add("hidden");
+  widgetPanel?.classList.add("hidden");
+  desktopPanel?.classList.add("hidden");
+  codePanel?.classList.add("hidden");
+  if (!keepApp && appSheet && !appSheet.classList.contains("hidden")) {
+    closeAppSheetVisual();
+  }
+  if (!keepApp) document.body.classList.remove("sheet-open");
+}
+
+function updateIslandUI() {
+  const appOpen = !!(currentApp && appSheet && !appSheet.classList.contains("hidden"));
+  document.body.classList.toggle("island-app-mode", appOpen);
+  document.querySelectorAll(".island-ai-btn").forEach((btn) => {
+    btn.classList.toggle("active", currentApp === "nocoai" && appOpen);
+  });
+  if (islandStatus) {
+    if (timerState.running) {
+      const rem = formatTimerDisplay(getTimerRemaining());
+      islandStatus.textContent = `◴ ${rem}`;
+      islandStatus.hidden = false;
+      islandStatus.setAttribute("aria-hidden", "false");
+      islandStatus.classList.add("is-timer");
+    } else if (appOpen) {
+      const meta = getAppMeta(currentApp);
+      islandStatus.textContent = meta.title;
+      islandStatus.hidden = false;
+      islandStatus.setAttribute("aria-hidden", "false");
+      islandStatus.classList.remove("is-timer");
+    } else {
+      islandStatus.textContent = "";
+      islandStatus.hidden = true;
+      islandStatus.setAttribute("aria-hidden", "true");
+      islandStatus.classList.remove("is-timer");
+    }
+  }
+  if (islandClock && timerState.running) {
+    islandClock.dataset.timerActive = "1";
+  } else if (islandClock) {
+    delete islandClock.dataset.timerActive;
+  }
+  document.querySelectorAll(".island-page-tab, [data-island-pip]").forEach((el) => {
+    const page = el.dataset.page ?? el.dataset.islandPip;
+    if (page == null) return;
+    el.classList.toggle("active", Number(page) === currentPage);
   });
 }
 
+function refreshHomeStatus() {
+  const syncEl = document.querySelector(".bento-status .mini-metrics span:last-child strong");
+  if (syncEl) {
+    const hasKeycard = !!localStorage.getItem("noco_mobile_last_keycard");
+    syncEl.textContent = hasKeycard ? "Sync" : "Lokal";
+  }
+  const shieldBtn = document.querySelector(".bento-status [data-app='security']");
+  if (shieldBtn) {
+    shieldBtn.textContent = settings.mobileCode || settings.passkeyEnabled ? "Aktiv" : "Shield";
+  }
+}
+
+function showCoachIfNeeded() {
+  const coach = document.getElementById("coachBanner");
+  if (!coach || !hasCompletedFirstLight()) return;
+  if (localStorage.getItem("noco_mobile_coach_done")) {
+    coach.classList.add("hidden");
+    return;
+  }
+  coach.classList.remove("hidden");
+}
+
+function dismissCoach() {
+  localStorage.setItem("noco_mobile_coach_done", "1");
+  document.getElementById("coachBanner")?.classList.add("hidden");
+}
+
 function loadNote() {
+  if (window.NocoNotes) {
+    window.NocoNotes.reload();
+    syncHomeNoteFromStore();
+    const active = window.NocoNotes.getActiveNote();
+    saveState.textContent = active?.body ? `«${active.title}» geladen.` : "Noch nichts gespeichert.";
+    return;
+  }
   const saved = localStorage.getItem("noco_mobile_note") || "";
   noteInput.value = saved;
   saveState.textContent = saved ? "Letzte Notiz geladen." : "Noch nichts gespeichert.";
 }
 
 function saveNote() {
-  localStorage.setItem("noco_mobile_note", noteInput.value.trim());
+  const body = noteInput.value.trim();
+  if (window.NocoNotes) {
+    const active = window.NocoNotes.getActiveNote();
+    window.NocoNotes.updateNote(active.id, { body });
+  } else {
+    localStorage.setItem("noco_mobile_note", body);
+  }
   saveState.textContent = "Gespeichert um " + new Date().toLocaleTimeString("de-DE", {
     hour: "2-digit",
     minute: "2-digit"
@@ -375,9 +764,9 @@ function renderShortcuts() {
   shortcutGrid.innerHTML = activeShortcuts.map((id) => {
     const shortcut = shortcutById(id);
     return `
-      <button class="shortcut-btn" data-shortcut="${shortcut.id}">
-        <span class="icon-orb ${shortcut.className}">${shortcut.icon}</span>
-        <strong>${shortcut.title}</strong>
+      <button type="button" class="shortcut-btn" data-shortcut="${shortcut.id}">
+        ${renderIconOrb({ id: shortcut.id, className: shortcut.className || "neutral" })}
+        <span class="shortcut-label">${shortcut.title}</span>
       </button>
     `;
   }).join("");
@@ -389,7 +778,7 @@ function renderShortcutEditor() {
     return `
       <button class="shortcut-option" data-shortcut-choice="${choice.id}">
         <span><strong>${choice.title}</strong><br><small>${selected ? "Aktiv" : "Tippen zum Ersetzen"}</small></span>
-        <span class="icon-orb ${choice.className}">${choice.icon}</span>
+        ${renderIconOrb({ id: choice.id, className: choice.className || "neutral" }, "", "sm")}
       </button>
     `;
   }).join("");
@@ -485,6 +874,8 @@ function finishFirstLight() {
     firstLightPanel.classList.remove("firstlight-finish");
     setPage(0);
     resetAutoLockTimer();
+    refreshHomeStatus();
+    showCoachIfNeeded();
   }, 1050);
 }
 
@@ -531,6 +922,7 @@ function showLockScreen(reason = "NOCO Mobile gesperrt") {
 }
 
 async function unlockFromLockScreen() {
+  cancelUnlockHold();
   const ok = await unlockDesktop();
   if (!ok) return;
   isLocked = false;
@@ -538,6 +930,69 @@ async function unlockFromLockScreen() {
   sessionStorage.setItem("noco_mobile_launch_unlocked", "1");
   resetAutoLockTimer();
   showToast("Entsperrt");
+}
+
+function setUnlockHoldProgress(progress) {
+  if (!unlockBtn) return;
+  const clamped = Math.max(0, Math.min(1, progress));
+  unlockBtn.style.setProperty("--hold-progress", String(clamped));
+}
+
+function cancelUnlockHold() {
+  if (unlockHoldRaf) window.cancelAnimationFrame(unlockHoldRaf);
+  unlockHoldRaf = 0;
+  unlockHoldStarted = 0;
+  unlockBtn?.classList.remove("is-holding");
+  setUnlockHoldProgress(0);
+}
+
+function tickUnlockHold() {
+  if (!unlockHoldStarted) return;
+  const progress = (Date.now() - unlockHoldStarted) / UNLOCK_HOLD_MS;
+  setUnlockHoldProgress(progress);
+  if (progress >= 1) {
+    cancelUnlockHold();
+    void unlockFromLockScreen();
+    return;
+  }
+  unlockHoldRaf = window.requestAnimationFrame(tickUnlockHold);
+}
+
+function startUnlockHold() {
+  if (!unlockBtn || !lockScreen || lockScreen.classList.contains("hidden")) return;
+  cancelUnlockHold();
+  unlockHoldStarted = Date.now();
+  unlockBtn.classList.add("is-holding");
+  setUnlockHoldProgress(0);
+  unlockHoldRaf = window.requestAnimationFrame(tickUnlockHold);
+}
+
+function initLockScreenGestures() {
+  if (!unlockBtn) return;
+  unlockBtn.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    startUnlockHold();
+  });
+  ["pointerup", "pointerleave", "pointercancel"].forEach((type) => {
+    unlockBtn.addEventListener(type, cancelUnlockHold);
+  });
+
+  lockScreen?.addEventListener("touchstart", (event) => {
+    if (event.target.closest("button, input, textarea, .lock-edit")) return;
+    const touch = event.touches[0];
+    lockSwipeStart = { x: touch.clientX, y: touch.clientY, at: Date.now() };
+  }, { passive: true });
+
+  lockScreen?.addEventListener("touchend", (event) => {
+    if (!lockSwipeStart) return;
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - lockSwipeStart.x;
+    const dy = touch.clientY - lockSwipeStart.y;
+    lockSwipeStart = null;
+    if (dy < -70 && Math.abs(dy) > Math.abs(dx) * 1.15) {
+      void unlockFromLockScreen();
+    }
+  }, { passive: true });
 }
 
 function resetAutoLockTimer() {
@@ -556,25 +1011,26 @@ function toggleLockWidget(id) {
 }
 
 function updatePageToggle() {
-  if (!pageToggleBtn) return;
-  const onDesktop = currentPage === 1;
-  pageToggleBtn.textContent = onDesktop ? "Home" : "Apps";
-  pageToggleBtn.dataset.goPage = onDesktop ? "0" : "1";
-  pageToggleBtn.setAttribute("aria-label", onDesktop ? "Zurueck zum Home" : "Desktop Apps oeffnen");
+  updateIslandUI();
 }
 
 function getTrackWidth() {
   return screenTrack?.clientWidth || Math.min(window.innerWidth, 430);
 }
 
+function setPageStageTransform(page, dragPx = 0, animate = true) {
+  if (!pageStage) return;
+  const width = getTrackWidth();
+  pageStage.classList.toggle("dragging", !animate);
+  pageStage.style.transform = `translate3d(${(-page * width) + dragPx}px, 0, 0)`;
+}
+
 function scrollTrackToPage(page, smooth = false) {
-  if (!screenTrack) return;
-  const left = page * getTrackWidth();
   pageScrollLock = true;
-  screenTrack.scrollTo({ left, behavior: smooth ? "smooth" : "auto" });
+  setPageStageTransform(page, 0, smooth);
   window.setTimeout(() => {
     pageScrollLock = false;
-  }, smooth ? 420 : 0);
+  }, smooth ? 440 : 0);
 }
 
 function applyPageState(page, options = {}) {
@@ -584,7 +1040,9 @@ function applyPageState(page, options = {}) {
   document.documentElement.style.setProperty("--page", currentPage);
   screenTrack?.style.setProperty("--page", currentPage);
   document.body.classList.toggle("desktop-page", currentPage === 1);
-  document.querySelectorAll(".screen-track > .screen").forEach((screen, index) => {
+  document.body.classList.toggle("home-page", currentPage === 0);
+  updateHomeEditChrome();
+  document.querySelectorAll("#pageStage > .screen, .page-stage > .screen").forEach((screen, index) => {
     const active = index === currentPage;
     screen.classList.toggle("is-active", active);
     screen.setAttribute("aria-hidden", active ? "false" : "true");
@@ -593,18 +1051,19 @@ function applyPageState(page, options = {}) {
     }
   });
   if (scroll) scrollTrackToPage(currentPage, smooth);
-  screenTitle.textContent = currentPage === 0 ? "Home" : "Desktop";
+  screenTitle.textContent = currentPage === 0 ? "Home" : "Apps";
   updatePageToggle();
   if (currentPage === 1) {
-    repairDesktopGrid("page");
-    applyDesktopLayout();
-    ensureDesktopGridVisible();
+    renderLibraryGrid();
+    refreshLibraryExpand();
   }
   if (editMode) setEditMode(true);
-  document.querySelectorAll(".dot").forEach((dot) => {
-    dot.classList.toggle("active", Number(dot.dataset.page) === currentPage);
-  });
-  if (haptic && previousPage !== currentPage) hapticTap();
+  updateIslandUI();
+  if (haptic && previousPage !== currentPage) {
+    hapticTap();
+    showToast(currentPage === 0 ? "Home" : "Apps", 900);
+  }
+  updateIslandUI();
 }
 
 function setPage(page) {
@@ -612,14 +1071,21 @@ function setPage(page) {
 }
 
 function initPageScrollSync() {
-  screenTrack?.addEventListener("scroll", () => {
-    if (pageScrollLock || pageDrag) return;
-    const width = getTrackWidth();
-    if (!width) return;
-    const next = Math.round(screenTrack.scrollLeft / width);
-    if (next === currentPage) return;
-    applyPageState(next, { scroll: false, haptic: true });
-  }, { passive: true });
+  pageStage?.addEventListener("transitionend", (event) => {
+    if (event.propertyName !== "transform") return;
+    document.body.classList.remove("noco-transitioning");
+    if (gestureSafetyTimer) {
+      window.clearTimeout(gestureSafetyTimer);
+      gestureSafetyTimer = null;
+    }
+    if (currentPage === 1) repairDesktopGrid("page-transition");
+  });
+}
+
+function isTapTarget(target) {
+  return !!target?.closest?.(
+    "button, a, input, textarea, select, label, [role='button'], [data-app], [data-folder], [data-library-folder], [data-action], [data-shortcut], [data-open-panel], .app-icon, .folder-tile, .quick-tile, .library-app, .library-head, .shortcut-btn, .mini-action, .beam-strip, .forge-install, .icon-orb, .icon-orb-glyph, [data-app-icon], .widget-add-fab, .edit-fab, .noco-ai-chip, .noco-ai-send"
+  );
 }
 
 function canStartPageSwipe(event) {
@@ -627,14 +1093,16 @@ function canStartPageSwipe(event) {
   if (document.body.classList.contains("sheet-open")) return false;
   if (!spotlightPanel?.classList.contains("hidden")) return false;
   if (!hubPanel?.classList.contains("hidden")) return false;
+  if (document.body.classList.contains("hub-open")) return false;
+  if (document.body.classList.contains("island-open")) return false;
   if (!appSheet?.classList.contains("hidden")) return false;
   if (!lockScreen?.classList.contains("hidden")) return false;
   if (!firstLightPanel?.classList.contains("hidden")) return false;
   const target = event.target;
   if (!target?.closest?.(".screen-track")) return false;
-  if (target.closest(".mobile-topbar, .page-dots")) return false;
+  if (target.closest(".mobile-topbar, .page-dots, .island-zone, .island-menu")) return false;
+  if (isTapTarget(target)) return false;
   if (target.closest("textarea, input, select, [contenteditable='true']")) return false;
-  if (target.closest(".edit-remove, .beam-glyph")) return false;
   return true;
 }
 
@@ -669,15 +1137,15 @@ function movePageDrag(event) {
     if (intent !== "horizontal") return;
     pageDrag.active = true;
     pageScrollLock = true;
-    screenTrack?.classList.add("page-swiping");
+    pageStage?.classList.add("page-swiping");
   }
   if (event.cancelable) event.preventDefault();
-  suppressClickUntil = Date.now() + GESTURE.clickSuppressMs;
   const width = getTrackWidth();
   const atEdge = (pageDrag.base === 0 && dx > 0) || (pageDrag.base === 1 && dx < 0);
-  const easedDx = atEdge ? dx * 0.16 : dx;
-  const left = Math.max(0, Math.min(width, pageDrag.base * width - easedDx));
-  screenTrack.scrollLeft = left;
+  const followDx = atEdge ? dx * 0.22 : dx;
+  const maxDrag = width;
+  const clampedDx = Math.max(-maxDrag, Math.min(maxDrag, followDx));
+  setPageStageTransform(pageDrag.base, clampedDx, false);
 }
 
 function endPageDrag() {
@@ -688,17 +1156,23 @@ function endPageDrag() {
   const rawDx = pageDrag.rawDx;
   const velocity = Math.abs(rawDx) / Math.max(1, Date.now() - pageDrag.at);
   pageDrag = null;
-  screenTrack?.classList.remove("page-swiping");
+  pageStage?.classList.remove("page-swiping");
   if (!wasActive) {
     pageScrollLock = false;
-    scrollTrackToPage(base, false);
+    scrollTrackToPage(base, true);
     return;
   }
+  if (Math.abs(rawDx) < 10) {
+    pageScrollLock = false;
+    scrollTrackToPage(base, true);
+    return;
+  }
+  suppressClickUntil = Date.now() + GESTURE.clickSuppressMs;
   let next = base;
   if (Math.abs(rawDx) > width * GESTURE.pageSnap || velocity > GESTURE.pageVelocity) {
     next = rawDx < 0 ? base + 1 : base - 1;
-  } else {
-    next = Math.round(screenTrack.scrollLeft / Math.max(1, width));
+  } else if (Math.abs(rawDx) > width * 0.14) {
+    next = rawDx < 0 ? base + 1 : base - 1;
   }
   next = Math.max(0, Math.min(1, next));
   void goToPage(next);
@@ -752,6 +1226,7 @@ function resolveBeamTool(id) {
   }
   if (id === "beam:security-scan") {
     openApp("security");
+    window.setTimeout(() => runSecurityScan(), 320);
     return;
   }
   if (id === "beam:sync") {
@@ -778,6 +1253,18 @@ function resolveBeamTool(id) {
     openApp("arcade");
     return;
   }
+  if (id === "beam:calculator") {
+    openApp("calculator");
+    return;
+  }
+  if (id === "beam:tasks") {
+    openApp("tasks");
+    return;
+  }
+  if (id === "beam:timer") {
+    openApp("timer");
+    return;
+  }
 }
 
 function resolveSearchItem(item) {
@@ -800,10 +1287,16 @@ function resolveSearchItem(item) {
   openApp(item.app || item.id.split(":")[0]);
 }
 
+function beamResultIconFor(item) {
+  const appId = item.app || String(item.id).replace(/^beam:/, "") || item.id;
+  return renderIconOrb({ id: appId, className: getAppMeta(appId).className }, "", "sm");
+}
+
 function renderSpotlightResultButton(item) {
   return `
     <button type="button" class="spotlight-result" data-spotlight-open="${item.id}">
-      <span><strong>${item.title}</strong><small>${item.type}</small></span>
+      <span class="beam-result-icon">${beamResultIconFor(item)}</span>
+      <span class="spotlight-result-copy"><strong>${item.title}</strong><small>${item.type}</small></span>
       <em>${item.keywords.split(" ").slice(0, 4).join(" ")}</em>
     </button>
   `;
@@ -821,8 +1314,8 @@ function renderSpotlightResults(query = "") {
         <div class="beam-tool-grid">
           ${tools.map((item) => `
             <button type="button" class="beam-tool" data-spotlight-open="${item.id}">
-              <strong>${item.title}</strong>
-              <small>${item.type}</small>
+              <span class="beam-result-icon">${beamResultIconFor(item)}</span>
+              <span><strong>${item.title}</strong><small>${item.type}</small></span>
             </button>
           `).join("")}
         </div>
@@ -858,6 +1351,7 @@ function renderSpotlightResults(query = "") {
 }
 
 function openBeam() {
+  setIslandExpanded(false);
   closeHub();
   spotlightPanel?.classList.remove("hidden");
   renderSpotlightResults("");
@@ -877,7 +1371,14 @@ function getAppMeta(appId) {
   if (base) return base;
   const forge = forgeApps.find((item) => item.id === appId);
   if (forge) return { id: forge.id, title: forge.title, icon: forge.icon, className: forge.className };
-  const titles = { settings: { id: "settings", title: "Core", icon: "C", className: "core" }, pay: { id: "pay", title: "Pay", icon: "P", className: "pay" }, notes: { id: "notes", title: "Notizen", icon: "N", className: "notes" }, web: { id: "web", title: "Web", icon: "W", className: "explorer" }, exclusive: { id: "exclusive", title: "Exclusive", icon: "X", className: "exclusive" } };
+  const titles = {
+    settings: { id: "settings", title: "Core", icon: "C", className: "core" },
+    nocoai: { id: "nocoai", title: "NOCO AI", icon: "✧", className: "core" },
+    pay: { id: "pay", title: "Pay", icon: "P", className: "pay" },
+    notes: { id: "notes", title: "Notizen", icon: "N", className: "notes" },
+    web: { id: "web", title: "Web", icon: "W", className: "explorer" },
+    exclusive: { id: "exclusive", title: "Exclusive", icon: "X", className: "exclusive" }
+  };
   return titles[appId] || { id: appId, title: appId, icon: appId.slice(0, 1).toUpperCase(), className: "forge" };
 }
 
@@ -886,7 +1387,7 @@ function openFolder(folderId) {
   const titleMap = { games: "Spiele", design: "Design", workspace: "Workspace" };
   const cards = ids.map((id) => {
     const app = getAppMeta(id);
-    return `<button type="button" class="folder-app desktop-tile" data-app="${app.id}"><span class="icon-orb ${app.className}">${app.icon}</span><strong>${app.title}</strong></button>`;
+    return `<button type="button" class="folder-app desktop-tile" data-app="${app.id}">${renderIconOrb(app)}<strong>${app.title}</strong></button>`;
   }).join("");
   renderAppSheet("folder-" + folderId, appShell(`
     ${appHero(titleMap[folderId] || "Ordner", "NOCO Folder", "Schneller App-Ordner für deinen Mobile Desktop.")}
@@ -1001,15 +1502,33 @@ function refreshWidgetEditButtons() {
   });
 }
 
+function updateHomeEditChrome() {
+  const onHome = currentPage === 0;
+  const showChrome = onHome && editMode;
+  if (homeEditChrome) homeEditChrome.hidden = !showChrome;
+  if (homeEditFab) {
+    homeEditFab.setAttribute("aria-label", "Bearbeiten beenden");
+  }
+}
+
 function setEditMode(value) {
   editMode = !!value;
+  if (editMode) setIslandExpanded(false);
   const onDesktop = currentPage === 1;
   document.body.classList.toggle("edit-mode", editMode);
   document.body.classList.toggle("desktop-page", currentPage === 1);
+  document.body.classList.toggle("home-page", currentPage === 0);
   editBtn.setAttribute("aria-label", editMode ? "Bearbeiten beenden" : (onDesktop ? "Desktop anpassen" : "Home anpassen"));
   refreshWidgetEditButtons();
+  updateHomeEditChrome();
   if (editMode && onDesktop) renderDesktopLibrary();
-  showToast(editMode ? (onDesktop ? "Desktop anpassen aktiv" : "Home anpassen aktiv") : "Anpassen beendet");
+  showToast(editMode ? (onDesktop ? "Desktop anpassen aktiv" : "Home: verschieben, + fuer Widgets") : "Anpassen beendet");
+}
+
+function openWidgetPanelFromHome() {
+  renderWidgetLibrary();
+  widgetPanel?.classList.remove("hidden");
+  document.body.classList.add("sheet-open");
 }
 
 function visibleWidgetIds() {
@@ -1017,14 +1536,25 @@ function visibleWidgetIds() {
     const saved = JSON.parse(localStorage.getItem("noco_mobile_visible_widgets") || "null");
     if (Array.isArray(saved) && saved.length) return saved.filter((id) => widgetDefinitions[id]);
   } catch (_) {}
-  return Array.from(document.querySelectorAll(".draggable-widget")).map((item) => item.dataset.widgetId);
+  const fromDom = Array.from(document.querySelectorAll(".home-bento .draggable-widget:not([hidden])")).map((item) => item.dataset.widgetId);
+  if (fromDom.length) return fromDom;
+  return ["hero", "clock", "status", "shortcuts", "nocoai", "notes", "sync", "feed"];
 }
 
 function saveVisibleWidgets(ids) {
   localStorage.setItem("noco_mobile_visible_widgets", JSON.stringify(ids));
 }
 
+function createNocoAIWidgetElement() {
+  const card = document.createElement("div");
+  card.className = "noco-ai-widget widget-card draggable-widget generated-widget bento-nocoai";
+  card.dataset.widgetId = "nocoai";
+  card.innerHTML = window.NocoAI?.buildWidgetMarkup?.() || "<p>NOCO AI</p>";
+  return card;
+}
+
 function createWidgetElement(id) {
+  if (id === "nocoai") return createNocoAIWidgetElement();
   const definition = widgetDefinitions[id];
   if (!definition) return null;
   const card = document.createElement("div");
@@ -1043,8 +1573,327 @@ function createWidgetElement(id) {
   return card;
 }
 
+function highlightCoreTarget(selector) {
+  const sheet = sheetContent || document.getElementById("sheetContent");
+  if (!sheet) return;
+  const el = sheet.querySelector(selector);
+  if (!el) return;
+  window.setTimeout(() => {
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("ai-core-highlight");
+    window.setTimeout(() => el.classList.remove("ai-core-highlight"), 2400);
+  }, 220);
+}
+
+async function navigateCoreFromAI(opts = {}) {
+  const { section = "deck", toggle, value, autoLockSeconds, highlight } = opts;
+  if (section) settingsActiveSection = section;
+
+  if (autoLockSeconds != null) {
+    settings.autoLockSeconds = autoLockSeconds;
+    settings.autoLock = value !== false;
+  } else if (toggle != null && value !== undefined) {
+    if (toggle === "codeLock" && value && !settings.mobileCode && !settings.passkeyEnabled) {
+      await openApp("settings");
+      setMobileCode();
+      return;
+    }
+    settings[toggle] = !!value;
+    if (toggle === "codeLock" && !settings.codeLock) {
+      sessionStorage.removeItem("noco_mobile_unlocked");
+      sessionStorage.removeItem("noco_mobile_launch_unlocked");
+    }
+  }
+
+  saveSettings();
+  applySettings();
+  if (settings.autoLock) resetAutoLockTimer();
+
+  invalidateAppCache("settings");
+  await openApp("settings");
+  refreshCoreSection();
+  syncCoreToggleStates();
+
+  if (highlight === "lock-time") highlightCoreTarget(".lock-time-grid");
+  else if (toggle) highlightCoreTarget(`[data-toggle-setting="${toggle}"]`);
+}
+
+function setHomeWidgetsFromAI(ids) {
+  const next = (Array.isArray(ids) ? ids : []).filter((id) => widgetDefinitions[id]);
+  if (!next.includes("hero")) next.unshift("hero");
+  saveVisibleWidgets(next.length ? next : ["hero"]);
+  applyVisibleWidgets();
+  renderWidgetLibrary();
+  saveMobileOrder();
+  void goToPage(0);
+}
+
+function addHomeWidgetFromAI(id) {
+  if (!widgetDefinitions[id]) return;
+  const visible = visibleWidgetIds();
+  if (!visible.includes(id)) toggleWidget(id);
+  else {
+    applyVisibleWidgets();
+    void goToPage(0);
+  }
+}
+
+function removeHomeWidgetFromAI(id) {
+  const visible = visibleWidgetIds();
+  if (!visible.includes(id)) return;
+  saveVisibleWidgets(visible.filter((item) => item !== id));
+  applyVisibleWidgets();
+  renderWidgetLibrary();
+  saveMobileOrder();
+  refreshWidgetEditButtons();
+}
+
+function setThemeFromAI(themeId) {
+  const allowed = ["aurora", "midnight", "sunset", "forest"];
+  if (!allowed.includes(themeId)) return;
+  settings.theme = themeId;
+  saveSettings();
+  applySettings();
+}
+
+const HOME_WIDGET_PACKS = {
+  minimal: ["hero", "clock"],
+  standard: ["hero", "clock", "status", "shortcuts", "nocoai", "notes"],
+  full: ["hero", "clock", "status", "shortcuts", "nocoai", "notes", "sync", "feed"],
+  focus: ["hero", "clock", "focusMini", "notes"],
+  ai: ["hero", "nocoai", "clock", "notes", "shortcuts"],
+  games: ["hero", "clock", "forgePick", "shortcuts"]
+};
+
+function enableGlassModeFromAI() {
+  settings.glassBoost = true;
+  settings.liveWallpaper = true;
+  settings.motion = true;
+  saveSettings();
+  applySettings();
+}
+
+function getSystemSnapshotForAI() {
+  const widgets = visibleWidgetIds().map((id) => widgetDefinitions[id]?.title || id);
+  window.NocoAIChats?.reload?.();
+  window.NocoNotes?.reload?.();
+  const chatCount = window.NocoAIChats?.listChats?.()?.length ?? 0;
+  const noteCount = window.NocoNotes?.listNotes?.()?.length ?? 0;
+  return {
+    theme: settings.theme,
+    autoLock: settings.autoLock,
+    autoLockSeconds: settings.autoLockSeconds || 60,
+    glassBoost: settings.glassBoost,
+    liveWallpaper: settings.liveWallpaper,
+    motion: settings.motion,
+    codeLock: settings.codeLock,
+    payBalance: formatEuro(settings.payBalance),
+    exclusiveActive: isExclusiveActive(),
+    nocoAiPlus: !!settings.nocoAiPlus,
+    widgets,
+    installed: getInstalledApps().length,
+    chatCount,
+    noteCount
+  };
+}
+
+function getNocoAIHelpers() {
+  return {
+    openApp: (id) => {
+      void openApp(id);
+    },
+    openBeam: () => openBeam(),
+    openHub: () => openHub(),
+    goToPage: (page) => {
+      void goToPage(page);
+    },
+    getAppTitle: (id) => getAppMeta(id).title,
+    openWidgetPanel: () => openWidgetPanelFromHome(),
+    enableEditMode: () => setEditMode(true),
+    openLibraryFolder: (folderId) => toggleLibraryFolder(folderId),
+    listInstalledApps: () => getInstalledApps().map((id) => getAppMeta(id).title),
+    getForgeCatalog: () => forgeApps.map((app) => ({ id: app.id, title: app.title, text: app.text || "", exclusive: !!app.exclusive })),
+    getSettings: () => ({ ...settings }),
+    isExclusiveActive: () => isExclusiveActive(),
+    isAppInstalled: (id) => getInstalledApps().includes(id),
+    openExclusive: () => {
+      void openApp("exclusive");
+    },
+    activateNocoAiPlus: () => {
+      void openApp("exclusive");
+      showToast("Unbegrenzte NOCO AI ist in Exclusive enthalten");
+    },
+    createNote: ({ title, body, example, openApp: openNotesApp }) => {
+      if (!window.NocoNotes) return null;
+      const t = example ? "Beispiel" : String(title || "Neue Notiz").trim().slice(0, 60) || "Neue Notiz";
+      const b = example ? "" : String(body || "");
+      const note = window.NocoNotes.createNote(t, b);
+      syncHomeNoteFromStore();
+      invalidateAppCache("notes");
+      if (openNotesApp) void openApp("notes", { force: true });
+      return note;
+    },
+    createTask: ({ text, example, openApp: openTasksApp }) => {
+      const label = example ? "Beispiel" : String(text || "Beispiel").trim().slice(0, 120) || "Beispiel";
+      const tasks = loadTasks();
+      tasks.unshift({ id: "t_" + Date.now(), text: label, done: false });
+      saveTasksList(tasks);
+      invalidateAppCache("tasks");
+      if (openTasksApp !== false) void openApp("tasks", { force: true });
+      return label;
+    },
+    appendToActiveNote: (text) => {
+      if (!window.NocoNotes) return null;
+      const active = window.NocoNotes.getActiveNote();
+      const next = active.body ? `${active.body}\n${text}` : text;
+      window.NocoNotes.updateNote(active.id, { body: next });
+      syncHomeNoteFromStore();
+      return window.NocoNotes.getActiveNote();
+    },
+    searchChats: (query, options) => {
+      window.NocoAIChats?.reload?.();
+      return window.NocoAIChats?.searchChats?.(query, options) || [];
+    },
+    searchNotes: (query, options) => {
+      window.NocoNotes?.reload?.();
+      return window.NocoNotes?.searchNotes?.(query, options) || [];
+    },
+    openChat: (chatId) => {
+      if (!window.NocoAIChats?.setActive(chatId)) return false;
+      const root = sheetContent?.querySelector("[data-noco-ai-root]");
+      if (currentApp === "nocoai" && root && window.NocoAI) {
+        const log = root.querySelector("[data-noco-ai-log]");
+        window.NocoAI.renderLogFromStore?.(log, false);
+        const nameEl = root.querySelector("[data-noco-ai-active-name]");
+        if (nameEl) nameEl.textContent = window.NocoAIChats.getActiveChat()?.name || "Chat";
+        window.NocoAI.uiRefreshChats?.();
+        global.dispatchEvent?.(new CustomEvent("noco-ai-updated"));
+      } else {
+        void openApp("nocoai");
+      }
+      return true;
+    },
+    openNote: (noteId) => {
+      if (!window.NocoNotes?.setActive(noteId)) return false;
+      syncHomeNoteFromStore();
+      void openApp("notes");
+      return true;
+    },
+    summarizeNoteMatch: (match, userQuery) => {
+      if (!match) return "";
+      const terms = String(userQuery || "")
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((w) => w.length >= 3);
+      const body = (match.preview || "").toLowerCase();
+      const hit = terms.find((t) => body.includes(t));
+      return hit ? `Treffer im Text: «${hit}»` : "Passende Notiz gefunden";
+    },
+    isInNocoAI: () => currentApp === "nocoai" && appSheet && !appSheet.classList.contains("hidden"),
+    navigateCore: (opts) => {
+      void navigateCoreFromAI(opts || {});
+    },
+    showLockScreenPreview: () => showLockScreen("Lock Screen Preview"),
+    setHomeWidgets: (ids) => setHomeWidgetsFromAI(ids),
+    addHomeWidget: (id) => addHomeWidgetFromAI(id),
+    removeHomeWidget: (id) => removeHomeWidgetFromAI(id),
+    getWidgetTitle: (id) => widgetDefinitions[id]?.title || id,
+    installForgeApp: (id) => {
+      void installForgeApp(id, { skipReopen: true });
+    },
+    uninstallForgeApp: (id) => {
+      void uninstallForgeApp(id, { skipReopen: true });
+    },
+    setTheme: (themeId) => setThemeFromAI(themeId),
+    getSystemSnapshot: () => getSystemSnapshotForAI(),
+    listHomeWidgets: () => visibleWidgetIds(),
+    resetHomeWidgets: () => setHomeWidgetsFromAI(HOME_WIDGET_PACKS.standard),
+    setHomeWidgetPack: (pack) => {
+      const ids = HOME_WIDGET_PACKS[pack];
+      if (ids) setHomeWidgetsFromAI(ids);
+    },
+    enableGlassMode: () => {
+      enableGlassModeFromAI();
+      void navigateCoreFromAI({ section: "deck", toggle: "glassBoost", value: true });
+    },
+    addPayBalance: (amount) => {
+      changeBalance(Number(amount) || 10, "NOCO AI Aufladung", "ai");
+      showToast("+" + (Number(amount) || 10) + " EUR");
+    },
+    openThemes: () => void openApp("themes"),
+    openSecurity: () => void openApp("security"),
+    openForge: () => void openApp("forge"),
+    openSync: () => void openApp("sync"),
+    openPay: () => void openApp("pay"),
+    deleteNote: (noteId) => window.NocoNotes?.deleteNote?.(noteId),
+    deleteActiveNote: () => {
+      const active = window.NocoNotes?.getActiveNote?.();
+      if (active?.id) window.NocoNotes.deleteNote(active.id);
+      syncHomeNoteFromStore();
+    },
+    addReminder: ({ text, minutes }) => addMemoryReminder(text, minutes),
+    openMemories: () => {
+      void openApp("memories");
+    },
+    applyTimerMinutes: (minutes) => {
+      if (timerState.running) stopFocusTimer();
+      timerState.mode = "custom";
+      timerState.customMinutes = Math.max(1, Math.min(180, Math.floor(Number(minutes) || 1)));
+      timerState.totalSeconds = timerState.customMinutes * 60;
+      timerState.seconds = timerState.totalSeconds;
+      timerState.endAt = null;
+      timerState.running = false;
+      invalidateAppCache("timer");
+      updateTimerLiveSurfaces();
+    },
+    startTimerCountdown: () => {
+      startFocusTimer();
+    },
+    openTimerApp: () => {
+      refreshTimerApp();
+    },
+    listReminders: () => (window.NocoReminders?.active?.() || []).map((r) => r.text),
+    getTimerStatus: () => getTimerStatusForAI(),
+    getNextReminder: () => getNextReminderForAI(),
+    listRemindersDetailed: () => listRemindersDetailedForAI(),
+    getTasks: () => loadTasks(),
+    completeTask: (needle) => {
+      const q = String(needle || "").toLowerCase().trim();
+      if (!q) return null;
+      const tasks = loadTasks();
+      const hit = tasks.find((t) => !t.done && String(t.text || "").toLowerCase().includes(q));
+      if (!hit) return null;
+      const next = tasks.map((t) => (t.id === hit.id ? { ...t, done: true } : t));
+      saveTasksList(next);
+      invalidateAppCache("tasks");
+      return hit;
+    },
+    startNewChat: ({ name, example } = {}) => {
+      if (!window.NocoAIChats) return;
+      const chatName = example ? "Beispiel" : String(name || "Neuer Chat").trim().slice(0, 40) || "Neuer Chat";
+      window.NocoAIChats.createChat(chatName);
+      if (currentApp === "nocoai") {
+        const root = sheetContent?.querySelector("[data-noco-ai-root]");
+        const log = root?.querySelector("[data-noco-ai-log]");
+        window.NocoAI?.renderLogFromStore?.(log, false);
+        const nameEl = root?.querySelector("[data-noco-ai-active-name]");
+        if (nameEl) nameEl.textContent = window.NocoAIChats.getActiveChat()?.name || "Chat";
+        window.NocoAI?.uiRefreshChats?.();
+      }
+    }
+  };
+}
+
+function mountNocoAIWidgetElement(element) {
+  const inner = element?.querySelector("[data-noco-ai-widget]");
+  if (inner && window.NocoAI?.mountWidget) {
+    window.NocoAI.mountWidget(inner, getNocoAIHelpers());
+  }
+}
+
 function applyVisibleWidgets() {
-  const home = document.querySelector(".home-screen");
+  const home = document.querySelector(".home-bento") || document.querySelector(".home-screen");
+  if (!home) return;
   const ids = visibleWidgetIds();
   Object.keys(widgetDefinitions).forEach((id) => {
     let element = home.querySelector(`[data-widget-id="${id}"]`);
@@ -1053,25 +1902,43 @@ function applyVisibleWidgets() {
         element = createWidgetElement(id);
         if (element) home.appendChild(element);
       }
-      if (element) element.hidden = false;
+      if (element) {
+        element.hidden = false;
+        if (id === "nocoai") mountNocoAIWidgetElement(element);
+      }
     } else if (element) {
       element.hidden = true;
     }
   });
+  refreshWidgetEditButtons();
 }
 
 function renderWidgetLibrary() {
   if (!widgetLibrary) return;
   const visible = visibleWidgetIds();
-  widgetLibrary.innerHTML = Object.entries(widgetDefinitions).map(([id, definition]) => {
-    const active = visible.includes(id);
-    return `
-      <button class="widget-choice" data-widget-toggle="${id}">
-        <span><strong>${definition.title}</strong><br><small>${definition.text}</small></span>
-        <strong>${active ? "Entfernen" : "+ Hinzufuegen"}</strong>
-      </button>
-    `;
-  }).join("");
+  const sections = [
+    { label: "Highlights", ids: ["nocoai", "hero", "clock", "status", "shortcuts"] },
+    { label: "Mehr", ids: ["notes", "sync", "feed", "focusMini", "batteryLab", "forgePick", "payMini", "securityMini"] }
+  ];
+  widgetLibrary.innerHTML = sections
+    .map((section) => {
+      const items = section.ids
+        .filter((id) => widgetDefinitions[id])
+        .map((id) => {
+          const definition = widgetDefinitions[id];
+          const active = visible.includes(id);
+          return `
+            <button type="button" class="widget-choice" data-widget-toggle="${id}">
+              <span><strong>${definition.title}</strong><br><small>${definition.text}</small></span>
+              <strong>${active ? "Entfernen" : "+ Hinzufuegen"}</strong>
+            </button>
+          `;
+        })
+        .join("");
+      if (!items) return "";
+      return `<p class="widget-section-label">${section.label}</p>${items}`;
+    })
+    .join("");
 }
 
 function toggleWidget(id) {
@@ -1095,8 +1962,53 @@ function appHero(title, eyebrow, text) {
   `;
 }
 
-function appShell(content) {
-  return `<div class="mobile-app-body" data-app-scroll-area>${content}</div>`;
+function appShell(content, extraClass = "") {
+  return `<div class="mobile-app-body noco-glass-scroll ${extraClass}" data-app-scroll-area>${content}</div>`;
+}
+
+function nocoAITemplate() {
+  const body = window.NocoAI?.buildTemplate?.() || "<p>NOCO AI wird geladen …</p>";
+  return appShell(body);
+}
+
+function mountNocoAIIfNeeded(appId) {
+  if (appId !== "nocoai" || !window.NocoAI) return;
+  const root = sheetContent?.querySelector("[data-noco-ai-root]");
+  if (!root) return;
+  window.NocoAI.mount(root, getNocoAIHelpers());
+  window.NocoAI.focusChatInput?.(root);
+}
+
+function mountNotesIfNeeded(appId) {
+  if (appId !== "notes" || !window.NocoNotes) return;
+  const root = sheetContent?.querySelector("[data-notes-app]");
+  if (!root) return;
+  root.querySelectorAll("[data-note-select]").forEach((btn) => {
+    if (btn.dataset.noteLongBound === "1") return;
+    btn.dataset.noteLongBound = "1";
+    let timer = null;
+    const clear = () => {
+      if (timer) window.clearTimeout(timer);
+      timer = null;
+    };
+    btn.addEventListener("pointerdown", () => {
+      clear();
+      timer = window.setTimeout(() => {
+        const id = btn.dataset.noteSelect;
+        const note = window.NocoNotes.listNotes().find((n) => n.id === id);
+        const sheet = root.querySelector("[data-notes-rename-sheet]");
+        const input = root.querySelector("[data-notes-rename-input]");
+        if (!sheet || !note || !input) return;
+        sheet.dataset.renameId = id;
+        input.value = note.title;
+        sheet.classList.remove("hidden");
+        if (navigator.vibrate) navigator.vibrate([8, 36, 8]);
+      }, 520);
+    });
+    btn.addEventListener("pointerup", clear);
+    btn.addEventListener("pointerleave", clear);
+    btn.addEventListener("pointercancel", clear);
+  });
 }
 
 function subMenu(title, eyebrow, content, open = false) {
@@ -1110,28 +2022,513 @@ function subMenu(title, eyebrow, content, open = false) {
   `;
 }
 
-function renderAppSheet(appId, html) {
-  currentApp = appId;
-  sheetContent.innerHTML = html;
-  cancelSheetSwipe();
-  appSheet.classList.remove("hidden");
-  document.body.classList.add("sheet-open");
+function cacheAppState(appId) {
+  if (!appId || settings.keepAppsAlive === false) return;
   const card = appSheet.querySelector(".sheet-card");
-  if (card) {
-    card.scrollTop = 0;
-    card.classList.remove("sheet-dragging");
-    card.style.transform = "";
-    card.style.opacity = "";
-    requestAnimationFrame(() => {
-      card.scrollTop = 0;
-    });
+  appCache.set(appId, {
+    html: sheetContent.innerHTML,
+    scrollTop: card?.scrollTop || 0
+  });
+}
+
+const VOLATILE_APP_IDS = new Set([
+  "tapdash", "colorcatch", "memorygrid", "dodgerun", "runner",
+  "calculator", "timer", "memories", "tasks", "weather", "flashlight", "quotes", "sketch", "breath", "nocoai", "notes"
+]);
+
+function invalidateAppCache(appId) {
+  if (appId) appCache.delete(appId);
+}
+
+function loadTasks() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("noco_mobile_tasks") || "[]");
+    return Array.isArray(saved) ? saved.filter((t) => t && t.text) : [];
+  } catch (_) {
+    return [];
   }
 }
 
+function saveTasksList(tasks) {
+  localStorage.setItem("noco_mobile_tasks", JSON.stringify(tasks));
+}
+
+function formatTimerDisplay(totalSeconds) {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return String(m).padStart(2, "0") + ":" + String(r).padStart(2, "0");
+}
+
+const TIMER_MODE_LABELS = { focus: "Fokus", break: "Pause", quick: "Quick", custom: "Custom" };
+
+function playAlarmSound() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const beep = (freq, at, dur) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime + at);
+      gain.gain.exponentialRampToValueAtTime(0.22, ctx.currentTime + at + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + at + dur);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + at);
+      osc.stop(ctx.currentTime + at + dur + 0.05);
+    };
+    beep(880, 0, 0.12);
+    beep(1046, 0.16, 0.12);
+    beep(1318, 0.32, 0.18);
+    beep(1046, 0.54, 0.2);
+    window.setTimeout(() => {
+      try {
+        ctx.close();
+      } catch (_) {}
+    }, 1200);
+  } catch (_) {}
+  if (typeof navigator.vibrate === "function") {
+    navigator.vibrate([120, 80, 120, 80, 200]);
+  }
+}
+
+function getTimerStatusForAI() {
+  const remainingSec = getTimerRemaining();
+  const endAt = timerState.running && timerState.endAt ? timerState.endAt : null;
+  const end = endAt ? new Date(endAt) : null;
+  return {
+    running: !!timerState.running,
+    remainingSec,
+    endAt,
+    display: formatTimerDisplay(remainingSec),
+    endTimeLocale: end ? end.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) : null,
+    endDateLocale: end ? end.toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "short" }) : null,
+    mode: timerState.mode,
+    modeLabel: TIMER_MODE_LABELS[timerState.mode] || "Timer"
+  };
+}
+
+function getNextReminderForAI() {
+  const list = window.NocoReminders?.active?.() || [];
+  if (!list.length) return null;
+  const sorted = list.slice().sort((a, b) => a.fireAt - b.fireAt);
+  const r = sorted[0];
+  const end = new Date(r.fireAt);
+  return {
+    text: r.text,
+    fireAt: r.fireAt,
+    eta: window.NocoReminders?.formatEta?.(r) || "?",
+    remainingSec: Math.max(0, Math.ceil((r.fireAt - Date.now()) / 1000)),
+    endTimeLocale: end.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }),
+    endDateLocale: end.toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "short" })
+  };
+}
+
+function listRemindersDetailedForAI() {
+  return (window.NocoReminders?.active?.() || [])
+    .slice()
+    .sort((a, b) => a.fireAt - b.fireAt)
+    .map((r) => {
+      const end = new Date(r.fireAt);
+      return {
+        text: r.text,
+        fireAt: r.fireAt,
+        eta: window.NocoReminders?.formatEta?.(r) || "?",
+        remainingSec: Math.max(0, Math.ceil((r.fireAt - Date.now()) / 1000)),
+        endTimeLocale: end.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }),
+        endDateLocale: end.toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "short" })
+      };
+    });
+}
+
+function updateTimerLiveSurfaces() {
+  const rem = getTimerRemaining();
+  const running = timerState.running;
+  const display = formatTimerDisplay(rem);
+  const modeLabel = TIMER_MODE_LABELS[timerState.mode] || "Timer";
+
+  const lockTimer = document.getElementById("lockTimerLive");
+  if (lockTimer) {
+    if (running) {
+      lockTimer.classList.remove("hidden");
+      lockTimer.innerHTML = `<span class="timer-live-glyph" aria-hidden="true">◴</span><span><strong>${display}</strong><small>${modeLabel} · laeuft</small></span>`;
+    } else {
+      lockTimer.classList.add("hidden");
+      lockTimer.innerHTML = "";
+    }
+  }
+
+  const homeTimer = document.getElementById("homeTimerLive");
+  if (homeTimer) {
+    if (running) {
+      homeTimer.classList.remove("hidden");
+      homeTimer.innerHTML = `<button type="button" class="timer-live-hit" data-open-timer-live><span class="timer-live-glyph" aria-hidden="true">◴</span><span><strong>Timer ${display}</strong><small>${modeLabel} — tippen</small></span></button>`;
+    } else {
+      homeTimer.classList.add("hidden");
+      homeTimer.innerHTML = "";
+    }
+  }
+
+  const nextRem = getNextReminderForAI();
+  const lockMem = document.getElementById("lockMemoryLive");
+  const homeMem = document.getElementById("homeMemoryLive");
+  const esc = (s) => String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const memoryInner = (text) =>
+    `<span class="timer-live-glyph" aria-hidden="true">◷</span><span><strong>${esc(nextRem.eta)}</strong><small>Memory: ${esc(text)}</small></span>`;
+  [lockMem, homeMem].forEach((el) => {
+    if (!el) return;
+    if (nextRem) {
+      el.classList.remove("hidden");
+      const label = running ? nextRem.text.slice(0, 28) : nextRem.text;
+      if (el === homeMem) {
+        el.innerHTML = `<button type="button" class="timer-live-hit" data-open-memory-live>${memoryInner(label)}</button>`;
+      } else {
+        el.innerHTML = memoryInner(label);
+      }
+    } else {
+      el.classList.add("hidden");
+      el.innerHTML = "";
+    }
+  });
+
+  const focusMini = document.querySelector('[data-widget-id="focusMini"]');
+  if (focusMini) {
+    const p = focusMini.querySelector("p");
+    if (p) {
+      p.textContent = running
+        ? `Timer laeuft: ${display} (${modeLabel})`
+        : widgetDefinitions.focusMini?.text || "Ruhige Schnellsteuerung fuer Fokus.";
+    }
+  }
+
+  if (dynamicIsland) {
+    dynamicIsland.classList.toggle("has-timer-live", running);
+  }
+  updateIslandUI();
+}
+
+function handleTimerFinished() {
+  const labels = { focus: "Fokus beendet", break: "Pause beendet", quick: "Quick Timer fertig", custom: "Timer fertig" };
+  playAlarmSound();
+  showToast(labels[timerState.mode] || "Timer fertig");
+  hapticTap();
+  updateTimerLiveSurfaces();
+  void openApp("timer", { force: true });
+  refreshTimerApp();
+}
+
+function handleReminderFired(reminder) {
+  playAlarmSound();
+  showToast("Memory: " + (reminder?.text || "Erinnerung"));
+  hapticTap();
+  invalidateAppCache("memories");
+  updateTimerLiveSurfaces();
+  void openApp("memories", { force: true });
+  if (currentApp === "memories") refreshMemoriesApp();
+}
+
+function randomMemorySequence(length) {
+  return Array.from({ length }, () => 1 + Math.floor(Math.random() * 4));
+}
+
+function flashMemoryCell(id) {
+  const btn = sheetContent.querySelector(`[data-memory-choice="${id}"]`);
+  if (!btn) return;
+  btn.classList.add("lit");
+  window.setTimeout(() => btn.classList.remove("lit"), 420);
+}
+
+async function playMemorySequence() {
+  if (memoryState.playbackLock || currentApp !== "memorygrid") return;
+  memoryState.playbackLock = true;
+  memoryState.phase = "playback";
+  memoryState.playerIndex = 0;
+  const status = sheetContent.querySelector("[data-memory-status]");
+  if (status) status.textContent = "Merken...";
+  sheetContent.querySelectorAll("[data-memory-choice]").forEach((btn) => {
+    btn.disabled = true;
+  });
+  await sleep(500);
+  for (const cell of memoryState.sequence) {
+    flashMemoryCell(cell);
+    await sleep(520);
+  }
+  memoryState.phase = "input";
+  memoryState.playbackLock = false;
+  if (status) status.textContent = "Dein Zug";
+  sheetContent.querySelectorAll("[data-memory-choice]").forEach((btn) => {
+    btn.disabled = false;
+  });
+}
+
+function startNewMemoryRound() {
+  memoryState.sequence = randomMemorySequence(Math.min(8, memoryState.round + 2));
+  memoryState.playerIndex = 0;
+  memoryState.phase = "playback";
+  invalidateAppCache("memorygrid");
+  openApp("memorygrid");
+  window.setTimeout(() => playMemorySequence(), 120);
+}
+
+function timerTotalForMode(mode) {
+  if (mode === "focus") return 25 * 60;
+  if (mode === "break") return 5 * 60;
+  if (mode === "quick") return 15 * 60;
+  return Math.max(60, Math.min(180 * 60, (timerState.customMinutes || 5) * 60));
+}
+
+function getTimerRemaining() {
+  if (timerState.running && timerState.endAt) {
+    return Math.max(0, Math.ceil((timerState.endAt - Date.now()) / 1000));
+  }
+  return Math.max(0, timerState.seconds);
+}
+
+function refreshTimerDom() {
+  const remaining = getTimerRemaining();
+  timerState.seconds = remaining;
+  const label = sheetContent?.querySelector("[data-timer-display]");
+  const ring = sheetContent?.querySelector("[data-timer-ring]");
+  const status = sheetContent?.querySelector("[data-timer-status]");
+  const toggleLabel = sheetContent?.querySelector("[data-timer-toggle-label]");
+  if (label) label.textContent = formatTimerDisplay(remaining);
+  if (status) status.textContent = timerState.running ? "Läuft" : "Bereit";
+  if (toggleLabel) toggleLabel.textContent = timerState.running ? "Pause" : "Start";
+  if (ring) {
+    const total = timerState.totalSeconds || timerTotalForMode(timerState.mode) || 1;
+    ring.style.setProperty("--timer-pct", String((remaining / total) * 100));
+  }
+  updateTimerLiveSurfaces();
+}
+
+function refreshTimerApp() {
+  invalidateAppCache("timer");
+  if (currentApp === "timer" && appSheet && !appSheet.classList.contains("hidden")) {
+    renderAppSheet("timer", timerTemplate());
+  } else {
+    void openApp("timer", { force: true });
+  }
+}
+
+function stopFocusTimer() {
+  timerState.running = false;
+  timerState.endAt = null;
+  timerState.seconds = getTimerRemaining();
+  updateTimerLiveSurfaces();
+}
+
+function tickFocusTimer() {
+  const remaining = getTimerRemaining();
+  timerState.seconds = remaining;
+  if (remaining <= 0) {
+    stopFocusTimer();
+    handleTimerFinished();
+    return;
+  }
+  refreshTimerDom();
+}
+
+function startFocusTimer() {
+  if (timerState.running) return;
+  if (timerState.seconds <= 0) {
+    timerState.totalSeconds = timerTotalForMode(timerState.mode);
+    timerState.seconds = timerState.totalSeconds;
+  }
+  timerState.endAt = Date.now() + timerState.seconds * 1000;
+  timerState.running = true;
+  showToast("Timer laeuft");
+  refreshTimerDom();
+  updateTimerLiveSurfaces();
+}
+
+function setTimerMode(mode) {
+  stopFocusTimer();
+  timerState.mode = mode;
+  timerState.totalSeconds = timerTotalForMode(mode);
+  timerState.seconds = timerState.totalSeconds;
+  invalidateAppCache("timer");
+}
+
+function setTimerMinutes(minutes) {
+  stopFocusTimer();
+  timerState.mode = "custom";
+  timerState.customMinutes = Math.max(1, Math.min(180, Math.floor(Number(minutes) || 1)));
+  timerState.totalSeconds = timerState.customMinutes * 60;
+  timerState.seconds = timerState.totalSeconds;
+  invalidateAppCache("timer");
+}
+
+function addMemoryReminder(text, minutes) {
+  if (!window.NocoReminders) return null;
+  const entry = window.NocoReminders.add({ text, delayMinutes: minutes });
+  invalidateAppCache("memories");
+  return entry;
+}
+
+function refreshMemoriesApp() {
+  invalidateAppCache("memories");
+  if (currentApp === "memories" && appSheet && !appSheet.classList.contains("hidden")) {
+    renderAppSheet("memories", memoriesTemplate());
+  } else {
+    void openApp("memories", { force: true });
+  }
+}
+
+function ensureDefaultToolsInstalled() {
+  const installed = getInstalledApps();
+  const want = ["timer", "memories"];
+  const missing = want.filter((id) => !installed.includes(id));
+  if (!missing.length) return;
+  saveInstalledApps([...installed, ...missing]);
+  renderInstalledApps();
+  refreshLibraryExpand();
+}
+
+function calcSanitizeDisplay(value) {
+  if (!Number.isFinite(value)) return "Fehler";
+  const rounded = Math.round(value * 1e10) / 1e10;
+  return String(rounded).slice(0, 14);
+}
+
+function applyCalcKey(key) {
+  const d = calcState;
+  if (key === "C") {
+    d.display = "0";
+    d.fresh = true;
+    return;
+  }
+  if (key === "MC") {
+    d.memory = null;
+    return;
+  }
+  if (key === "MR" && d.memory != null) {
+    d.display = calcSanitizeDisplay(d.memory);
+    d.fresh = true;
+    return;
+  }
+  if (key === "M+" && Number.isFinite(Number(d.display))) {
+    d.memory = (d.memory || 0) + Number(d.display);
+    return;
+  }
+  if (key === "=") {
+    try {
+      const expr = String(d.display).replace(/×/g, "*").replace(/÷/g, "/");
+      if (!/^[\d.+\-*/()\s]+$/.test(expr)) throw new Error("bad");
+      const result = Function(`"use strict"; return (${expr})`)();
+      d.display = calcSanitizeDisplay(Number(result));
+      d.fresh = true;
+    } catch (_) {
+      d.display = "Fehler";
+      d.fresh = true;
+    }
+    return;
+  }
+  if ("0123456789.".includes(key)) {
+    if (d.fresh || d.display === "Fehler") {
+      d.display = key === "." ? "0." : key;
+      d.fresh = false;
+    } else if (key === "." && d.display.includes(".")) {
+      return;
+    } else {
+      d.display = d.display === "0" && key !== "." ? key : d.display + key;
+    }
+    return;
+  }
+  if ("+-×÷".includes(key)) {
+    if (d.display === "Fehler") d.display = "0";
+    if (!d.fresh) d.display += key;
+    else if (!/[\+\-×÷]$/.test(d.display)) d.display += key;
+    else d.display = d.display.slice(0, -1) + key;
+    d.fresh = false;
+  }
+}
+
+const WEATHER_PRESETS = [
+  { city: "NOCO City", temp: 19, feel: 18, cond: "Glasregen", icon: "🌧", hours: ["18°", "17°", "16°", "15°"] },
+  { city: "Aurora Bay", temp: 22, feel: 21, cond: "Sonnig", icon: "☀", hours: ["23°", "22°", "20°", "18°"] },
+  { city: "Mint Valley", temp: 16, feel: 15, cond: "Nebel", icon: "🌫", hours: ["15°", "14°", "13°", "12°"] }
+];
+let weatherIndex = Number(localStorage.getItem("noco_mobile_weather_idx") || 0) % WEATHER_PRESETS.length;
+
+const QUOTE_POOL = [
+  "Liquid Glass ist kein Filter — es ist eine Haltung.",
+  "Sync lokal, fühlen global.",
+  "Dein Desktop verdient sichtbare Icons.",
+  "NOCO Beam findet, was du verlegt hast.",
+  "Exclusive ist optional. Style ist nicht."
+];
+let quoteIndex = Number(localStorage.getItem("noco_mobile_quote_idx") || 0) % QUOTE_POOL.length;
+
+function refreshCoreSection() {
+  if (currentApp !== "settings" || !sheetContent) return;
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = settingsTemplateV2();
+  const nextContent = wrapper.querySelector(".menu-content");
+  const nextTitle = wrapper.querySelector(".core-section-title");
+  const picker = sheetContent.querySelector(".menu-picker");
+  picker?.querySelectorAll("[data-settings-section]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.settingsSection === settingsActiveSection);
+  });
+  const menuContent = sheetContent.querySelector(".menu-content");
+  const titleBlock = sheetContent.querySelector(".core-section-title");
+  if (nextContent && menuContent) menuContent.innerHTML = nextContent.innerHTML;
+  if (nextTitle && titleBlock) titleBlock.innerHTML = nextTitle.innerHTML;
+  cacheAppState("settings");
+  hapticTap();
+}
+
+function renderAppSheet(appId, html, options = {}) {
+  const meta = getAppMeta(appId);
+  const header =
+    appId === "nocoai"
+      ? ""
+      : `
+    <header class="sheet-app-head">
+      <div>
+        <p class="eyebrow">NOCO App</p>
+        <h2 class="sheet-app-title">${meta.title}</h2>
+      </div>
+    </header>
+  `;
+  currentApp = appId;
+  sheetContent.innerHTML = header + html;
+  document.body.classList.toggle("noco-ai-sheet", appId === "nocoai");
+  cancelSheetSwipe();
+  appSheet.classList.add("app-navigating");
+  appSheet.classList.remove("hidden");
+  document.body.classList.add("sheet-open");
+  requestAnimationFrame(() => {
+    appSheet.classList.remove("app-navigating");
+  });
+  armGestureSafety(800);
+  setIslandExpanded(false);
+  dismissCoach();
+  const card = appSheet.querySelector(".sheet-card");
+  if (card) {
+    card.classList.remove("sheet-dragging");
+    card.style.transform = "";
+    card.style.opacity = "";
+    const scrollTop = options.restore ? Number(options.scrollTop || 0) : 0;
+    card.scrollTop = scrollTop;
+    requestAnimationFrame(() => {
+      card.scrollTop = scrollTop;
+    });
+  }
+  updateIslandUI();
+}
+
 function closeAppSheetVisual() {
+  if (currentApp) cacheAppState(currentApp);
   appSheet.classList.add("hidden");
-  document.body.classList.remove("sheet-open");
+  appSheet.classList.remove("app-navigating");
+  document.body.classList.remove("sheet-open", "noco-ai-sheet");
+  resetSheetGestureTransform();
+  cleanupGestureState();
   currentApp = null;
+  updateIslandUI();
 }
 
 function settingsTemplate() {
@@ -1143,7 +2540,7 @@ function settingsTemplate() {
       ${toggleRow("motion", "Animationen", "Sanfte Übergänge und App-Start-Animationen")}
     </div>
     <div class="settings-list">
-      <div class="settings-row"><span>Version</span><strong>Mobile 1.1</strong></div>
+      <div class="settings-row"><span>Version</span><strong>Mobile 1.2</strong></div>
       <div class="settings-row"><span>Installation</span><strong>PWA Fullscreen</strong></div>
       <div class="settings-row"><span>Navigation</span><strong>Swipe + Desktop</strong></div>
       <button class="settings-row" data-action="open-security"><span>Sicherheit</span><strong>Security öffnen</strong></button>
@@ -1158,13 +2555,13 @@ function settingsTemplateV2() {
       text: "System, Look und schnelle mobile Steuerung.",
       content: `
         <div class="overview-grid">
-          <div class="overview-tile"><span>Apps</span><strong>${document.querySelectorAll("#appGrid .app-icon").length}</strong><small>Desktop bereit</small></div>
+          <div class="overview-tile"><span>Apps</span><strong>${new Set([...getLibraryFolderApps("core"), ...getLibraryFolderApps("forge"), ...getLibraryFolderApps("games")]).size}</strong><small>Bibliothek bereit</small></div>
           <div class="overview-tile"><span>Schutz</span><strong>${settings.codeLock ? "An" : "Aus"}</strong><small>ShieldGate</small></div>
           <div class="overview-tile"><span>Pay</span><strong>${formatEuro(settings.payBalance)}</strong><small>Wallet</small></div>
           <div class="overview-tile"><span>Exclusive</span><strong>${isExclusiveActive() ? "Aktiv" : "Offen"}</strong><small>Premium</small></div>
         </div>
         <div class="settings-mini-grid">
-          <div class="settings-row"><span>Version</span><strong>Mobile 1.1</strong></div>
+          <div class="settings-row"><span>Version</span><strong>Mobile 1.2</strong></div>
           <div class="settings-row"><span>Installation</span><strong>PWA Fullscreen</strong></div>
           <div class="settings-row"><span>Navigation</span><strong>Home + Desktop</strong></div>
         </div>
@@ -1172,6 +2569,7 @@ function settingsTemplateV2() {
         ${toggleRow("glassBoost", "Mehr Liquid Glass", "Staerkerer Glaslook fuer Karten und Apps")}
         ${toggleRow("motion", "Animationen", "Sanfte Uebergaenge und App-Starts")}
         ${toggleRow("nativeFeel", "App Handling", "Weniger Webseiten-Gefuehl, mehr iPhone-App")}
+        ${toggleRow("keepAppsAlive", "Apps behalten", "Core und Apps merken sich die letzte Position")}
         ${toggleRow("compactTiles", "Kompakte Kacheln", "Mehr Platz bei vielen Apps und Listen")}
         ${toggleRow("autoLock", "Auto-Lock", "Nach 1 Minute Ruhe Sperrbildschirm zeigen")}
         <button class="settings-row" data-app="themes"><span>Themes</span><strong>Oeffnen</strong></button>
@@ -1324,13 +2722,18 @@ function securityTemplate() {
         <button class="security-action" data-action="clear-passkey"><strong>Passkey entfernen</strong><small>Code bleibt als Schutz erhalten.</small></button>
         <button class="security-action" data-app="sync"><strong>Keycard</strong><small>Importieren oder exportieren.</small></button>
       </div>
-      <button class="primary-action" data-action="scan">Security Scan starten</button>
+      <div class="security-scan-live" id="securityScanLive" hidden>
+        <div class="security-scan-bar"><span id="securityScanProgress"></span></div>
+        <p class="muted" id="securityScanStatus">Scan bereit</p>
+        <div class="security-threat-list" id="securityThreatList"></div>
+      </div>
+      <button class="primary-action" data-action="scan" id="securityScanBtn">Security Scan starten</button>
     `)}
   `);
 }
 
 function payTemplate() {
-  const transactions = loadTransactions();
+  const transactions = loadTransactions().filter((entry) => Number(entry.amount) !== 0);
   return appShell(`
     ${appHero("NOCO Pay", "Mobile Wallet", "Dein Fake-Guthaben, Zahlungen und Exclusive-Kaeufe an einem Ort. Wird komplett in der Keycard gespeichert.")}
     ${subMenu("Wallet", "Guthaben", `
@@ -1361,50 +2764,121 @@ function payTemplate() {
 
 function exclusiveTemplate() {
   const active = isExclusiveActive();
+  const plan = settings.exclusivePlan || (active ? "member" : "free");
+  const planLabel =
+    plan === "trial" ? "Probetag" : plan === "monthly" ? "Monatsmitglied" : plan === "keycard" ? "Keycard" : active ? "Member" : "Guest";
   const exclusiveApps = forgeApps.filter((app) => app.exclusive);
-  return appShell(`
-    <section class="exclusive-hero">
-      <div class="exclusive-orb">X</div>
-      <p class="eyebrow">NOCO Exclusive Mobile</p>
-      <h1>${active ? "Du bist drin." : "Hol alles aus NOCO Mobile raus."}</h1>
-      <p>${active ? "Premium-Designs, Deep Scan und Exclusive Apps sind auf diesem Geraet aktiv." : "Mehr Glas, mehr Apps, fruehere Features und Security Plus. Wenn es am Desktop aktiv ist, kommt es per Keycard auch hier an."}</p>
-      <div class="exclusive-price-row">
-        <span>1 Tag testen</span>
-        <strong>danach 12 EUR/Monat</strong>
-      </div>
-    </section>
-    <div class="exclusive-showcase">
-      <div><strong>100 GB</strong><small>Cloud-Gefuehl</small></div>
-      <div><strong>Deep</strong><small>Security Scan</small></div>
-      <div><strong>Pro</strong><small>Glass Themes</small></div>
-    </div>
-    ${subMenu("Vorteile", "Member Features", `
-      <div class="exclusive-benefits">
-      <div class="exclusive-benefit"><strong>Mehr Glas</strong><small>Extra tiefe Liquid-Glass Ebenen, weichere Animationen und Premium Looks.</small></div>
-      <div class="exclusive-benefit"><strong>Deep Scan</strong><small>Erweiterte Security-Pruefung nur fuer Member.</small></div>
-      <div class="exclusive-benefit"><strong>Pro Themes</strong><small>Premium-Liquid-Glass Looks fuer Mobile.</small></div>
-      <div class="exclusive-benefit"><strong>Exclusive Apps</strong><small>${exclusiveApps.length} Apps sofort freischaltbar.</small></div>
-      <div class="exclusive-benefit"><strong>Sync-Vorteil</strong><small>Status wird in Keycards zwischen Desktop und Handy uebernommen.</small></div>
-      </div>
-    `, true)}
-    ${subMenu("Abo", "Status und Probe", `
-      <div class="exclusive-actions">
-      ${active
-        ? `<button class="primary-action" data-action="exclusive-manage">Mitgliedschaft verwalten</button>`
-        : `<button class="primary-action" data-action="exclusive-subscribe">Fuer 12 EUR/Monat aktivieren</button>
-           <button class="settings-row" data-action="exclusive-trial"><span>1 Tag kostenlos testen</span><strong>${settings.exclusiveTrialUsed ? "Genutzt" : "Starten"}</strong></button>`}
-      </div>
-    `)}
-    ${subMenu("Member Apps", "Nur mit Exclusive", `
-      ${exclusiveApps.map((app) => `
-        <div class="app-card exclusive-row">
-          <span class="icon-orb ${app.className}">${app.icon}</span>
-          <span><strong>${app.title}</strong><br><small>${app.text}</small></span>
-          <button class="forge-install" ${getInstalledApps().includes(app.id) ? `data-app="${app.id}"` : `data-install="${app.id}"`}>${getInstalledApps().includes(app.id) ? "Oeffnen" : "Installieren"}</button>
+  const installed = getInstalledApps();
+  const installedExclusive = exclusiveApps.filter((app) => installed.includes(app.id)).length;
+  const progressPct = exclusiveApps.length ? Math.round((installedExclusive / exclusiveApps.length) * 100) : 0;
+  const memberId = `NX-${String(settings.mobileCode || "0000").slice(0, 4).padEnd(4, "0")}-${planLabel.slice(0, 3).toUpperCase()}`;
+
+  const appCards = exclusiveApps
+    .map((app) => {
+      const isInstalled = installed.includes(app.id);
+      const locked = !active;
+      return `
+        <article class="exv2-app-card ${locked ? "is-locked" : ""} ${isInstalled ? "is-installed" : ""}">
+          ${renderIconOrb(app)}
+          <div class="exv2-app-body">
+            <strong>${app.title}</strong>
+            <small>${app.text}</small>
+            <span class="exv2-app-tag">${locked ? "Gesperrt" : isInstalled ? "Bereit" : "Verfuegbar"}</span>
+          </div>
+          <button class="forge-install" ${locked ? `data-action="exclusive-subscribe"` : isInstalled ? `data-app="${app.id}"` : `data-install="${app.id}"`}>
+            ${locked ? "Freischalten" : isInstalled ? "Oeffnen" : "Installieren"}
+          </button>
+        </article>
+      `;
+    })
+    .join("");
+
+  return appShell(
+    `
+    <div class="exv2-wrap">
+      <header class="exv2-hero ${active ? "is-member" : ""}">
+        <div class="exv2-hero-shine" aria-hidden="true"></div>
+        <div class="exv2-hero-inner">
+          <div class="exv2-brand-row">
+            <span class="exv2-brand">NOCO Exclusive</span>
+            <span class="exv2-live-pill ${active ? "" : "is-guest"}">${active ? "Live Member" : "Guest"}</span>
+          </div>
+          <div class="exv2-pass">
+            <div class="exv2-pass-mark" aria-hidden="true">X</div>
+            <div class="exv2-pass-meta">
+              <strong>${active ? "Premium aktiv" : "Upgrade verfuegbar"}</strong>
+              <span>${active ? "Deep Scan · Pro Glas · Member Apps" : "1 Tag gratis testen · danach 12 EUR/Monat"}</span>
+              <div class="exv2-pass-id">${memberId}</div>
+            </div>
+          </div>
+          <p class="exv2-hero-tagline">${active ? "Dein Abo laeuft auf diesem Geraet. Exclusive-Apps unten installieren und oeffnen." : "Schalte das volle NOCO-Erlebnis frei — staerkeres Glas, Security Plus und exklusive Forge-Apps."}</p>
         </div>
-      `).join("")}
-    `)}
-  `);
+      </header>
+
+      <section class="exv2-compare" aria-label="Vergleich Free und Exclusive">
+        <div class="exv2-tier">
+          <div class="exv2-tier-label">NOCO Free</div>
+          <div class="exv2-tier-price">0 €</div>
+          <ul>
+            <li>Standard Liquid Glass</li>
+            <li>Basis Security Scan</li>
+            <li>Forge Standard-Apps</li>
+            <li class="is-no">Exclusive Apps</li>
+            <li class="is-no">Deep Scan Pro</li>
+          </ul>
+        </div>
+        <div class="exv2-tier is-pro">
+          <div class="exv2-tier-label">Exclusive</div>
+          <div class="exv2-tier-price">12 €</div>
+          <ul>
+            <li><strong>NOCO AI unbegrenzt</strong> (inklusive)</li>
+            <li>Liquid Glass Pro</li>
+            <li>Deep Scan + Pro Themes</li>
+            <li>${exclusiveApps.length} Member-Apps</li>
+            <li>Keycard Status-Sync</li>
+            <li>1 Tag Probe (Demo)</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="exv2-progress" aria-label="Installationsfortschritt">
+        <div class="exv2-progress-head">
+          <span>Member-Apps installiert</span>
+          <strong>${installedExclusive} / ${exclusiveApps.length}</strong>
+        </div>
+        <div class="exv2-progress-track">
+          <div class="exv2-progress-fill" style="width:${progressPct}%"></div>
+        </div>
+      </section>
+
+      <section class="exv2-features" aria-label="Exclusive Vorteile">
+        <div class="exv2-feature"><div class="exv2-feature-icon">✧</div><strong>NOCO AI unbegrenzt</strong><small>Kein Extra-Plus — der Assistent ist im Exclusive-Paket enthalten.</small></div>
+        <div class="exv2-feature"><div class="exv2-feature-icon">◈</div><strong>Pro Glas</strong><small>Tiefere Blur-Stufen und Premium-Reflexe systemweit.</small></div>
+        <div class="exv2-feature"><div class="exv2-feature-icon">⛨</div><strong>Deep Scan</strong><small>Erweiterte ShieldGate-Pruefung nur fuer Member.</small></div>
+        <div class="exv2-feature"><div class="exv2-feature-icon">✧</div><strong>Pro Themes</strong><small>Zwei mobile Looks mit mehr Glow und Tiefe.</small></div>
+        <div class="exv2-feature"><div class="exv2-feature-icon">⬡</div><strong>Member Apps</strong><small>Exclusive Lab, Deep Scan App & Pro Themes in Forge.</small></div>
+      </section>
+
+      <section class="exv2-cta" aria-label="Abo Aktionen">
+        ${active
+          ? `<button class="primary-action" data-action="exclusive-manage">Mitgliedschaft pausieren</button>`
+          : `<button class="primary-action" data-action="exclusive-subscribe">Exclusive aktivieren · 12 EUR/Monat</button>
+             <button type="button" class="exv2-trial-row" data-action="exclusive-trial">
+               <span><strong>1 Tag kostenlos</strong><br><small>${settings.exclusiveTrialUsed ? "Probetag bereits genutzt" : "Demo ohne Risiko — sofort starten"}</small></span>
+               <strong>${settings.exclusiveTrialUsed ? "—" : "Start"}</strong>
+             </button>`}
+        <p class="exv2-pay-hint">Zahlung ueber <strong>NOCO Pay</strong> · Guthaben & Zahlungsmethode noetig fuer Monatsabo</p>
+      </section>
+
+      <div class="exv2-section-head">
+        <h2>Member Apps</h2>
+        <span>${active ? "Installieren & oeffnen" : "Nach Freischaltung"}</span>
+      </div>
+      <div class="exv2-apps">${appCards}</div>
+    </div>
+  `,
+    "exv2-app"
+  );
 }
 
 function forgeTemplate() {
@@ -1437,7 +2911,7 @@ function forgeTemplateV2() {
   const active = sections[forgeActiveSection] ? forgeActiveSection : "discover";
   const appCards = (items) => items.map((app) => `
     <div class="app-card ${app.exclusive ? "exclusive-row" : ""}">
-      <span class="icon-orb ${app.className}">${app.icon}</span>
+      ${renderIconOrb(app)}
       <span><strong>${app.title}</strong>${app.exclusive ? `<em class="exclusive-badge">Exclusive</em>` : ""}<br><small>${app.text}</small></span>
       <span class="forge-actions">
         <button class="forge-install" ${installed.includes(app.id) ? `data-app="${app.id}"` : `data-install="${app.id}"`}>${installed.includes(app.id) ? "Öffnen" : app.exclusive && !isExclusiveActive() ? "Exclusive holen" : "Installieren"}</button>
@@ -1461,13 +2935,41 @@ function forgeTemplateV2() {
   `);
 }
 
+function escapeNoteHtml(text) {
+  return String(text || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 function notesTemplate() {
+  window.NocoNotes?.reload?.();
+  const active = window.NocoNotes?.getActiveNote?.() || { id: "", title: "Notiz", body: "" };
+  const list = window.NocoNotes?.listNotes?.() || [];
+  const listHtml = list
+    .map((note) => {
+      const preview = escapeNoteHtml((note.body || "").replace(/\s+/g, " ").slice(0, 48)) || "Leer";
+      return `<li><button type="button" class="notes-list-item${note.id === active.id ? " active" : ""}" data-note-select="${note.id}"><strong>${escapeNoteHtml(note.title)}</strong><span>${preview}</span></button></li>`;
+    })
+    .join("");
   return appShell(`
-    ${appHero("Notizen", "Mobile Notes", "Schreibe direkt in der App. Alles landet beim Keycard-Export mit in deinem Stand.")}
-    <div class="notes-app-editor">
-      <textarea id="notesAppInput" rows="12" placeholder="Deine NOCO Notiz...">${(localStorage.getItem("noco_mobile_note") || "").replace(/</g, "&lt;")}</textarea>
-      <button class="primary-action" data-action="save-note-app">Notiz speichern</button>
-      <div class="settings-row"><span>Sync</span><strong>Wird in Keycard gespeichert</strong></div>
+    ${appHero("Notizen", "Mobile Notes", "Mehrere Notizen — wie AI-Chats. Langdruck zum Umbenennen.")}
+    <div class="notes-app-layout" data-notes-app>
+      <div class="notes-toolbar">
+        <button type="button" class="notes-toolbar-btn" data-note-new>+ Neu</button>
+        <span class="notes-active-label">${escapeNoteHtml(active.title)}</span>
+      </div>
+      <ul class="notes-list" data-notes-list>${listHtml}</ul>
+      <input type="text" class="notes-title-input" data-note-title maxlength="60" value="${escapeNoteHtml(active.title)}" aria-label="Titel" />
+      <textarea class="notes-body-input" data-note-body rows="10" placeholder="Deine Notiz …" aria-label="Inhalt">${escapeNoteHtml(active.body)}</textarea>
+      <button type="button" class="primary-action" data-note-save>Speichern</button>
+      <p class="notes-hint">Tipp: «Erstelle Notiz mit Titel Aufgaben» in NOCO AI.</p>
+      <div class="notes-rename-sheet hidden" data-notes-rename-sheet>
+        <p>Notiz umbenennen</p>
+        <input type="text" data-notes-rename-input maxlength="60" />
+        <div class="notes-rename-actions">
+          <button type="button" data-notes-rename-cancel>Abbrechen</button>
+          <button type="button" data-notes-rename-save>Speichern</button>
+        </div>
+        <button type="button" class="notes-rename-delete" data-notes-rename-delete>Loeschen</button>
+      </div>
     </div>
   `);
 }
@@ -1477,9 +2979,9 @@ function toonTemplate() {
   return appShell(`
     ${appHero("NOCO Toon", "Mobile Zeitung", "Kurze Workspace- und Mobile-News, die mit deiner Keycard mitwandern.")}
     <div class="toon-stack">
-      <button class="toon-headline">
-        <span><strong>NOCO Mobile</strong><small>App Desktop ist wieder sichtbar und fuer PC-Klicks stabil.</small></span>
-        <em>Heute</em>
+      <button class="toon-headline" data-app="calculator">
+        <span><strong>NOCO Mobile 1.2</strong><small>Rechner, Tasks, Timer, Wetter und Daily — im Forge installieren.</small></span>
+        <em>Neu</em>
       </button>
       <button class="toon-headline">
         <span><strong>Workspace Sync</strong><small>Keycards speichern Apps, Widgets, Pay, Exclusive und Toon-Notizen.</small></span>
@@ -1507,17 +3009,211 @@ function simpleAppTemplate(title, eyebrow, text, rows) {
   `);
 }
 
+function arcadeHubTemplate() {
+  return appShell(`
+    ${appHero("Arcade", "NOCO Games 1.2", "Drei Mini-Spiele und ein kleiner Runner im Liquid-Glass-Look.")}
+    <div class="settings-list">
+      <button class="settings-row" data-app="dodgerun"><span>Dodge Run</span><strong>Ausweichen</strong></button>
+      <button class="settings-row" data-app="tapdash"><span>Tap Dash</span><strong>Speed Tap</strong></button>
+      <button class="settings-row" data-app="colorcatch"><span>Color Catch</span><strong>Farben</strong></button>
+      <button class="settings-row" data-app="memorygrid"><span>Memory Grid</span><strong>Merken</strong></button>
+      <button class="settings-row" data-app="runner"><span>NOCO Runner</span><strong>Neu in 1.2</strong></button>
+    </div>
+  `);
+}
+
+function runnerTemplate() {
+  return appShell(`
+    ${appHero("Runner", "NOCO Run", "Tippe zum Springen und halte den Orb am Leben.")}
+    <section class="runner-stage" data-runner-stage>
+      <div class="runner-ground"></div>
+      <span class="runner-player" data-runner-player style="transform:translateY(0px)"></span>
+      <span class="runner-obstacle" data-runner-obstacle style="left:${runnerGame.obstacleX}%"></span>
+      <div class="runner-hud"><strong data-runner-score>${runnerGame.score}</strong><small> Best ${runnerGame.best}</small></div>
+    </section>
+    <div class="game-grid">
+      <button class="settings-row" data-action="runner-start"><span>${runnerGame.running ? "Läuft" : "Start"}</span><strong>${runnerGame.running ? "Springen!" : "Los"}</strong></button>
+      <button class="settings-row" data-action="runner-reset"><span>Reset</span><strong>0</strong></button>
+    </div>
+  `);
+}
+
+function updateRunnerDom() {
+  const player = sheetContent.querySelector("[data-runner-player]");
+  const obstacle = sheetContent.querySelector("[data-runner-obstacle]");
+  const score = sheetContent.querySelector("[data-runner-score]");
+  if (player) player.style.transform = `translateY(${runnerGame.playerY}px)`;
+  if (obstacle) obstacle.style.left = runnerGame.obstacleX + "%";
+  if (score) score.textContent = String(runnerGame.score);
+}
+
+function runnerJump() {
+  if (!runnerGame.running || runnerGame.playerY < -2) return;
+  runnerGame.vy = -15;
+}
+
+function stopRunnerGame(showToastMsg = true) {
+  if (runnerGame.timer) window.clearInterval(runnerGame.timer);
+  runnerGame.timer = null;
+  const wasRunning = runnerGame.running;
+  runnerGame.running = false;
+  if (runnerGame.score > runnerGame.best) {
+    runnerGame.best = runnerGame.score;
+    localStorage.setItem("noco_mobile_runner_best", String(runnerGame.best));
+  }
+  if (showToastMsg && wasRunning) showToast("Runner Score " + runnerGame.score);
+}
+
+function startRunnerGame() {
+  stopRunnerGame(false);
+  runnerGame.running = true;
+  runnerGame.score = 0;
+  runnerGame.playerY = 0;
+  runnerGame.vy = 0;
+  runnerGame.obstacleX = 108;
+  openApp("runner");
+  runnerGame.timer = window.setInterval(() => {
+    if (!runnerGame.running || currentApp !== "runner") {
+      stopRunnerGame(false);
+      return;
+    }
+    runnerGame.vy += 0.9;
+    runnerGame.playerY = Math.min(0, runnerGame.playerY + runnerGame.vy);
+    if (runnerGame.playerY >= 0) {
+      runnerGame.playerY = 0;
+      runnerGame.vy = 0;
+    }
+    runnerGame.obstacleX -= 2.4 + Math.min(2.2, runnerGame.score * 0.05);
+    const hit = runnerGame.obstacleX < 24 && runnerGame.obstacleX > 12 && runnerGame.playerY > -8;
+    if (hit) {
+      stopRunnerGame(true);
+      openApp("runner");
+      return;
+    }
+    if (runnerGame.obstacleX < -8) {
+      runnerGame.score += 1;
+      runnerGame.obstacleX = 104 + Math.random() * 8;
+    }
+    updateRunnerDom();
+  }, 48);
+  showToast("NOCO Runner gestartet");
+}
+
+const FAKE_THREATS = [
+  "GlassWorm.tmp",
+  "BeamTracker.sdk",
+  "CacheLeech.bundle",
+  "WidgetSpy.dat",
+  "FakeUpdate.pkg"
+];
+
+function sleep(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function runSecurityScan() {
+  if (securityScanRunning) return;
+  const panel = document.getElementById("securityScanLive");
+  const progress = document.getElementById("securityScanProgress");
+  const status = document.getElementById("securityScanStatus");
+  const list = document.getElementById("securityThreatList");
+  const button = document.getElementById("securityScanBtn");
+  if (!panel || !progress || !status || !list) {
+    showToast("Security oeffnen und Scan starten");
+    return;
+  }
+  securityScanRunning = true;
+  if (button) button.disabled = true;
+  panel.hidden = false;
+  list.innerHTML = "";
+  const foundThreats = Math.random() < 0.72 ? [FAKE_THREATS[Math.floor(Math.random() * FAKE_THREATS.length)]] : [];
+  if (Math.random() < 0.22 && foundThreats.length) foundThreats.push(FAKE_THREATS[Math.floor(Math.random() * FAKE_THREATS.length)]);
+  const phases = ["Systemdateien lesen...", "Beam-Signaturen pruefen...", "Widget-Cache scannen...", "ShieldGate abstimmen..."];
+  for (let i = 0; i < phases.length; i += 1) {
+    status.textContent = phases[i];
+    progress.style.width = ((i + 1) / phases.length) * 68 + "%";
+    await sleep(620 + Math.random() * 380);
+  }
+  if (foundThreats.length) {
+    status.textContent = foundThreats.length + " Bedrohung(en) gefunden";
+    list.innerHTML = foundThreats.map((name) => `
+      <div class="security-threat" data-threat="${name}">
+        <span><strong>${name}</strong><small>Quarantaene ausstehend</small></span>
+        <em>!</em>
+      </div>
+    `).join("");
+    await sleep(900);
+    for (const name of foundThreats) {
+      status.textContent = "Entferne " + name + "...";
+      progress.style.width = "88%";
+      await sleep(780 + Math.random() * 520);
+      const row = list.querySelector(`[data-threat="${name}"]`);
+      if (row) row.classList.add("removed");
+      if (Math.random() < 0.14) {
+        status.textContent = name + " blockiert den Cleaner kurz...";
+        await sleep(1100);
+      }
+    }
+    progress.style.width = "100%";
+    status.textContent = Math.random() < 0.08 ? "Scan haengt... nochmal versuchen" : "Bedrohungen entfernt";
+    showToast(Math.random() < 0.08 ? "Cleaner musste neu starten" : "System wieder sauber");
+  } else {
+    progress.style.width = "100%";
+    status.textContent = "Keine Bedrohungen gefunden";
+    showToast("Scan sauber");
+  }
+  securityScanRunning = false;
+  if (button) button.disabled = false;
+}
+
+const CODE_PIN_LENGTH = 4;
+
+function renderCodeDots() {
+  const dots = document.getElementById("codeDots");
+  if (!dots || !codeInput) return;
+  const len = codeInput.value.length;
+  dots.innerHTML = Array.from({ length: CODE_PIN_LENGTH }, (_, index) => `
+    <span class="code-dot ${index < len ? "filled" : ""}"></span>
+  `).join("");
+}
+
+function initCodeKeypad() {
+  const keypad = document.getElementById("codeKeypad");
+  if (!keypad || keypad.dataset.ready) return;
+  keypad.dataset.ready = "1";
+  const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "←", "0", "OK"];
+  keypad.innerHTML = keys.map((key) => `
+    <button type="button" class="code-key ${key === "OK" ? "wide" : ""}" data-code-key="${key}">${key}</button>
+  `).join("");
+  keypad.addEventListener("click", (event) => {
+    const key = event.target.closest("[data-code-key]");
+    if (!key || !codeInput) return;
+    const value = key.dataset.codeKey;
+    if (value === "←") codeInput.value = codeInput.value.slice(0, -1);
+    else if (value === "OK") codeConfirm?.click();
+    else if (codeInput.value.length < CODE_PIN_LENGTH) {
+      codeInput.value += value;
+      if (codeInput.value.length === CODE_PIN_LENGTH) {
+        window.setTimeout(() => codeConfirm?.click(), 120);
+      }
+    }
+    renderCodeDots();
+    hapticTap();
+  });
+  codeInput?.addEventListener("input", renderCodeDots);
+}
+
 function tapDashTemplate() {
   return appShell(`
-    ${appHero("Tap Dash", "NOCO Games", "Tippe schnell und sammle Punkte in einer kurzen Mobile-Runde.")}
+    ${appHero("Tap Dash", "NOCO Games", "Tippe schnell — ab 30 Punkten gewinnst du die Runde.")}
     <section class="game-panel">
       <strong>${tapDashScore}</strong>
-      <small>Punkte</small>
+      <small>Punkte · Best ${tapDashBest}</small>
       <button class="game-big-button" data-action="tapdash-hit">Tap</button>
     </section>
     <div class="game-grid">
       <button class="settings-row" data-action="tapdash-reset"><span>Runde</span><strong>Reset</strong></button>
-      <div class="settings-row"><span>Ziel</span><strong>30 Punkte</strong></div>
+      <div class="settings-row"><span>Ziel</span><strong>30</strong></div>
     </div>
   `);
 }
@@ -1525,10 +3221,11 @@ function tapDashTemplate() {
 function colorCatchTemplate() {
   const colors = ["Mint", "Blue", "Pink"];
   return appShell(`
-    ${appHero("Color Catch", "NOCO Games", "Triff die Ziel-Farbe und halte die Combo am Leben.")}
+    ${appHero("Color Catch", "NOCO Games", "Triff die Ziel-Farbe. Combo gibt Bonuspunkte.")}
     <section class="game-panel">
-      <small>Ziel</small>
+      <small>Ziel · Combo ${colorCatchCombo}</small>
       <strong>${colorCatchTarget}</strong>
+      <small class="muted">Best ${colorCatchBest}</small>
     </section>
     <div class="color-game-grid">
       ${colors.map((color) => `<button class="color-choice color-${color.toLowerCase()}" data-color-choice="${color}">${color}</button>`).join("")}
@@ -1537,16 +3234,242 @@ function colorCatchTemplate() {
 }
 
 function memoryGridTemplate() {
+  const preview = memoryState.sequence.join(" → ") || "—";
+  const status = memoryState.phase === "playback" ? "Merken..." : memoryState.playerIndex ? `Schritt ${memoryState.playerIndex + 1}/${memoryState.sequence.length}` : "Dein Zug";
   return appShell(`
-    ${appHero("Memory Grid", "NOCO Games", "Merke dir die Reihenfolge und tippe die Felder nach.")}
+    ${appHero("Memory Grid", "NOCO Games", "Sieh dir die Reihenfolge an, dann tippe sie nach.")}
     <section class="game-panel">
-      <small>Runde</small>
-      <strong>${memoryRound}</strong>
+      <small data-memory-status>${status}</small>
+      <strong>Runde ${memoryState.round}</strong>
+      <small class="muted">Best ${memoryState.best} · ${preview}</small>
     </section>
     <div class="memory-grid">
-      ${[1, 2, 3, 4].map((id) => `<button class="${memorySequence[0] === id ? "hint" : ""}" data-memory-choice="${id}">${id}</button>`).join("")}
+      ${[1, 2, 3, 4].map((id) => `<button type="button" data-memory-choice="${id}">${id}</button>`).join("")}
     </div>
-    <button class="settings-row" data-action="memory-reset"><span>Sequenz</span><strong>Neu starten</strong></button>
+    <div class="game-grid">
+      <button class="settings-row" data-action="memory-replay"><span>Zeigen</span><strong>Nochmal</strong></button>
+      <button class="settings-row" data-action="memory-reset"><span>Neu</span><strong>Reset</strong></button>
+    </div>
+  `);
+}
+
+function calculatorTemplate() {
+  const keys = ["C", "MC", "MR", "M+", "7", "8", "9", "÷", "4", "5", "6", "×", "1", "2", "3", "-", "0", ".", "=", "+"];
+  return appShell(`
+    ${appHero("Rechner", "NOCO Tools", "Taschenrechner mit Speicher — alles bleibt in der Session.")}
+    <div class="calc-display" data-calc-display>${calcState.display}</div>
+    <div class="calc-keypad">
+      ${keys.map((key) => `<button type="button" class="calc-key ${key === "=" ? "wide" : ""}" data-calc-key="${key}">${key}</button>`).join("")}
+    </div>
+    ${calcState.memory != null ? `<div class="settings-row"><span>Speicher</span><strong>${calcSanitizeDisplay(calcState.memory)}</strong></div>` : ""}
+  `);
+}
+
+function timerTemplate() {
+  const modes = [
+    { id: "focus", label: "Fokus", sub: "25 Min" },
+    { id: "break", label: "Pause", sub: "5 Min" },
+    { id: "quick", label: "Quick", sub: "15 Min" },
+    { id: "custom", label: "Custom", sub: `${timerState.customMinutes} Min` }
+  ];
+  const remaining = getTimerRemaining();
+  const total = timerState.totalSeconds || timerTotalForMode(timerState.mode);
+  const pct = total ? (remaining / total) * 100 : 0;
+  const presets = [1, 5, 10, 15, 20, 25, 30];
+  return appShell(`
+    ${appHero("Timer", "NOCO Countdown", "Eigene Minuten waehlen, starten — laeuft auch wenn du die App schliesst.")}
+    <div class="timer-ring-wrap" data-timer-ring style="--timer-pct:${pct}">
+      <div class="timer-ring-core">
+        <strong data-timer-display>${formatTimerDisplay(remaining)}</strong>
+        <small data-timer-status>${timerState.running ? "Läuft" : "Bereit"} · ${modes.find((m) => m.id === timerState.mode)?.label || "Custom"}</small>
+      </div>
+    </div>
+    <div class="timer-custom-row">
+      <input type="number" inputmode="numeric" min="1" max="180" value="${timerState.customMinutes}" data-timer-minutes aria-label="Minuten" />
+      <button type="button" class="timer-preset-btn" data-action="timer-apply-minutes">Setzen</button>
+    </div>
+    <div class="timer-preset-row">
+      ${presets.map((m) => `<button type="button" class="timer-preset-btn ${timerState.mode === "custom" && timerState.customMinutes === m ? "active" : ""}" data-timer-preset="${m}">${m} min</button>`).join("")}
+    </div>
+    <div class="menu-picker menu-picker-compact">
+      ${modes.map((m) => `<button type="button" class="${timerState.mode === m.id ? "active" : ""}" data-timer-mode="${m.id}"><strong>${m.label}</strong><small>${m.sub}</small></button>`).join("")}
+    </div>
+    <div class="game-grid">
+      <button class="settings-row" data-action="timer-toggle"><span data-timer-toggle-label>${timerState.running ? "Pause" : "Start"}</span><strong>${timerState.running ? "||" : "▶"}</strong></button>
+      <button class="settings-row" data-action="timer-reset"><span>Zurück</span><strong>↺</strong></button>
+    </div>
+  `);
+}
+
+function escapeMemoryHtml(text) {
+  return String(text || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function memoriesTemplate() {
+  const list = window.NocoReminders?.active?.() || [];
+  const chips = [5, 10, 15, 20, 30, 60];
+  const rows = list.length
+    ? list
+        .map((entry) => {
+          const soon = window.NocoReminders.remainingMs(entry) < 60000;
+          return `
+            <article class="memory-card ${soon ? "is-soon" : ""}" data-memory-id="${entry.id}">
+              <div>
+                <strong>${escapeMemoryHtml(entry.text)}</strong>
+                <small>In ${entry.delayMinutes} Min geplant</small>
+              </div>
+              <div class="memory-card-actions">
+                <time data-memory-eta="${entry.id}">${window.NocoReminders.formatEta(entry)}</time>
+                <button type="button" class="task-delete" data-memory-delete="${entry.id}" aria-label="Loeschen">×</button>
+              </div>
+            </article>
+          `;
+        })
+        .join("")
+    : `<div class="memory-empty">Noch keine Erinnerungen.<br>Sag z. B. in <strong>NOCO AI</strong>: «Erinnere mich in 20 Minuten, Muell rausbringen».</div>`;
+  return appShell(`
+    ${appHero("Memory", "NOCO Erinnerungen", "Countdown-Erinnerungen — offline auf deinem Geraet.")}
+    <section class="memory-compose" data-memory-compose>
+      <label for="memoryText">Woran soll ich dich erinnern?</label>
+      <textarea id="memoryText" data-memory-text rows="2" placeholder="z. B. Muell rausbringen"></textarea>
+      <label>In wie vielen Minuten?</label>
+      <div class="memory-minute-row">
+        ${chips.map((m) => `<button type="button" class="memory-minute-chip ${memoryPickMinutes === m ? "active" : ""}" data-memory-minutes="${m}">${m} min</button>`).join("")}
+      </div>
+      <input type="number" inputmode="numeric" min="1" max="1440" value="${memoryPickMinutes}" data-memory-minutes-input aria-label="Minuten" />
+      <button type="button" class="primary-action" data-action="memory-add">Erinnerung setzen</button>
+    </section>
+    <div class="section-title section-title-tight">
+      <div><p class="eyebrow">Aktiv</p><h2>Deine Timer</h2></div>
+      <span>${list.length}</span>
+    </div>
+    <div class="memory-list" data-memory-list>${rows}</div>
+  `);
+}
+
+function updateMemoryEtas() {
+  if (currentApp !== "memories" || !sheetContent) return;
+  sheetContent.querySelectorAll("[data-memory-eta]").forEach((el) => {
+    const id = el.dataset.memoryEta;
+    const list = window.NocoReminders?.load?.() || [];
+    const entry = list.find((r) => r.id === id && !r.done);
+    if (entry) el.textContent = window.NocoReminders.formatEta(entry);
+  });
+}
+
+function tasksTemplate() {
+  const tasks = loadTasks();
+  const rows = tasks.length
+    ? tasks.map((task) => `
+      <label class="task-row ${task.done ? "done" : ""}">
+        <input type="checkbox" data-task-toggle="${task.id}" ${task.done ? "checked" : ""} />
+        <span>${task.text.replace(/</g, "&lt;")}</span>
+        <button type="button" class="task-delete" data-task-delete="${task.id}" aria-label="Loeschen">×</button>
+      </label>
+    `).join("")
+    : `<div class="settings-row"><span>Keine Aufgaben</span><strong>Unten hinzufuegen</strong></div>`;
+  return appShell(`
+    ${appHero("Tasks", "NOCO Workspace", "Echte Liste mit Speicher und Keycard-Sync.")}
+    <div class="task-list">${rows}</div>
+    <div class="task-compose">
+      <input type="text" data-task-input maxlength="120" placeholder="Neue Aufgabe..." />
+      <button type="button" class="primary-action" data-action="task-add">Hinzufuegen</button>
+    </div>
+    <div class="settings-row"><span>Offen</span><strong>${tasks.filter((t) => !t.done).length}</strong></div>
+  `);
+}
+
+function weatherTemplate() {
+  const w = WEATHER_PRESETS[weatherIndex % WEATHER_PRESETS.length];
+  return appShell(`
+    ${appHero("Wetter", "NOCO Cloud", "Demo-Wetter mit Refresh — Daten wechseln lokal.")}
+    <section class="weather-hero">
+      <span class="weather-icon">${w.icon}</span>
+      <div>
+        <strong>${w.temp}°</strong>
+        <small>${w.city}</small>
+        <p>${w.cond} · Gefuehlt ${w.feel}°</p>
+      </div>
+    </section>
+    <div class="weather-hours">
+      ${w.hours.map((h, i) => `<span><em>+${i + 1}h</em><strong>${h}</strong></span>`).join("")}
+    </div>
+    <button class="primary-action" data-action="weather-refresh">Aktualisieren</button>
+  `);
+}
+
+function flashlightTemplate() {
+  const on = document.body.classList.contains("flashlight-on");
+  return appShell(`
+    ${appHero("Taschenlampe", "NOCO Tools", "Schaltet einen hellen Lichtmodus im Phone-Frame.")}
+    <section class="flashlight-stage ${on ? "on" : ""}" data-flashlight-stage>
+      <span class="flashlight-beam" aria-hidden="true"></span>
+      <strong>${on ? "An" : "Aus"}</strong>
+    </section>
+    <button class="primary-action" data-action="flashlight-toggle">${on ? "Ausschalten" : "Einschalten"}</button>
+  `);
+}
+
+function quotesTemplate() {
+  const quote = QUOTE_POOL[quoteIndex % QUOTE_POOL.length];
+  const saved = localStorage.getItem("noco_mobile_saved_quote") || "";
+  return appShell(`
+    ${appHero("Daily", "NOCO Quotes", "Sprueche zum Merken und Teilen.")}
+    <blockquote class="quote-card" data-quote-text>${quote}</blockquote>
+    <div class="game-grid">
+      <button class="settings-row" data-action="quote-next"><span>Neu</span><strong>↻</strong></button>
+      <button class="settings-row" data-action="quote-save"><span>Merken</span><strong>★</strong></button>
+    </div>
+    ${saved ? `<div class="settings-row"><span>Gespeichert</span><strong>${saved.slice(0, 42)}${saved.length > 42 ? "…" : ""}</strong></div>` : ""}
+  `);
+}
+
+function sketchTemplate() {
+  const saved = (localStorage.getItem("noco_mobile_sketch") || "").replace(/</g, "&lt;");
+  return appShell(`
+    ${appHero("Sketch", "NOCO Paint", "Text-Skizzenbuch — wird lokal gespeichert.")}
+    <div class="notes-app-editor">
+      <textarea id="sketchAppInput" rows="10" placeholder="Kritzle Ideen...">${saved}</textarea>
+      <button class="primary-action" data-action="save-sketch">Skizze speichern</button>
+    </div>
+  `);
+}
+
+function breathTemplate() {
+  const phase = localStorage.getItem("noco_mobile_breath_phase") || "ein";
+  return appShell(`
+    ${appHero("Breath", "Focus Atem", "4 Sekunden ein, 4 Sekunden aus — folge dem Glas-Kreis.")}
+    <div class="breath-orb ${phase === "aus" ? "exhale" : "inhale"}" data-breath-orb aria-hidden="true"></div>
+    <p class="breath-label" data-breath-label>${phase === "aus" ? "Ausatmen" : "Einatmen"}</p>
+    <button class="primary-action" data-action="breath-toggle">${localStorage.getItem("noco_mobile_breath_on") === "1" ? "Stoppen" : "Atem starten"}</button>
+  `);
+}
+
+function pulseTemplate() {
+  const tasks = loadTasks();
+  const openTasks = tasks.filter((t) => !t.done).length;
+  const mem = performance && performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : 42;
+  return appShell(`
+    ${appHero("Pulse", "System Pulse", "Live-Werte aus deinem NOCO Mobile Stand.")}
+    <div class="pulse-grid">
+      <div class="pulse-tile"><span>Apps</span><strong>${getInstalledApps().length + 4}</strong></div>
+      <div class="pulse-tile"><span>Tasks</span><strong>${openTasks}</strong></div>
+      <div class="pulse-tile"><span>Heap</span><strong>${mem} MB</strong></div>
+      <div class="pulse-tile"><span>Theme</span><strong>${settings.theme}</strong></div>
+    </div>
+    <button class="settings-row" data-action="pulse-refresh"><span>Aktualisieren</span><strong>↻</strong></button>
+  `);
+}
+
+function focusTemplateV2() {
+  return appShell(`
+    ${appHero("Focus", "NOCO Focus", "Profile und direkter Sprung zum Timer.")}
+    <div class="settings-list">
+      <button class="settings-row" data-app="timer"><span>Fokus-Timer</span><strong>25 Min</strong></button>
+      <button class="settings-row" data-app="breath"><span>Atem</span><strong>4-4 Rhythmus</strong></button>
+      <button class="settings-row" data-timer-mode="focus"><span>Modus</span><strong>Ruhig</strong></button>
+    </div>
+    <div class="settings-row"><span>Motion</span><strong>${settings.motion ? "An" : "Aus"}</strong></div>
   `);
 }
 
@@ -1578,42 +3501,41 @@ function toggleRow(id, title, text) {
   `;
 }
 
+let breathInterval = null;
+
 function extraTemplateForApp(appId) {
   const templates = {
-    tasks: () => appShell(`
-      ${appHero("Tasks", "NOCO Aufgaben", "Eine schnelle Mini-Liste fuer alles, was du gleich machen willst.")}
-      <div class="settings-list">
-        <label class="settings-row"><span>Mobile UI pruefen</span><input type="checkbox" checked /></label>
-        <label class="settings-row"><span>Keycard exportieren</span><input type="checkbox" /></label>
-        <label class="settings-row"><span>Neue Apps testen</span><input type="checkbox" /></label>
-      </div>
-    `),
-    timer: () => simpleAppTemplate("Timer", "NOCO Fokuszeit", "Kurzer Timer mit ruhigem Mobile-Look.", [
-      ["Fokus", "25 Minuten"],
-      ["Pause", "5 Minuten"],
-      ["Haptik", "Leicht"]
-    ]),
-    radar: () => simpleAppTemplate("Radar", "NOCO Status", "Ein kleines Systemradar fuer Mobile.", [
+    tasks: tasksTemplate,
+    timer: timerTemplate,
+    memories: memoriesTemplate,
+    calculator: calculatorTemplate,
+    weather: weatherTemplate,
+    flashlight: flashlightTemplate,
+    quotes: quotesTemplate,
+    sketch: sketchTemplate,
+    breath: breathTemplate,
+    pulse: pulseTemplate,
+    radar: () => simpleAppTemplate("Radar", "NOCO Status", "Systemradar mit Live-Werten.", [
       ["Sync", loadSyncInfo() ? "Verbunden" : "Lokal"],
       ["Motion", settings.motion ? "Aktiv" : "Reduziert"],
-      ["Glass", settings.glassBoost ? "Boost" : "Normal"]
+      ["Tasks", String(loadTasks().filter((t) => !t.done).length) + " offen"]
     ]),
-    recipes: () => simpleAppTemplate("Recipes", "NOCO Ideen", "Kleine App fuer Rezepte, Plaene und spontane Ideen.", [
+    recipes: () => simpleAppTemplate("Recipes", "NOCO Ideen", "Rezepte und Ideen — tippe Forge fuer mehr.", [
       ["Heute", "Glas-Limonade"],
       ["Liste", "3 Ideen"],
       ["Sync", "Keycard"]
     ]),
-    mood: () => simpleAppTemplate("Mood Board", "NOCO Mood", "Farben, Vibes und Wallpaper-Ideen sammeln.", [
+    mood: () => simpleAppTemplate("Mood Board", "NOCO Mood", "Farben und Vibes — Themes-App fuer Looks.", [
       ["Stimmung", "Ruhig"],
-      ["Farbe", "Aurora"],
-      ["Sync", "Lokal"]
+      ["Farbe", settings.theme],
+      ["Glass", settings.glassBoost ? "Boost" : "Normal"]
     ]),
-    vault: () => simpleAppTemplate("Vault Mini", "NOCO Vault", "Private Checkliste fuer sensible Mobile-Daten.", [
+    vault: () => simpleAppTemplate("Vault Mini", "NOCO Vault", "Sensible Daten — nutze Security + Code.", [
       ["Eintraege", "3"],
-      ["Schutz", "ShieldGate"],
+      ["Schutz", settings.mobileCode ? "Code" : "Offen"],
       ["Sync", "Keycard"]
     ]),
-    glowcam: () => simpleAppTemplate("GlowCam", "NOCO Kamera", "Fake-Kamera mit Glas-Licht und Profilkarten.", [
+    glowcam: () => simpleAppTemplate("GlowCam", "NOCO Kamera", "Portrait-Lichtsimulation.", [
       ["Modus", "Portrait"],
       ["Licht", "Mint"],
       ["Filter", "Glass"]
@@ -1638,24 +3560,63 @@ function extraTemplateForApp(appId) {
   return templates[appId] || null;
 }
 
-async function openApp(appId) {
-  if (editMode) return;
-  if (currentApp === "dodgerun" && appId !== "dodgerun") stopDodgeGame(false);
+async function openApp(appId, options = {}) {
+  const targetId = String(appId || "").trim();
+  const force = !!options.force;
+  if (!targetId) return;
+  if (openAppInFlight) {
+    pendingOpenAppId = targetId;
+    return;
+  }
+  openAppInFlight = true;
+  try {
+  if (editMode) {
+    showToast("Bearbeiten beenden, dann App oeffnen");
+    return;
+  }
+  if (currentApp === targetId && !force && appSheet && !appSheet.classList.contains("hidden")) {
+    hapticTap();
+    return;
+  }
+  closeBeam();
+  closeHub();
+  setIslandExpanded(false);
+  widgetPanel?.classList.add("hidden");
+  shortcutPanel?.classList.add("hidden");
+  desktopPanel?.classList.add("hidden");
+  if (currentApp === "dodgerun" && targetId !== "dodgerun") stopDodgeGame(false);
+  if (currentApp === "runner" && targetId !== "runner") stopRunnerGame(false);
+  if (settings.keepAppsAlive !== false && appCache.has(targetId) && !VOLATILE_APP_IDS.has(targetId)) {
+    const cached = appCache.get(targetId);
+    hapticTap();
+    renderAppSheet(targetId, cached.html, { restore: true, scrollTop: cached.scrollTop });
+    if (targetId === "dodgerun" && dodgeGame.running) updateDodgeDom();
+    if (targetId === "runner" && runnerGame.running) updateRunnerDom();
+    if (targetId === "settings") {
+      refreshCoreSection();
+      syncCoreToggleStates();
+    }
+    mountNocoAIIfNeeded(targetId);
+    mountNotesIfNeeded(targetId);
+    return;
+  }
   if (currentPage === 1 && desktopNeedsUnlock(1) && !(await unlockDesktop())) {
     return;
   }
-  const forgeApp = forgeApps.find((app) => app.id === appId);
+  const forgeApp = forgeApps.find((app) => app.id === targetId);
   if (forgeApp?.exclusive && !isExclusiveActive()) {
     renderAppSheet("exclusive", exclusiveTemplate());
     showToast("NOCO Exclusive benoetigt");
     return;
   }
-  if (appId === "pay" || appId === "wallet") {
+  if (targetId === "pay" || targetId === "wallet") {
     hapticTap();
-    renderAppSheet(appId, payTemplate());
+    renderAppSheet(targetId, payTemplate());
+    mountNocoAIIfNeeded(targetId);
+    mountNotesIfNeeded(targetId);
     return;
   }
-  currentApp = appId;
+  currentApp = targetId;
   hapticTap();
   const templates = {
     settings: settingsTemplateV2,
@@ -1672,56 +3633,57 @@ async function openApp(appId) {
       ["Notizen", "Backend nötig"],
       ["Desktop Unlock", "Pairing möglich"]
     ]),
-    focus: () => simpleAppTemplate("Focus", "NOCO Focus", "Mobile Fokusprofile für ruhige Nutzung und schnellen Zugriff.", [
-      ["Ruhig", "Bereit"],
-      ["Gaming", "Preview"],
-      ["Produktiv", "Preview"]
-    ]),
+    focus: focusTemplateV2,
+    calculator: calculatorTemplate,
+    weather: weatherTemplate,
+    flashlight: flashlightTemplate,
+    quotes: quotesTemplate,
+    tasks: tasksTemplate,
+    timer: timerTemplate,
+    memories: memoriesTemplate,
+    sketch: sketchTemplate,
+    breath: breathTemplate,
+    pulse: pulseTemplate,
     pay: () => simpleAppTemplate("Pay", "NOCO Pay", "Fake-Pay-Ansicht für spätere NOCO Demos und App-Käufe.", [
       ["Guthaben", "24,00 € Demo"],
       ["Exclusive", "Nicht aktiv"],
       ["Zahlung", "Simuliert"]
     ]),
-    pulse: () => simpleAppTemplate("Pulse", "System Pulse", "Ein schneller Blick auf Gefühl, Speicher und App-Zustand.", [
-      ["Performance", "Flüssig"],
-      ["Speicher", "42% genutzt"],
-      ["Akku-Modus", "Mobil optimiert"]
-    ]),
-    sketch: () => `
-      ${appShell(`
-        ${appHero("Sketch", "NOCO Paint", "Ein kleines Glas-Zeichenbrett als mobile Kreativ-App.")}
-        <div class="notes-app-editor">
-          <textarea rows="8" placeholder="Kritzle hier erstmal als Text-Skizze..."></textarea>
-          <button class="primary-action">Skizze merken</button>
-        </div>
-      `)}
-    `,
-    breath: () => simpleAppTemplate("Breath", "Focus Atem", "Ruhiger Atem-Timer mit sanftem Pulse-Gefühl.", [
-      ["Rhythmus", "4 Sekunden"],
-      ["Haptik", "Leicht"],
-      ["Stimmung", "Ruhig"]
-    ]),
-    arcade: () => simpleAppTemplate("Mini Arcade", "NOCO Games", "Kleine Spielecke für mobile Experimente.", [
-      ["Runner", "Preview"],
-      ["Tiles", "Preview"],
-      ["Highscore", "0"]
-    ]),
+    arcade: arcadeHubTemplate,
+    runner: runnerTemplate,
+    nocoai: nocoAITemplate,
     transit: () => simpleAppTemplate("Transit", "NOCO Route", "Fake-Reiseplaner für die mobile Demo-Welt.", [
       ["Nächster Halt", "NOCO Plaza"],
       ["Route", "Glaslinie 1"],
       ["Status", "Pünktlich"]
     ])
   };
-  const meta = getAppMeta(appId);
-  const renderer = templates[appId] || extraTemplateForApp(appId) || (forgeApp
+  const meta = getAppMeta(targetId);
+  const renderer = templates[targetId] || extraTemplateForApp(targetId) || (forgeApp
     ? () => simpleAppTemplate(forgeApp.title, "NOCO Mobile App", forgeApp.text, [["Status", "Installiert"], ["Sync", "Keycard bereit"], ["Exclusive", forgeApp.exclusive ? "Ja" : "Nein"]])
-    : () => simpleAppTemplate(meta.title, "NOCO Mobile", "Diese App ist auf deinem Geraet bereit.", [["Status", "Bereit"], ["Sync", "Lokal"], ["Version", "1.1"]]));
-  renderAppSheet(appId, renderer());
+    : () => simpleAppTemplate(meta.title, "NOCO Mobile", "Diese App ist auf deinem Geraet bereit.", [["Status", "Bereit"], ["Sync", "Lokal"], ["Version", "1.2"]]));
+  renderAppSheet(targetId, renderer());
+  mountNocoAIIfNeeded(targetId);
+  mountNotesIfNeeded(targetId);
+  if (targetId === "timer") window.setTimeout(() => refreshTimerDom(), 60);
+  if (targetId === "memories") window.setTimeout(() => updateMemoryEtas(), 60);
+  if (targetId === "memorygrid" && memoryState.phase === "input" && !memoryState.playbackLock && memoryState.playerIndex === 0) {
+    window.setTimeout(() => playMemorySequence(), 180);
+  }
+  } finally {
+    window.setTimeout(() => {
+      openAppInFlight = false;
+      const queued = pendingOpenAppId;
+      pendingOpenAppId = null;
+      if (queued) void openApp(queued);
+    }, 180);
+  }
 }
 
 async function closeAppToPage(page) {
   if (appSheet.classList.contains("hidden")) return;
   stopDodgeGame(false);
+  stopRunnerGame(false);
   const target = Math.max(0, Math.min(1, page));
   if (target === 1 && desktopNeedsUnlock(1) && !(await unlockDesktop())) {
     return;
@@ -1733,20 +3695,25 @@ async function closeAppToPage(page) {
 
 function runShortcut(id) {
   if (id === "hub") {
+    closeAllOverlays();
     openHub();
     return;
   }
-  if (forgeApps.some((app) => app.id === id) || baseDesktopApps.some((app) => app.id === id) || ["web", "themes", "cloud", "focus", "notes", "pay", "exclusive", "toon"].includes(id)) {
-    openApp(id);
+  const openable = forgeApps.some((app) => app.id === id)
+    || baseDesktopApps.some((app) => app.id === id)
+    || ["web", "themes", "cloud", "focus", "notes", "pay", "exclusive", "toon", "tasks", "calculator", "timer", "memories", "arcade", "nocoai"].includes(id)
+    || getInstalledApps().includes(id);
+  if (openable) {
+    void openApp(id);
     return;
   }
   hapticTap();
-  showToast(shortcutById(id).title + " geoeffnet");
+  showToast(shortcutById(id).title + " nicht installiert — Forge oeffnen");
 }
 
 const feedItems = [
-  ["NOCO Mobile 1.1", "Home-Screen, Desktop-Swipe und Liquid Glass laufen als PWA."],
-  ["App-Gefühl", "Apps starten jetzt fullscreen statt als kleines Fenster unten."],
+  ["NOCO Mobile 1.2", "Rechner, Tasks, Timer und Wetter — im Forge installieren."],
+  ["Spiele", "Memory zeigt die Sequenz, Tap Dash und Color Catch speichern Bestwerte."],
   ["Themes", "Aurora, Midnight, Sunset und Forest verändern das ganze System."],
   ["Nächster Schritt", "Cloud-Sync und Mobile Unlock brauchen später ein echtes Backend."]
 ];
@@ -1760,27 +3727,179 @@ if (demoList) {
   });
 }
 
-editBtn.addEventListener("click", () => setEditMode(!editMode));
-widgetBtn.addEventListener("click", () => {
+editBtn.addEventListener("click", (event) => {
+  event.stopPropagation();
+  setIslandExpanded(false);
+  if (currentPage === 1) {
+    setEditMode(!editMode);
+    return;
+  }
+  if (currentPage !== 0) {
+    void goToPage(0);
+    window.setTimeout(() => setEditMode(!editMode), 440);
+  } else {
+    setEditMode(!editMode);
+  }
+});
+
+homeEditFab?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  setEditMode(false);
+});
+
+widgetAddFab?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  hapticTap();
+  openWidgetPanelFromHome();
+});
+
+widgetBtn.addEventListener("click", (event) => {
+  event.stopPropagation();
+  setIslandExpanded(false);
   if (currentPage === 1) {
     renderDesktopLibrary();
     desktopPanel?.classList.remove("hidden");
+    document.body.classList.add("sheet-open");
     return;
   }
-  renderWidgetLibrary();
-  widgetPanel.classList.remove("hidden");
+  if (!editMode && currentPage === 0) {
+    setEditMode(true);
+  }
+  openWidgetPanelFromHome();
 });
 saveBtn.addEventListener("click", saveNote);
-closeSheet.addEventListener("click", () => closeAppToPage(1));
+closeSheet.addEventListener("click", () => closeAppToPage(currentPage));
+
+document.getElementById("coachDismiss")?.addEventListener("click", dismissCoach);
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  if (!appSheet?.classList.contains("hidden")) {
+    closeAppToPage(currentPage);
+    return;
+  }
+  if (!hubPanel?.classList.contains("hidden")) {
+    closeHub();
+    return;
+  }
+  if (!spotlightPanel?.classList.contains("hidden")) {
+    closeBeam();
+    return;
+  }
+  if (islandOpen) setIslandExpanded(false);
+});
 codeConfirm.addEventListener("click", () => finishCodeRequest(codeInput.value.trim()));
 codeInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") finishCodeRequest(codeInput.value.trim());
   if (event.key === "Escape") finishCodeRequest(null);
 });
 
-document.querySelectorAll("[data-page]").forEach((dot) => {
-  dot.addEventListener("click", () => goToPage(Number(dot.dataset.page)));
+document.querySelectorAll(".island-page-tab[data-page]").forEach((btn) => {
+  btn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setIslandExpanded(false);
+    void goToPage(Number(btn.dataset.page));
+  });
 });
+
+function openNocoAIFromIsland(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  setIslandExpanded(false);
+  hapticTap();
+  openApp("nocoai");
+}
+
+document.querySelectorAll("[data-open-nocoai]").forEach((btn) => {
+  btn.addEventListener("click", openNocoAIFromIsland);
+});
+
+dynamicIsland?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  if (event.target.closest(".island-menu")) return;
+  if (event.target.closest("[data-open-nocoai]")) return;
+  setIslandExpanded(!islandOpen);
+  hapticTap();
+});
+
+document.addEventListener("click", (event) => {
+  if (!islandOpen) return;
+  if (event.target.closest(".island-zone")) return;
+  setIslandExpanded(false);
+}, true);
+
+function startIslandSwipe(event) {
+  if (!islandZone || editMode) return;
+  const point = event.touches ? event.touches[0] : event;
+  islandZone._swipe = { y: point.clientY, x: point.clientX, at: Date.now() };
+}
+
+function endIslandSwipe(event) {
+  const start = islandZone?._swipe;
+  islandZone._swipe = null;
+  if (!start) return;
+  const point = event.changedTouches ? event.changedTouches[0] : event;
+  const dy = point.clientY - start.y;
+  const dx = Math.abs(point.clientX - start.x);
+  if (dy > 42 && dy > dx) {
+    setIslandExpanded(false);
+    openBeam();
+  }
+}
+
+islandZone?.addEventListener("touchstart", startIslandSwipe, { passive: true });
+islandZone?.addEventListener("touchend", endIslandSwipe, { passive: true });
+
+function startPageDragPointer(event) {
+  if (event.pointerType === "touch") return;
+  if (!canStartPageSwipe(event)) return;
+  pageDrag = {
+    x: event.clientX,
+    y: event.clientY,
+    at: Date.now(),
+    active: false,
+    cancelled: false,
+    base: currentPage,
+    rawDx: 0,
+    pointerId: event.pointerId
+  };
+}
+
+function movePageDragPointer(event) {
+  if (!pageDrag || pageDrag.pointerId !== event.pointerId) return;
+  const dx = event.clientX - pageDrag.x;
+  const dy = event.clientY - pageDrag.y;
+  pageDrag.rawDx = dx;
+  if (!pageDrag.active) {
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < GESTURE.pageStart) return;
+    const intent = getGestureIntent(dx, dy, GESTURE.pageRatio);
+    if (intent !== "horizontal") {
+      pageDrag.cancelled = true;
+      pageDrag = null;
+      return;
+    }
+    pageDrag.active = true;
+    pageScrollLock = true;
+    pageStage?.classList.add("page-swiping");
+  }
+  event.preventDefault();
+  const width = getTrackWidth();
+  const atEdge = (pageDrag.base === 0 && dx > 0) || (pageDrag.base === 1 && dx < 0);
+  const followDx = atEdge ? dx * 0.22 : dx;
+  setPageStageTransform(pageDrag.base, Math.max(-width, Math.min(width, followDx)), false);
+}
+
+function endPageDragPointer(event) {
+  if (!pageDrag || pageDrag.pointerId !== event.pointerId) return;
+  endPageDrag();
+}
+
+screenTrack?.addEventListener("pointerdown", startPageDragPointer);
+screenTrack?.addEventListener("pointermove", movePageDragPointer);
+screenTrack?.addEventListener("pointerup", endPageDragPointer);
+screenTrack?.addEventListener("pointercancel", endPageDragPointer);
 
 document.addEventListener("click", async (event) => {
   resetAutoLockTimer();
@@ -1801,16 +3920,45 @@ document.addEventListener("click", async (event) => {
     return;
   }
 
-  const app = event.target.closest("[data-app]");
-  if (app && !editMode) await openApp(app.dataset.app);
+  if (event.target.closest("[data-open-timer-live]")) {
+    void openApp("timer", { force: true });
+    hapticTap();
+    return;
+  }
+  if (event.target.closest("[data-open-memory-live]")) {
+    void openApp("memories", { force: true });
+    hapticTap();
+    return;
+  }
+
+  const libraryApp = event.target.closest(".library-app[data-app], .library-quick-app[data-app]");
+  if (libraryApp && !editMode) {
+    event.stopPropagation();
+    event.preventDefault();
+    await openApp(libraryApp.dataset.app);
+    return;
+  }
+
+  const app = event.target.closest("[data-app], .forge-install[data-app]");
+  if (app && !editMode) {
+    event.stopPropagation();
+    event.preventDefault();
+    await openApp(app.dataset.app);
+    return;
+  }
 
   const pageJump = event.target.closest("[data-go-page]");
   if (pageJump) {
     await goToPage(Number(pageJump.dataset.goPage));
   }
 
+  if (event.target.closest("[data-action='go-apps']") && !editMode) {
+    void goToPage(1);
+    return;
+  }
+
   const beamOpen = event.target.closest("[data-action='open-beam'], [data-action='open-spotlight']");
-  if (beamOpen && !editMode && !event.target.closest(".beam-glyph")) {
+  if (beamOpen && !editMode) {
     openBeam();
   }
 
@@ -1841,9 +3989,16 @@ document.addEventListener("click", async (event) => {
     if (item) resolveSearchItem(item);
   }
 
+  const libraryFolderBtn = event.target.closest("[data-library-folder]");
+  if (libraryFolderBtn && !editMode) {
+    toggleLibraryFolder(libraryFolderBtn.dataset.libraryFolder);
+    return;
+  }
+
   const folder = event.target.closest("[data-folder]");
   if (folder && !editMode) {
     openFolder(folder.dataset.folder);
+    return;
   }
 
   if (event.target.closest("[data-firstlight-next]")) {
@@ -1862,10 +4017,6 @@ document.addEventListener("click", async (event) => {
   if (event.target.closest("[data-firstlight-export]")) {
     await exportMobileKeycard({ skipAuth: true });
     finishFirstLight();
-  }
-
-  if (event.target === unlockBtn) {
-    await unlockFromLockScreen();
   }
 
   if (event.target === lockEditBtn) {
@@ -1897,7 +4048,13 @@ document.addEventListener("click", async (event) => {
     settings.autoLockSeconds = Number(lockTime.dataset.lockTime || 60);
     saveSettings();
     resetAutoLockTimer();
-    openApp("settings");
+    invalidateAppCache("settings");
+    if (currentApp === "settings") {
+      refreshCoreSection();
+      syncCoreToggleStates();
+    } else {
+      void openApp("settings");
+    }
     showToast("Auto-Lock: " + settings.autoLockSeconds + " Sekunden");
   }
 
@@ -1906,20 +4063,34 @@ document.addEventListener("click", async (event) => {
   }
 
   const shortcut = event.target.closest("[data-shortcut]");
-  if (shortcut) runShortcut(shortcut.dataset.shortcut);
+  if (shortcut && !editMode) {
+    event.stopPropagation();
+    event.preventDefault();
+    runShortcut(shortcut.dataset.shortcut);
+    return;
+  }
 
   const panelOpen = event.target.closest("[data-open-panel='shortcuts']");
   if (panelOpen) {
+    event.stopPropagation();
+    setIslandExpanded(false);
     renderShortcutEditor();
-    shortcutPanel.classList.remove("hidden");
+    shortcutPanel?.classList.remove("hidden");
+    document.body.classList.add("sheet-open");
   }
 
   if (event.target.closest("[data-close-panel]")) {
-    shortcutPanel.classList.add("hidden");
+    shortcutPanel?.classList.add("hidden");
+    if (appSheet?.classList.contains("hidden") && widgetPanel?.classList.contains("hidden")) {
+      document.body.classList.remove("sheet-open");
+    }
   }
 
   if (event.target.closest("[data-close-widget-panel]")) {
     widgetPanel.classList.add("hidden");
+    if (appSheet?.classList.contains("hidden") && shortcutPanel?.classList.contains("hidden")) {
+      document.body.classList.remove("sheet-open");
+    }
   }
 
   if (event.target.closest("[data-code-cancel]")) {
@@ -1935,6 +4106,8 @@ document.addEventListener("click", async (event) => {
   if (widgetRemove) {
     toggleWidget(widgetRemove.dataset.widgetRemove);
     refreshWidgetEditButtons();
+    saveMobileOrder();
+    hapticTap();
     return;
   }
 
@@ -1995,8 +4168,17 @@ document.addEventListener("click", async (event) => {
   }
     saveSettings();
     applySettings();
-    if (currentApp === "security") openApp("security");
-    else openApp("settings");
+    invalidateAppCache("settings");
+    if (currentApp === "security") {
+      await openApp("security");
+      syncCoreToggleStates();
+    } else if (currentApp === "settings") {
+      refreshCoreSection();
+      syncCoreToggleStates();
+    } else {
+      await openApp("settings");
+      refreshCoreSection();
+    }
     showToast("Einstellung geändert");
   }
 
@@ -2007,6 +4189,10 @@ document.addEventListener("click", async (event) => {
   const settingsSection = event.target.closest("[data-settings-section]");
   if (settingsSection) {
     settingsActiveSection = settingsSection.dataset.settingsSection || "deck";
+    if (currentApp === "settings") {
+      refreshCoreSection();
+      return;
+    }
     openApp("settings");
   }
 
@@ -2030,13 +4216,58 @@ document.addEventListener("click", async (event) => {
     }
   }
 
-  if (event.target.closest("[data-action='save-note-app']")) {
-    const appInput = document.getElementById("notesAppInput");
-    if (appInput) {
-      noteInput.value = appInput.value;
-      saveNote();
-      openApp("notes");
-    }
+  const noteSaveBtn = event.target.closest("[data-note-save]");
+  if (noteSaveBtn && window.NocoNotes) {
+    const root = noteSaveBtn.closest("[data-notes-app]");
+    const title = root?.querySelector("[data-note-title]")?.value?.trim();
+    const body = root?.querySelector("[data-note-body]")?.value ?? "";
+    const active = window.NocoNotes.getActiveNote();
+    window.NocoNotes.updateNote(active.id, { title, body });
+    syncHomeNoteFromStore();
+    showToast("Notiz gespeichert");
+    openApp("notes");
+    return;
+  }
+
+  const noteNew = event.target.closest("[data-note-new]");
+  if (noteNew && window.NocoNotes) {
+    window.NocoNotes.createNote(`Notiz ${window.NocoNotes.listNotes().length + 1}`);
+    syncHomeNoteFromStore();
+    openApp("notes");
+    return;
+  }
+
+  const noteSelect = event.target.closest("[data-note-select]");
+  if (noteSelect && window.NocoNotes) {
+    window.NocoNotes.setActive(noteSelect.dataset.noteSelect);
+    openApp("notes");
+    return;
+  }
+
+  const notesRenameSave = event.target.closest("[data-notes-rename-save]");
+  if (notesRenameSave && window.NocoNotes) {
+    const sheet = document.querySelector("[data-notes-rename-sheet]");
+    const id = sheet?.dataset.renameId;
+    const val = document.querySelector("[data-notes-rename-input]")?.value?.trim();
+    if (id && val) window.NocoNotes.updateNote(id, { title: val });
+    sheet?.classList.add("hidden");
+    openApp("notes");
+    return;
+  }
+
+  if (event.target.closest("[data-notes-rename-cancel]")) {
+    document.querySelector("[data-notes-rename-sheet]")?.classList.add("hidden");
+    return;
+  }
+
+  if (event.target.closest("[data-notes-rename-delete]") && window.NocoNotes) {
+    const sheet = document.querySelector("[data-notes-rename-sheet]");
+    const id = sheet?.dataset.renameId;
+    if (id) window.NocoNotes.deleteNote(id);
+    sheet?.classList.add("hidden");
+    syncHomeNoteFromStore();
+    openApp("notes");
+    return;
   }
 
   if (event.target.closest("[data-action='save-toon-note']")) {
@@ -2066,7 +4297,6 @@ document.addEventListener("click", async (event) => {
     settings.exclusivePlan = "trial";
     saveSettings();
     applySettings();
-    addTransaction("NOCO Exclusive Probetag", 0, "exclusive");
     openApp("exclusive");
     showToast("NOCO Exclusive Probetag aktiv");
   }
@@ -2109,7 +4339,6 @@ document.addEventListener("click", async (event) => {
   if (event.target.closest("[data-action='pay-method']")) {
     settings.paymentMethod = true;
     saveSettings();
-    addTransaction("Zahlungsmethode verbunden", 0, "pay");
     openApp("pay");
     showToast("Zahlungsmethode aktiv");
   }
@@ -2125,17 +4354,39 @@ document.addEventListener("click", async (event) => {
   }
 
   if (event.target.closest("[data-action='scan']")) {
-    showToast("Scan abgeschlossen: alles sauber");
+    void runSecurityScan();
+  }
+
+  if (event.target.closest("[data-action='runner-start']") || event.target.closest("[data-runner-stage]")) {
+    if (!runnerGame.running) startRunnerGame();
+    else runnerJump();
+  }
+
+  if (event.target.closest("[data-action='runner-reset']")) {
+    stopRunnerGame(false);
+    runnerGame.score = 0;
+    runnerGame.best = 0;
+    localStorage.setItem("noco_mobile_runner_best", "0");
+    openApp("runner");
   }
 
   if (event.target.closest("[data-action='tapdash-hit']")) {
     tapDashScore += 1;
+    if (tapDashScore > tapDashBest) {
+      tapDashBest = tapDashScore;
+      localStorage.setItem("noco_mobile_tapdash_best", String(tapDashBest));
+    }
+    invalidateAppCache("tapdash");
     openApp("tapdash");
-    if (tapDashScore >= 30) showToast("Tap Dash gewonnen");
+    if (tapDashScore >= 30) {
+      showToast("Tap Dash gewonnen!");
+      tapDashScore = 0;
+    }
   }
 
   if (event.target.closest("[data-action='tapdash-reset']")) {
     tapDashScore = 0;
+    invalidateAppCache("tapdash");
     openApp("tapdash");
   }
 
@@ -2143,33 +4394,240 @@ document.addEventListener("click", async (event) => {
   if (colorChoice) {
     const colors = ["Mint", "Blue", "Pink"];
     const picked = colorChoice.dataset.colorChoice;
-    showToast(picked === colorCatchTarget ? "Treffer" : "Daneben");
+    if (picked === colorCatchTarget) {
+      colorCatchCombo += 1;
+      const gain = 1 + Math.min(5, colorCatchCombo);
+      colorCatchBest = Math.max(colorCatchBest, colorCatchCombo);
+      localStorage.setItem("noco_mobile_color_best", String(colorCatchBest));
+      showToast("Treffer +" + gain + " Combo");
+    } else {
+      colorCatchCombo = 0;
+      showToast("Daneben — Combo weg");
+    }
     colorCatchTarget = colors[Math.floor(Math.random() * colors.length)];
+    invalidateAppCache("colorcatch");
     openApp("colorcatch");
   }
 
   const memoryChoice = event.target.closest("[data-memory-choice]");
-  if (memoryChoice) {
+  if (memoryChoice && memoryState.phase === "input" && !memoryState.playbackLock) {
     const picked = Number(memoryChoice.dataset.memoryChoice);
-    if (picked === memorySequence[0]) {
-      memorySequence.shift();
-      if (!memorySequence.length) {
-        memoryRound += 1;
-        memorySequence = Array.from({ length: Math.min(6, memoryRound + 2) }, () => 1 + Math.floor(Math.random() * 4));
-        showToast("Runde geschafft");
+    const expected = memoryState.sequence[memoryState.playerIndex];
+    flashMemoryCell(picked);
+    if (picked === expected) {
+      memoryState.playerIndex += 1;
+      if (memoryState.playerIndex >= memoryState.sequence.length) {
+        memoryState.best = Math.max(memoryState.best, memoryState.round);
+        localStorage.setItem("noco_mobile_memory_best", String(memoryState.best));
+        memoryState.round += 1;
+        showToast("Runde " + (memoryState.round - 1) + " geschafft");
+        startNewMemoryRound();
+        return;
       }
+      invalidateAppCache("memorygrid");
+      openApp("memorygrid");
     } else {
-      memoryRound = 1;
-      memorySequence = [1, 3, 2];
-      showToast("Sequenz zurueckgesetzt");
+      memoryState.round = 1;
+      memoryState.best = memoryState.best;
+      memoryState.sequence = randomMemorySequence(3);
+      memoryState.playerIndex = 0;
+      showToast("Falsch — von vorn");
+      invalidateAppCache("memorygrid");
+      openApp("memorygrid");
+      window.setTimeout(() => playMemorySequence(), 200);
     }
-    openApp("memorygrid");
+  }
+
+  if (event.target.closest("[data-action='memory-replay']")) {
+    void playMemorySequence();
   }
 
   if (event.target.closest("[data-action='memory-reset']")) {
-    memoryRound = 1;
-    memorySequence = [1, 3, 2];
+    memoryState.round = 1;
+    memoryState.sequence = randomMemorySequence(3);
+    memoryState.playerIndex = 0;
+    memoryState.phase = "input";
+    invalidateAppCache("memorygrid");
     openApp("memorygrid");
+    window.setTimeout(() => playMemorySequence(), 200);
+  }
+
+  const calcKey = event.target.closest("[data-calc-key]");
+  if (calcKey) {
+    applyCalcKey(calcKey.dataset.calcKey);
+    invalidateAppCache("calculator");
+    openApp("calculator");
+    hapticTap();
+  }
+
+  const timerMode = event.target.closest("[data-timer-mode]");
+  if (timerMode) {
+    setTimerMode(timerMode.dataset.timerMode);
+    refreshTimerApp();
+    hapticTap();
+  }
+
+  const timerPreset = event.target.closest("[data-timer-preset]");
+  if (timerPreset) {
+    setTimerMinutes(Number(timerPreset.dataset.timerPreset));
+    refreshTimerApp();
+    hapticTap();
+  }
+
+  if (event.target.closest("[data-action='timer-apply-minutes']")) {
+    const input = sheetContent.querySelector("[data-timer-minutes]");
+    setTimerMinutes(Number(input?.value || timerState.customMinutes));
+    refreshTimerApp();
+    showToast(timerState.customMinutes + " Minuten eingestellt");
+    hapticTap();
+  }
+
+  if (event.target.closest("[data-action='timer-toggle']")) {
+    if (timerState.running) {
+      stopFocusTimer();
+      refreshTimerApp();
+    } else {
+      startFocusTimer();
+      refreshTimerApp();
+    }
+    hapticTap();
+  }
+
+  if (event.target.closest("[data-action='timer-reset']")) {
+    stopFocusTimer();
+    setTimerMode(timerState.mode);
+    refreshTimerApp();
+    hapticTap();
+  }
+
+  const memoryMinChip = event.target.closest("[data-memory-minutes]");
+  if (memoryMinChip) {
+    memoryPickMinutes = Number(memoryMinChip.dataset.memoryMinutes) || 10;
+    const input = sheetContent.querySelector("[data-memory-minutes-input]");
+    if (input) input.value = String(memoryPickMinutes);
+    refreshMemoriesApp();
+    hapticTap();
+  }
+
+  if (event.target.closest("[data-action='memory-add']")) {
+    const text = (sheetContent.querySelector("[data-memory-text]")?.value || "").trim();
+    const minInput = sheetContent.querySelector("[data-memory-minutes-input]");
+    const mins = Number(minInput?.value || memoryPickMinutes);
+    if (!text) {
+      showToast("Text eingeben");
+      return;
+    }
+    addMemoryReminder(text, mins);
+    showToast("Erinnerung in " + mins + " Min");
+    refreshMemoriesApp();
+    hapticTap();
+  }
+
+  const memoryDelete = event.target.closest("[data-memory-delete]");
+  if (memoryDelete) {
+    window.NocoReminders?.remove?.(memoryDelete.dataset.memoryDelete);
+    refreshMemoriesApp();
+    hapticTap();
+  }
+
+  if (event.target.closest("[data-action='task-add']")) {
+    const input = sheetContent.querySelector("[data-task-input]");
+    const text = (input?.value || "").trim();
+    if (!text) {
+      showToast("Text eingeben");
+      return;
+    }
+    const tasks = loadTasks();
+    tasks.unshift({ id: "t_" + Date.now(), text, done: false });
+    saveTasksList(tasks);
+    invalidateAppCache("tasks");
+    openApp("tasks");
+    showToast("Aufgabe hinzugefuegt");
+  }
+
+  const taskToggle = event.target.closest("[data-task-toggle]");
+  if (taskToggle) {
+    const tasks = loadTasks().map((t) => (t.id === taskToggle.dataset.taskToggle ? { ...t, done: taskToggle.checked } : t));
+    saveTasksList(tasks);
+    invalidateAppCache("tasks");
+    openApp("tasks");
+  }
+
+  const taskDelete = event.target.closest("[data-task-delete]");
+  if (taskDelete) {
+    saveTasksList(loadTasks().filter((t) => t.id !== taskDelete.dataset.taskDelete));
+    invalidateAppCache("tasks");
+    openApp("tasks");
+    showToast("Geloescht");
+  }
+
+  if (event.target.closest("[data-action='weather-refresh']")) {
+    weatherIndex = (weatherIndex + 1) % WEATHER_PRESETS.length;
+    localStorage.setItem("noco_mobile_weather_idx", String(weatherIndex));
+    invalidateAppCache("weather");
+    openApp("weather");
+    showToast("Wetter aktualisiert");
+  }
+
+  if (event.target.closest("[data-action='flashlight-toggle']")) {
+    const on = document.body.classList.toggle("flashlight-on");
+    invalidateAppCache("flashlight");
+    openApp("flashlight");
+    showToast(on ? "Licht an" : "Licht aus");
+  }
+
+  if (event.target.closest("[data-action='quote-next']")) {
+    quoteIndex = (quoteIndex + 1) % QUOTE_POOL.length;
+    localStorage.setItem("noco_mobile_quote_idx", String(quoteIndex));
+    invalidateAppCache("quotes");
+    openApp("quotes");
+  }
+
+  if (event.target.closest("[data-action='quote-save']")) {
+    const text = sheetContent.querySelector("[data-quote-text]")?.textContent || QUOTE_POOL[quoteIndex];
+    localStorage.setItem("noco_mobile_saved_quote", text);
+    showToast("Spruch gemerkt");
+    invalidateAppCache("quotes");
+    openApp("quotes");
+  }
+
+  if (event.target.closest("[data-action='save-sketch']")) {
+    const val = sheetContent.querySelector("#sketchAppInput")?.value || "";
+    localStorage.setItem("noco_mobile_sketch", val);
+    showToast("Skizze gespeichert");
+    invalidateAppCache("sketch");
+  }
+
+  if (event.target.closest("[data-action='breath-toggle']")) {
+    const running = localStorage.getItem("noco_mobile_breath_on") === "1";
+    if (running) {
+      localStorage.setItem("noco_mobile_breath_on", "0");
+      if (breathInterval) window.clearInterval(breathInterval);
+      breathInterval = null;
+      showToast("Atem gestoppt");
+    } else {
+      localStorage.setItem("noco_mobile_breath_on", "1");
+      let inhale = true;
+      breathInterval = window.setInterval(() => {
+        inhale = !inhale;
+        localStorage.setItem("noco_mobile_breath_phase", inhale ? "ein" : "aus");
+        const orb = sheetContent.querySelector("[data-breath-orb]");
+        const label = sheetContent.querySelector("[data-breath-label]");
+        if (orb) orb.classList.toggle("exhale", !inhale);
+        if (orb) orb.classList.toggle("inhale", inhale);
+        if (label) label.textContent = inhale ? "Einatmen" : "Ausatmen";
+        if (currentApp !== "breath") return;
+      }, 4000);
+      showToast("4-4 Atemrhythmus");
+    }
+    invalidateAppCache("breath");
+    openApp("breath");
+  }
+
+  if (event.target.closest("[data-action='pulse-refresh']")) {
+    invalidateAppCache("pulse");
+    openApp("pulse");
+    showToast("Pulse aktualisiert");
   }
 
   if (event.target.closest("[data-action='dodge-start']")) {
@@ -2256,11 +4714,11 @@ function launchNeedsUnlock() {
 }
 
 function isWeakCode(code) {
-  return !/^\d{4,8}$/.test(code)
+  return !/^\d{4}$/.test(code)
     || /^(\d)\1+$/.test(code)
-    || ["0000", "1111", "1234", "12345", "123456", "4321", "9876"].includes(code)
-    || "0123456789".includes(code)
-    || "9876543210".includes(code);
+    || ["0000", "1111", "1234", "4321", "9876"].includes(code)
+    || "0123".includes(code)
+    || "3210".includes(code);
 }
 
 function requestCode({ title, text, setup = false }) {
@@ -2268,8 +4726,10 @@ function requestCode({ title, text, setup = false }) {
     codeRequest = { resolve, setup };
     codeTitle.textContent = title;
     codeText.textContent = text;
-    codeHint.textContent = setup ? "4 bis 8 Zahlen, keine Reihen wie 1234 oder 0000." : "Mit deinem gespeicherten NOCO Mobile Code bestaetigen.";
+    codeHint.textContent = setup ? "Genau 4 Ziffern — keine Reihen wie 1234 oder 0000." : "4-stelliger NOCO Mobile Code.";
     codeInput.value = "";
+    renderCodeDots();
+    initCodeKeypad();
     codePanel.classList.remove("hidden");
     window.setTimeout(() => codeInput.focus(), 80);
   });
@@ -2341,11 +4801,14 @@ async function unlockOnLaunch() {
 
 async function goToPage(page) {
   const target = Math.max(0, Math.min(1, page));
+  if (target === currentPage && !pageScrollLock) return;
   if (desktopNeedsUnlock(target) && !(await unlockDesktop())) {
-    setPage(0);
+    applyPageState(0, { scroll: true, smooth: true, haptic: false });
     return;
   }
-  setPage(target);
+  document.body.classList.add("noco-transitioning");
+  armGestureSafety(560);
+  applyPageState(target, { scroll: true, smooth: true, haptic: true });
 }
 
 function getGestureIntent(dx, dy, ratio) {
@@ -2365,12 +4828,18 @@ function resetSheetGestureTransform() {
 }
 
 function openHub() {
+  setIslandExpanded(false);
+  closeBeam();
+  if (!appSheet?.classList.contains("hidden")) closeAppSheetVisual();
   hapticTap();
-  hubPanel.classList.remove("hidden");
+  hubPanel?.classList.remove("hidden");
+  document.body.classList.add("hub-open");
+  dismissCoach();
 }
 
 function closeHub() {
-  hubPanel.classList.add("hidden");
+  hubPanel?.classList.add("hidden");
+  document.body.classList.remove("hub-open");
 }
 
 function runHubAction(action) {
@@ -2393,8 +4862,19 @@ function runHubAction(action) {
 }
 
 function startSheetSwipe(event) {
-  appSwipe = null;
-  return;
+  if (editMode || appSheet.classList.contains("hidden")) return;
+  if (event.target.closest("textarea, input, select, .code-keypad, .code-key, .runner-stage, .dodge-stage, .memory-grid, .color-game-grid")) return;
+  const touch = event.touches[0];
+  appSwipe = {
+    x: touch.clientX,
+    y: touch.clientY,
+    at: Date.now(),
+    active: false,
+    cancelled: false,
+    basePage: currentPage,
+    rawDx: 0,
+    card: appSheet.querySelector(".sheet-card")
+  };
 }
 
 function moveSheetSwipe(event) {
@@ -2402,27 +4882,35 @@ function moveSheetSwipe(event) {
   const touch = event.touches[0];
   const dx = touch.clientX - appSwipe.x;
   const dy = touch.clientY - appSwipe.y;
-  appSwipe.dx = dx;
-  appSwipe.dy = dy;
+  appSwipe.rawDx = dx;
   if (!appSwipe.active) {
     if (Math.max(Math.abs(dx), Math.abs(dy)) < GESTURE.sheetStart) return;
-    const intent = getGestureIntent(dx, dy, GESTURE.sheetRatio);
+    const intent = getGestureIntent(dx, dy, GESTURE.pageRatio);
     if (intent === "vertical") {
       appSwipe.cancelled = true;
       return;
     }
     if (intent !== "horizontal") return;
-    if (!appSwipe.edge && !appSwipe.topZone && Math.abs(dx) < 54) return;
     appSwipe.active = true;
+    appSheet.classList.add("app-navigating");
+    pageStage?.classList.add("page-swiping");
     appSwipe.card?.classList.add("sheet-dragging");
   }
   if (event.cancelable) event.preventDefault();
-  suppressClickUntil = Date.now() + GESTURE.clickSuppressMs;
-  const card = appSwipe.card || appSheet.querySelector(".sheet-card");
-  if (!card) return;
-  const eased = Math.max(-110, Math.min(110, dx * 0.36));
-  card.style.transform = `translate3d(${eased}px, 0, 0) scale(${1 - Math.min(0.025, Math.abs(dx) / 9000)})`;
-  card.style.opacity = String(Math.max(0.78, 1 - Math.abs(dx) / 850));
+  if (appSwipe.active) {
+    suppressClickUntil = Date.now() + GESTURE.clickSuppressMs;
+  }
+  const width = getTrackWidth();
+  const atEdge = (appSwipe.basePage === 0 && dx > 0) || (appSwipe.basePage === 1 && dx < 0);
+  const followDx = atEdge ? dx * 0.22 : dx;
+  const clampedDx = Math.max(-width, Math.min(width, followDx));
+  setPageStageTransform(appSwipe.basePage, clampedDx, false);
+  const progress = Math.min(1, Math.abs(clampedDx) / Math.max(1, width * 0.92));
+  const card = appSwipe.card;
+  if (card) {
+    card.style.transform = `translate3d(${clampedDx * 0.28}px, 0, 0)`;
+    card.style.opacity = String(Math.max(0.55, 1 - progress * 0.5));
+  }
 }
 
 async function endSheetSwipe(event) {
@@ -2432,12 +4920,24 @@ async function endSheetSwipe(event) {
   const dy = touch.clientY - appSwipe.y;
   const wasActive = appSwipe.active && !appSwipe.cancelled;
   const velocity = Math.abs(dx) / Math.max(1, Date.now() - appSwipe.at);
+  const width = getTrackWidth();
+  const base = appSwipe.basePage;
   appSwipe = null;
+  appSheet.classList.remove("app-navigating");
+  pageStage?.classList.remove("page-swiping");
   resetSheetGestureTransform();
-  if (wasActive && Math.abs(dx) > Math.abs(dy) * GESTURE.sheetRatio && (Math.abs(dx) > GESTURE.sheetSnap || velocity > GESTURE.sheetVelocity)) {
-    await closeAppToPage(dx < 0 ? 0 : 1);
-    showToast(dx < 0 ? "Zum Home gewechselt" : "Zum Desktop gewechselt");
+  if (!wasActive) return;
+  let targetPage = base;
+  if (Math.abs(dx) > width * GESTURE.pageSnap || velocity > GESTURE.pageVelocity || Math.abs(dx) > width * 0.14) {
+    if (dx > 0) targetPage = 0;
+    else if (dx < 0) targetPage = 1;
   }
+  if (Math.abs(dx) <= Math.abs(dy) * GESTURE.pageRatio) return;
+  stopDodgeGame(false);
+  stopRunnerGame(false);
+  closeAppSheetVisual();
+  await goToPage(targetPage);
+  showToast(targetPage === 0 ? "Zum Home gewechselt" : "Zum Desktop gewechselt");
 }
 
 function cancelSheetSwipe() {
@@ -2521,7 +5021,7 @@ function createDesktopAppButton(app) {
   button.className = "app-icon desktop-tile";
   button.dataset.app = app.id;
   button.type = "button";
-  button.innerHTML = `<span class="icon-orb ${app.className}">${app.icon}</span><strong>${app.title}</strong>`;
+  button.innerHTML = `${renderIconOrb(app)}<strong>${app.title}</strong>`;
   return button;
 }
 
@@ -2534,21 +5034,14 @@ function desktopAppsToRender() {
 }
 
 function forceRenderDesktopGrid(reason = "render") {
+  renderLibraryGrid();
+  refreshLibraryExpand();
   const appGrid = document.getElementById("appGrid");
-  if (!appGrid) return;
-  appGrid.hidden = false;
-  appGrid.removeAttribute("hidden");
-  appGrid.innerHTML = "";
-  desktopAppsToRender().forEach((app) => appGrid.appendChild(createDesktopAppButton(app)));
-  appGrid.dataset.rendered = reason;
+  if (appGrid) appGrid.dataset.rendered = reason;
 }
 
 function ensureBaseDesktopApps() {
-  const appGrid = document.getElementById("appGrid");
-  if (!appGrid) return;
-  const currentIds = Array.from(appGrid.querySelectorAll(".app-icon")).map((button) => button.dataset.app);
-  const missingBase = baseDesktopApps.some((app) => !currentIds.includes(app.id));
-  if (!currentIds.length || missingBase) forceRenderDesktopGrid("ensure");
+  renderLibraryGrid();
 }
 
 function renderInstalledApps() {
@@ -2560,18 +5053,13 @@ function renderInstalledApps() {
 }
 
 function repairDesktopGrid(reason = "repair") {
+  renderLibraryGrid();
+  refreshLibraryExpand();
   const appGrid = document.getElementById("appGrid");
-  if (!appGrid) return;
-  ensureDesktopGridVisible();
-  const iconCount = appGrid.querySelectorAll(".app-icon").length;
-  if (iconCount < baseDesktopApps.length) {
-    forceRenderDesktopGrid(reason);
-    ensureBaseDesktopApps();
-  }
-  appGrid.dataset.repaired = reason;
+  if (appGrid) appGrid.dataset.repaired = reason;
 }
 
-async function installForgeApp(id) {
+async function installForgeApp(id, options = {}) {
   const app = forgeApps.find((item) => item.id === id);
   if (!app) return;
   if (app.exclusive && !isExclusiveActive()) {
@@ -2585,21 +5073,26 @@ async function installForgeApp(id) {
     installed.push(id);
     saveInstalledApps(installed);
     renderInstalledApps();
+    refreshLibraryExpand();
     saveMobileOrder();
   }
-  openApp("forge");
+  if (!options.skipReopen) openApp("forge");
   showToast(app.title + " installiert");
 }
 
-async function uninstallForgeApp(id) {
+async function uninstallForgeApp(id, options = {}) {
   const app = forgeApps.find((item) => item.id === id);
   if (!app) return;
   if (!(await authorizeSensitiveAction(app.title + " deinstallieren? Bitte freigeben."))) return;
   saveInstalledApps(getInstalledApps().filter((item) => item !== id));
-  document.querySelector(`#appGrid [data-app="${id}"]`)?.remove();
+  renderInstalledApps();
+  refreshLibraryExpand();
   saveMobileOrder();
-  openApp("forge");
-  showToast(app.title + " deinstalliert");
+  if (options.skipReopen) showToast(app.title + " deinstalliert");
+  else {
+    openApp("forge");
+    showToast(app.title + " deinstalliert");
+  }
 }
 
 function updateDodgeDom() {
@@ -2748,6 +5241,7 @@ async function importKeycard(file, options = {}) {
       at: Date.now()
     }));
     if (!options.stayInFirstLight) openApp("sync");
+    refreshHomeStatus();
     showToast("Keycard importiert");
   } catch (error) {
     showToast("Keycard konnte nicht gelesen werden");
@@ -2835,6 +5329,18 @@ function applyKeycardData(data, fileName) {
   if (typeof possibleToon === "string") {
     localStorage.setItem("noco_mobile_toon_note", possibleToon);
     applied.push("Toon");
+  }
+
+  const possibleTasks = mobileState.tasks || source.tasks;
+  if (Array.isArray(possibleTasks) && possibleTasks.length) {
+    saveTasksList(possibleTasks.filter((t) => t && t.text).slice(0, 80));
+    applied.push("Tasks");
+  }
+
+  const possibleSketch = mobileState.sketch || source.sketch;
+  if (typeof possibleSketch === "string") {
+    localStorage.setItem("noco_mobile_sketch", possibleSketch);
+    applied.push("Sketch");
   }
 
   const possibleTheme = source.theme || source.activeTheme || source.currentTheme || source.design || data?.settings?.theme;
@@ -2935,7 +5441,7 @@ async function exportMobileKeycard(options = {}) {
   const vaultKey = randomVaultKey();
   const mobileState = {
     platform: "mobile",
-    version: "1.1",
+    version: "1.2",
     owner,
     code: settings.mobileCode || "",
     mobileCode: settings.mobileCode || "",
@@ -2958,6 +5464,8 @@ async function exportMobileKeycard(options = {}) {
     notes: note,
     toonNote,
     nocoToon: toonNote,
+    tasks: loadTasks(),
+    sketch: localStorage.getItem("noco_mobile_sketch") || "",
     installedApps,
     mobileApps: installedApps,
     shortcuts: activeShortcuts,
@@ -2999,7 +5507,7 @@ async function exportMobileKeycard(options = {}) {
       protection: { login: true, install: true, delete: true, sessionReset: true, hardReset: true },
       currentTheme: settings.theme,
       currentMode: "dark",
-      systemVersion: "1.1",
+      systemVersion: "1.2",
       installedApps,
       mobileApps: installedApps,
       nocoExclusive: settings.nocoExclusive,
@@ -3249,8 +5757,12 @@ if ("serviceWorker" in navigator) {
 }
 
 function applyDeviceLayoutClass() {
-  const handset = window.matchMedia("(max-width: 920px), (hover: none) and (pointer: coarse)").matches;
+  const touchPrimary = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+  const phoneWidth = window.matchMedia("(max-width: 520px)").matches;
+  const standalone = window.matchMedia("(display-mode: standalone)").matches;
+  const handset = touchPrimary && (phoneWidth || standalone);
   document.body.classList.toggle("device-handset", handset);
+  document.body.classList.toggle("desktop-preview", !handset);
 }
 
 initSearchIndex();
@@ -3259,30 +5771,57 @@ setPage(0);
 
 applySettings();
 applyDeviceLayoutClass();
+updateIslandUI();
+refreshHomeStatus();
+showCoachIfNeeded();
 window.addEventListener("resize", () => {
   applyDeviceLayoutClass();
   pageScrollLock = true;
-  if (screenTrack) screenTrack.scrollLeft = currentPage * getTrackWidth();
+  setPageStageTransform(currentPage, 0, false);
   pageScrollLock = false;
 });
+initLockScreenGestures();
+initCodeKeypad();
 loadNote();
 renderShortcuts();
 ensureBaseDesktopApps();
 applyVisibleWidgets();
 refreshWidgetEditButtons();
+updateHomeEditChrome();
 applyMobileOrder();
 ensureBaseDesktopApps();
-applyDesktopLayout();
+ensureDefaultToolsInstalled();
+renderLibraryGrid();
 updatePageToggle();
 updateClock();
+window.NocoReminders?.startTicker?.();
+window.addEventListener("noco-reminder-fired", (event) => {
+  const reminder = event.detail?.reminder;
+  if (!reminder) return;
+  handleReminderFired(reminder);
+});
+window.NocoReminders?.onChange?.(() => {
+  updateMemoryEtas();
+  updateTimerLiveSurfaces();
+  if (currentApp === "memories") invalidateAppCache("memories");
+});
+window.setInterval(() => {
+  if (timerState.running) tickFocusTimer();
+  else updateTimerLiveSurfaces();
+  if (currentApp === "memories") updateMemoryEtas();
+}, 1000);
 updateLockClock();
 renderLockWidgets();
+updateTimerLiveSurfaces();
 showFirstLight();
 if (hasCompletedFirstLight()) {
   unlockOnLaunch();
   resetAutoLockTimer();
 }
 window.setInterval(updateClock, 1000);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") cleanupGestureState();
+});
 window.setInterval(() => {
   updateLockClock();
   if (isLocked) renderLockWidgets();

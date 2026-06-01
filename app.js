@@ -15,10 +15,26 @@ const shortcutEditor = document.getElementById("shortcutEditor");
 const appSheet = document.getElementById("appSheet");
 const sheetContent = document.getElementById("sheetContent");
 const closeSheet = document.getElementById("closeSheet");
+const firstLightPanel = document.getElementById("firstLightPanel");
+const firstLightContent = document.getElementById("firstLightContent");
+const spotlightPanel = document.getElementById("spotlightPanel");
+const spotlightInput = document.getElementById("spotlightInput");
+const spotlightResults = document.getElementById("spotlightResults");
+const lockScreen = document.getElementById("lockScreen");
+const lockClock = document.getElementById("lockClock");
+const lockDate = document.getElementById("lockDate");
+const lockWidgets = document.getElementById("lockWidgets");
+const unlockBtn = document.getElementById("unlockBtn");
+const lockEditBtn = document.getElementById("lockEditBtn");
+const lockWaitBtn = document.getElementById("lockWaitBtn");
 const hubPanel = document.getElementById("hubPanel");
 const widgetBtn = document.getElementById("widgetBtn");
 const widgetPanel = document.getElementById("widgetPanel");
 const widgetLibrary = document.getElementById("widgetLibrary");
+const pageToggleBtn = document.getElementById("pageToggleBtn");
+const desktopLayout = document.getElementById("desktopLayout");
+const desktopPanel = document.getElementById("desktopPanel");
+const desktopLibrary = document.getElementById("desktopLibrary");
 const codePanel = document.getElementById("codePanel");
 const codeTitle = document.getElementById("codeTitle");
 const codeText = document.getElementById("codeText");
@@ -38,10 +54,24 @@ let codeRequest = null;
 let unlockInFlight = null;
 let passkeyInFlight = false;
 let settingsActiveSection = "deck";
+let forgeActiveSection = "discover";
+let firstLightStep = 0;
+let lockTimer = null;
+let isLocked = false;
+let lockEditMode = false;
 let tapDashScore = 0;
 let colorCatchTarget = "Mint";
 let memoryRound = 1;
 let memorySequence = [1, 3, 2];
+let dodgeTimer = null;
+let dodgeGame = {
+  running: false,
+  score: 0,
+  best: Number(localStorage.getItem("noco_mobile_dodge_best") || 0),
+  playerX: 50,
+  obstacleX: 50,
+  obstacleY: -14
+};
 
 const GESTURE = {
   pageStart: 18,
@@ -62,6 +92,9 @@ const NOCO_KEY_PEPPER = "noco::key::seal::v2::a9f3c2e17d";
 const settings = loadSettings();
 if (settings.codeLock) {
   sessionStorage.removeItem("noco_mobile_unlocked");
+}
+if (settings.passkeyEnabled || settings.requireCodeOnLaunch) {
+  sessionStorage.removeItem("noco_mobile_launch_unlocked");
 }
 
 const shortcutChoices = [
@@ -85,6 +118,7 @@ const forgeApps = [
   { id: "tapdash", title: "Tap Dash", icon: "D", className: "forge", text: "Tippe schnell, sammle Punkte und schlage deinen Mobile-Highscore." },
   { id: "colorcatch", title: "Color Catch", icon: "C", className: "themes", text: "Triff die richtige Farbe, bevor NOCO den Vibe wechselt." },
   { id: "memorygrid", title: "Memory Grid", icon: "M", className: "focus", text: "Merke dir die leuchtende Reihenfolge und spiele sie nach." },
+  { id: "dodgerun", title: "Dodge Run", icon: "R", className: "forge", text: "Ein echtes kleines Ausweich-Spiel: bewege den Orb und weich den Blöcken aus." },
   { id: "transit", title: "Transit", icon: "T", className: "cloud", text: "Fake-Reiseplaner im NOCO Look." },
   { id: "mood", title: "Mood Board", icon: "M", className: "themes", text: "Sammelt Farben, Vibes und Wallpaper-Ideen fuer dein Setup." },
   { id: "wallet", title: "Wallet Watch", icon: "W", className: "pay", text: "Kleiner NOCO Pay Verlauf mit Budget-Gefuehl." },
@@ -117,6 +151,41 @@ const widgetDefinitions = {
 
 let activeShortcuts = loadShortcuts();
 
+const appFolders = {
+  games: ["tapdash", "colorcatch", "memorygrid", "dodgerun", "arcade"],
+  design: ["themes", "sketch", "mood", "pro-themes", "glowcam"],
+  workspace: ["settings", "security", "sync", "notes", "cloud", "toon", "forge", "pay"]
+};
+
+const DESKTOP_BLOCKS = {
+  beam: { title: "NOCO Beam", text: "Lokale Systemsuche auf dem Geraet" },
+  apps: { title: "Haupt-Apps", text: "Core, Security, Forge und Sync" },
+  folders: { title: "Ordner", text: "Spiele, Design und Workspace" }
+};
+
+const DEFAULT_DESKTOP_LAYOUT = ["beam", "apps", "folders"];
+
+const searchIndex = [
+  { id: "settings", title: "Core", type: "App", keywords: "settings core nococore deck einstellungen system toggle glas motion app handling" },
+  { id: "settings:shield", app: "settings", title: "ShieldGate", type: "Einstellung", keywords: "shield shieldgate sh sicherheit passkey code face id freigabe schutz" },
+  { id: "settings:vault", app: "settings", title: "SessionVault", type: "Einstellung", keywords: "session vault sessionvault keycard daten apps dev exclusive cache" },
+  { id: "security", title: "Security", type: "App", keywords: "security schutz passkey code face id scan shieldgate" },
+  { id: "sync", title: "Sync / Keycard", type: "App", keywords: "sync keycard import export anmelden workspace verbinden" },
+  { id: "forge", title: "Forge", type: "App", keywords: "forge store apps installieren löschen loeschen appstore" },
+  { id: "notes", title: "Notizen", type: "App", keywords: "notizen schreiben text note merken schnellnotiz" },
+  { id: "themes", title: "Themes", type: "App", keywords: "themes design farben look wallpaper aurora glas" },
+  { id: "exclusive", title: "Exclusive", type: "App", keywords: "exclusive abo premium trial plus member geld" },
+  { id: "pay", title: "Pay", type: "App", keywords: "pay wallet bezahlen geld euro ausgaben" },
+  { id: "toon", title: "Toon", type: "App", keywords: "toon zeitung news workspace meldungen" },
+  { id: "focus", title: "Focus", type: "App", keywords: "focus fokus ruhig timer konzentration" },
+  { id: "web", title: "Web", type: "App", keywords: "web explorer browser suche" },
+  { id: "dodgerun", title: "Dodge Run", type: "Spiel", keywords: "spiel game ausweichen dodge run orb block" },
+  { id: "folder:games", title: "Ordner Spiele", type: "Ordner", keywords: "spiele games arcade dodge tap memory color" },
+  { id: "folder:design", title: "Ordner Design", type: "Ordner", keywords: "design themes look farben sketch mood" },
+  { id: "folder:workspace", title: "Ordner Workspace", type: "Ordner", keywords: "workspace core sync security pay notizen" },
+  { id: "beam", title: "NOCO Beam", type: "Suche", keywords: "beam suche search finden lokal apps core sync ordner" }
+];
+
 function showToast(text) {
   toast.textContent = text;
   toast.classList.add("show");
@@ -135,6 +204,12 @@ function loadSettings() {
       liveWallpaper: true,
       glassBoost: true,
       motion: true,
+      nativeFeel: true,
+      compactTiles: false,
+      strictSecurity: true,
+      autoLock: true,
+      autoLockSeconds: 60,
+      lockWidgets: ["clock", "security", "sync"],
       codeLock: false,
       passkeyEnabled: false,
       mobileCode: "",
@@ -147,7 +222,7 @@ function loadSettings() {
       ...JSON.parse(localStorage.getItem("noco_mobile_settings") || "{}")
     };
   } catch (_) {
-    return { theme: "aurora", liveWallpaper: true, glassBoost: true, motion: true, codeLock: false, passkeyEnabled: false, mobileCode: "", requireCodeOnLaunch: false, nocoExclusive: false, exclusiveTrialUsed: false, exclusivePlan: "", payBalance: 24, paymentMethod: false };
+    return { theme: "aurora", liveWallpaper: true, glassBoost: true, motion: true, nativeFeel: true, compactTiles: false, strictSecurity: true, autoLock: true, autoLockSeconds: 60, lockWidgets: ["clock", "security", "sync"], codeLock: false, passkeyEnabled: false, mobileCode: "", requireCodeOnLaunch: false, nocoExclusive: false, exclusiveTrialUsed: false, exclusivePlan: "", payBalance: 24, paymentMethod: false };
   }
 }
 
@@ -157,13 +232,20 @@ function saveSettings() {
 
 function applySettings() {
   if (settings.codeLock && !settings.mobileCode && !settings.passkeyEnabled) {
-    settings.codeLock = false;
-    saveSettings();
+    if (!settings.strictSecurity) {
+      settings.codeLock = false;
+      saveSettings();
+    }
   }
+  if (settings.nativeFeel === undefined) settings.nativeFeel = true;
+  if (settings.glassBoost === undefined) settings.glassBoost = true;
   document.body.dataset.theme = settings.theme;
+  document.body.classList.add("noco-native");
   document.body.classList.toggle("no-live-wallpaper", !settings.liveWallpaper);
-  document.body.classList.toggle("glass-boost", !!settings.glassBoost);
+  document.body.classList.toggle("glass-boost", settings.glassBoost !== false);
   document.body.classList.toggle("reduce-noco-motion", !settings.motion);
+  document.body.classList.toggle("native-feel", settings.nativeFeel !== false);
+  document.body.classList.toggle("compact-tiles", !!settings.compactTiles);
   const showExclusiveBadge = isExclusiveActive() && settings.exclusivePlan !== "trial";
   exclusiveTopBadge?.classList.toggle("hidden", !showExclusiveBadge);
   if (exclusiveTopBadge) exclusiveTopBadge.textContent = "Exclusive";
@@ -248,6 +330,7 @@ function shortcutById(id) {
 }
 
 function renderShortcuts() {
+  if (!shortcutGrid) return;
   shortcutGrid.innerHTML = activeShortcuts.map((id) => {
     const shortcut = shortcutById(id);
     return `
@@ -271,34 +354,396 @@ function renderShortcutEditor() {
   }).join("");
 }
 
+function hasCompletedFirstLight() {
+  return localStorage.getItem("noco_mobile_firstlight_done") === "1";
+}
+
+function renderFirstLight() {
+  if (!firstLightContent) return;
+  const steps = [
+    {
+      eyebrow: "FirstLight Mobile",
+      title: "Willkommen bei NOCO OS Mobile.",
+      text: "Richte dein mobiles NOCO ein: Keycard anmelden, Schutz wählen, Design setzen und am Ende direkt eine neue Keycard exportieren.",
+      body: `
+        <button class="primary-action" data-firstlight-next>Setup starten</button>
+        <button class="settings-row" data-firstlight-skip><span>Später</span><strong>Desktop öffnen</strong></button>
+      `
+    },
+    {
+      eyebrow: "Keycard",
+      title: "Mit Workspace anmelden.",
+      text: "Wenn du schon eine NOCO Keycard hast, kannst du sie direkt am Anfang importieren. Ohne Keycard geht es lokal weiter.",
+      body: `
+        <label class="sync-import-card firstlight-import">
+          <input type="file" id="firstLightKeycardInput" accept=".json,.noco,.noco-key,.txt,.html,.keycard" />
+          <span><strong>Keycard anmelden</strong><br><small>Workspace-Daten, Code, Apps und Pay übernehmen.</small></span>
+        </label>
+        <button class="settings-row" data-firstlight-next><span>Ohne Keycard weiter</span><strong>Lokal</strong></button>
+      `
+    },
+    {
+      eyebrow: "ShieldGate",
+      title: "Schutz festlegen.",
+      text: "Empfohlen: Code als Fallback und Passkey/Face ID für Installation, Löschen, Keycards und neues Entsperren.",
+      body: `
+        <button class="primary-action" data-action="set-mobile-code"><span>Code erstellen</span></button>
+        <button class="settings-row" data-action="setup-passkey"><span>Passkey / Face ID</span><strong>${settings.passkeyEnabled ? "Aktiv" : "Einrichten"}</strong></button>
+        ${toggleRow("strictSecurity", "Strenger Modus", "Immer für Installieren, Löschen und Keycards fragen")}
+        ${toggleRow("autoLock", "Auto-Lock", "Nach 1 Minute Ruhe zum Sperrbildschirm")}
+        <button class="settings-row" data-firstlight-next><span>Weiter</span><strong>Design</strong></button>
+      `
+    },
+    {
+      eyebrow: "NocoDeck",
+      title: "Look wählen.",
+      text: "Nimm den Workspace-Vibe mit: Liquid Glass, Motion und ein ruhiges Mobile-Wallpaper.",
+      body: `
+        ${toggleRow("liveWallpaper", "Live Wallpaper", "Sanfter animierter Hintergrund")}
+        ${toggleRow("glassBoost", "Liquid Glass Boost", "Mehr Tiefe und Glow")}
+        ${toggleRow("nativeFeel", "App Handling", "Mehr App-Gefühl, weniger Webseite")}
+        <button class="primary-action" data-firstlight-next>Fast fertig</button>
+      `
+    },
+    {
+      eyebrow: "SessionVault",
+      title: "Fertig. Keycard sichern?",
+      text: "Exportiere deinen Mobile-Stand direkt: Code, Apps, Widgets, Pay, Exclusive und Toon wandern in die Keycard.",
+      body: `
+        <button class="primary-action" data-firstlight-export>Mobile Keycard exportieren</button>
+        <button class="settings-row" data-firstlight-finish><span>NOCO Mobile starten</span><strong>Bereit</strong></button>
+      `
+    }
+  ];
+  const step = steps[Math.max(0, Math.min(firstLightStep, steps.length - 1))];
+  firstLightContent.innerHTML = `
+    <div class="firstlight-progress">${steps.map((_, index) => `<span class="${index <= firstLightStep ? "active" : ""}"></span>`).join("")}</div>
+    <section class="firstlight-hero">
+      <p class="eyebrow">${step.eyebrow}</p>
+      <h1>${step.title}</h1>
+      <p>${step.text}</p>
+    </section>
+    <div class="firstlight-body">${step.body}</div>
+  `;
+}
+
+function showFirstLight() {
+  if (!firstLightPanel || hasCompletedFirstLight()) return;
+  firstLightStep = 0;
+  renderFirstLight();
+  firstLightPanel.classList.remove("hidden");
+}
+
+function finishFirstLight() {
+  localStorage.setItem("noco_mobile_firstlight_done", "1");
+  if (!firstLightPanel) return;
+  firstLightPanel.classList.add("firstlight-finish");
+  showToast("Willkommen in NOCO Mobile");
+  window.setTimeout(() => {
+    firstLightPanel.classList.add("hidden");
+    firstLightPanel.classList.remove("firstlight-finish");
+    setPage(0);
+    resetAutoLockTimer();
+  }, 1050);
+}
+
+function lockWidgetDefinitions() {
+  return {
+    clock: { title: "Uhr", value: new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }), text: "NOCO Zeit" },
+    security: { title: "ShieldGate", value: settings.codeLock || settings.passkeyEnabled ? "Aktiv" : "Offen", text: "Passkey / Code" },
+    sync: { title: "Keycard", value: loadSyncInfo() ? "Verbunden" : "Lokal", text: "Workspace Sync" },
+    pay: { title: "Pay", value: formatEuro(settings.payBalance), text: "Wallet" },
+    exclusive: { title: "Exclusive", value: isExclusiveActive() ? "Member" : "Offen", text: "Premium" },
+    focus: { title: "Focus", value: "Ruhig", text: "Mobile Profil" }
+  };
+}
+
+function updateLockClock() {
+  const now = new Date();
+  if (lockClock) lockClock.textContent = now.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  if (lockDate) lockDate.textContent = now.toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long" });
+}
+
+function renderLockWidgets() {
+  if (!lockWidgets) return;
+  const defs = lockWidgetDefinitions();
+  const selected = Array.isArray(settings.lockWidgets) && settings.lockWidgets.length ? settings.lockWidgets : ["clock", "security", "sync"];
+  lockWidgets.innerHTML = (lockEditMode ? Object.keys(defs) : selected).map((id) => {
+    const item = defs[id];
+    if (!item) return "";
+    const active = selected.includes(id);
+    return `
+      <button class="lock-widget ${active ? "active" : ""}" data-lock-widget="${id}">
+        <span>${item.title}</span><strong>${item.value}</strong><small>${lockEditMode ? active ? "Aktiv" : "Tippen zum Anzeigen" : item.text}</small>
+      </button>
+    `;
+  }).join("");
+}
+
+function showLockScreen(reason = "NOCO Mobile gesperrt") {
+  if (!lockScreen || !hasCompletedFirstLight()) return;
+  isLocked = true;
+  updateLockClock();
+  renderLockWidgets();
+  lockScreen.classList.remove("hidden");
+  showToast(reason);
+}
+
+async function unlockFromLockScreen() {
+  const ok = await unlockDesktop();
+  if (!ok) return;
+  isLocked = false;
+  lockScreen?.classList.add("hidden");
+  sessionStorage.setItem("noco_mobile_launch_unlocked", "1");
+  resetAutoLockTimer();
+  showToast("Entsperrt");
+}
+
+function resetAutoLockTimer() {
+  if (lockTimer) window.clearTimeout(lockTimer);
+  if (!settings.autoLock || !hasCompletedFirstLight() || isLocked) return;
+  const seconds = Math.max(15, Number(settings.autoLockSeconds || 60));
+  lockTimer = window.setTimeout(() => showLockScreen("Auto-Lock nach " + seconds + " Sekunden"), seconds * 1000);
+}
+
+function toggleLockWidget(id) {
+  const selected = Array.isArray(settings.lockWidgets) ? [...settings.lockWidgets] : ["clock", "security", "sync"];
+  const next = selected.includes(id) ? selected.filter((item) => item !== id) : [...selected, id].slice(-4);
+  settings.lockWidgets = next.length ? next : ["clock"];
+  saveSettings();
+  renderLockWidgets();
+}
+
+function updatePageToggle() {
+  if (!pageToggleBtn) return;
+  const onDesktop = currentPage === 1;
+  pageToggleBtn.textContent = onDesktop ? "Home" : "Apps";
+  pageToggleBtn.dataset.goPage = onDesktop ? "0" : "1";
+  pageToggleBtn.setAttribute("aria-label", onDesktop ? "Zurueck zum Home" : "Desktop Apps oeffnen");
+}
+
 function setPage(page) {
+  const previousPage = currentPage;
   currentPage = Math.max(0, Math.min(1, page));
   screenTrack.classList.remove("dragging");
   screenTrack.style.transform = "";
   document.documentElement.style.setProperty("--page", currentPage);
   screenTrack.style.setProperty("--page", currentPage);
+  document.body.classList.toggle("desktop-page", currentPage === 1);
+  document.querySelectorAll(".screen-track > .screen").forEach((screen, index) => {
+    const active = index === currentPage;
+    screen.classList.toggle("is-active", active);
+    if (active && previousPage !== currentPage) {
+      screen.scrollTop = 0;
+    }
+  });
   screenTitle.textContent = currentPage === 0 ? "Home" : "Desktop";
-  if (currentPage === 1) renderInstalledApps();
+  updatePageToggle();
+  if (currentPage === 1) {
+    repairDesktopGrid("page");
+    applyDesktopLayout();
+  }
+  if (editMode) setEditMode(true);
   document.querySelectorAll(".dot").forEach((dot) => {
     dot.classList.toggle("active", Number(dot.dataset.page) === currentPage);
   });
   hapticTap();
 }
 
+function normalizeSearch(value) {
+  return String(value || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function searchScore(item, query) {
+  const haystack = normalizeSearch([item.title, item.type, item.keywords].join(" "));
+  const normalized = normalizeSearch(query);
+  if (!normalized) return 0;
+  if (haystack.includes(normalized)) return 100 - Math.min(40, haystack.indexOf(normalized));
+  return normalized.split(/\s+/).filter((part) => part.length && haystack.includes(part)).length * 18;
+}
+
+function resolveSearchItem(item) {
+  if (item.id === "beam") {
+    openBeam();
+    return;
+  }
+  if (item.id.startsWith("folder:")) {
+    openFolder(item.id.replace("folder:", ""));
+    return;
+  }
+  if (item.id === "settings:shield") settingsActiveSection = "shield";
+  if (item.id === "settings:vault") settingsActiveSection = "vault";
+  openApp(item.app || item.id.split(":")[0]);
+}
+
+function renderSpotlightResults(query = "") {
+  if (!spotlightResults) return;
+  const results = searchIndex
+    .map((item) => ({ item, score: searchScore(item, query) }))
+    .filter((entry) => query ? entry.score > 0 : ["settings", "sync", "forge", "notes"].includes(entry.item.id))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 8);
+  spotlightResults.innerHTML = results.map(({ item }) => `
+    <button type="button" class="spotlight-result" data-spotlight-open="${item.id}">
+      <span><strong>${item.title}</strong><small>${item.type}</small></span>
+      <em>${item.keywords.split(" ").slice(0, 4).join(" ")}</em>
+    </button>
+  `).join("") || `<div class="settings-row"><span>NOCO Beam</span><strong>Keine Treffer</strong></div>`;
+}
+
+function openBeam() {
+  closeHub();
+  spotlightPanel?.classList.remove("hidden");
+  renderSpotlightResults("");
+  window.setTimeout(() => spotlightInput?.focus(), 80);
+}
+
+function closeBeam() {
+  spotlightPanel?.classList.add("hidden");
+  if (spotlightInput) spotlightInput.value = "";
+}
+
+const openSpotlight = openBeam;
+const closeSpotlight = closeBeam;
+
+function getAppMeta(appId) {
+  const base = baseDesktopApps.find((item) => item.id === appId);
+  if (base) return base;
+  const forge = forgeApps.find((item) => item.id === appId);
+  if (forge) return { id: forge.id, title: forge.title, icon: forge.icon, className: forge.className };
+  const titles = { settings: { id: "settings", title: "Core", icon: "C", className: "core" }, pay: { id: "pay", title: "Pay", icon: "P", className: "pay" }, notes: { id: "notes", title: "Notizen", icon: "N", className: "notes" }, web: { id: "web", title: "Web", icon: "W", className: "explorer" }, exclusive: { id: "exclusive", title: "Exclusive", icon: "X", className: "exclusive" } };
+  return titles[appId] || { id: appId, title: appId, icon: appId.slice(0, 1).toUpperCase(), className: "forge" };
+}
+
+function openFolder(folderId) {
+  const ids = appFolders[folderId] || [];
+  const titleMap = { games: "Spiele", design: "Design", workspace: "Workspace" };
+  const cards = ids.map((id) => {
+    const app = getAppMeta(id);
+    return `<button type="button" class="folder-app desktop-tile" data-app="${app.id}"><span class="icon-orb ${app.className}">${app.icon}</span><strong>${app.title}</strong></button>`;
+  }).join("");
+  renderAppSheet("folder-" + folderId, appShell(`
+    ${appHero(titleMap[folderId] || "Ordner", "NOCO Folder", "Schneller App-Ordner für deinen Mobile Desktop.")}
+    <div class="folder-app-grid">${cards}</div>
+  `));
+}
+
 function ensureDesktopGridVisible() {
   const appGrid = document.getElementById("appGrid");
   if (!appGrid) return;
   appGrid.hidden = false;
-  appGrid.style.display = "grid";
-  appGrid.style.visibility = "visible";
-  appGrid.style.opacity = "1";
+  appGrid.removeAttribute("hidden");
+}
+
+function loadDesktopVisible() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("noco_mobile_desktop_visible") || "null");
+    if (Array.isArray(saved) && saved.length) return saved.filter((id) => DESKTOP_BLOCKS[id]);
+  } catch (_) {}
+  return [...DEFAULT_DESKTOP_LAYOUT];
+}
+
+function saveDesktopVisible(ids) {
+  localStorage.setItem("noco_mobile_desktop_visible", JSON.stringify(ids));
+}
+
+function loadDesktopLayout() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("noco_mobile_desktop_layout") || "null");
+    if (Array.isArray(saved) && saved.length) return saved.filter((id) => DESKTOP_BLOCKS[id]);
+  } catch (_) {}
+  return [...DEFAULT_DESKTOP_LAYOUT];
+}
+
+function saveDesktopLayout(order) {
+  localStorage.setItem("noco_mobile_desktop_layout", JSON.stringify(order));
+}
+
+function applyDesktopVisible() {
+  if (!desktopLayout) return;
+  const visible = loadDesktopVisible();
+  desktopLayout.querySelectorAll(".desktop-block").forEach((block) => {
+    const id = block.dataset.desktopBlock;
+    const show = visible.includes(id);
+    block.hidden = !show;
+    block.classList.toggle("is-hidden-block", !show);
+  });
+}
+
+function applyDesktopLayout() {
+  if (!desktopLayout) return;
+  const order = loadDesktopLayout();
+  order.forEach((id) => {
+    const block = desktopLayout.querySelector(`[data-desktop-block="${id}"]`);
+    if (block) desktopLayout.appendChild(block);
+  });
+  applyDesktopVisible();
+}
+
+function renderDesktopLibrary() {
+  if (!desktopLibrary) return;
+  const visible = loadDesktopVisible();
+  desktopLibrary.innerHTML = Object.entries(DESKTOP_BLOCKS).map(([id, meta]) => {
+    const active = visible.includes(id);
+    return `
+      <button type="button" class="widget-choice" data-desktop-add="${id}" ${active ? "disabled" : ""}>
+        <span><strong>${meta.title}</strong><br><small>${meta.text}</small></span>
+        <strong>${active ? "Aktiv" : "+ Hinzufuegen"}</strong>
+      </button>
+    `;
+  }).join("");
+}
+
+function hideDesktopBlock(id) {
+  const visible = loadDesktopVisible().filter((item) => item !== id);
+  if (!visible.length) {
+    showToast("Mindestens ein Bereich bleibt sichtbar");
+    return;
+  }
+  saveDesktopVisible(visible);
+  applyDesktopVisible();
+  renderDesktopLibrary();
+  showToast((DESKTOP_BLOCKS[id]?.title || id) + " entfernt");
+}
+
+function showDesktopBlock(id) {
+  if (!DESKTOP_BLOCKS[id]) return;
+  const visible = loadDesktopVisible();
+  if (!visible.includes(id)) visible.push(id);
+  saveDesktopVisible(visible);
+  applyDesktopVisible();
+  applyDesktopLayout();
+  renderDesktopLibrary();
+  showToast((DESKTOP_BLOCKS[id]?.title || id) + " hinzugefuegt");
+}
+
+function refreshWidgetEditButtons() {
+  document.querySelectorAll(".home-screen .draggable-widget").forEach((widget) => {
+    const existing = widget.querySelector(".edit-remove[data-widget-remove]");
+    if (!editMode) {
+      existing?.remove();
+      return;
+    }
+    if (existing) return;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "edit-remove";
+    button.dataset.widgetRemove = widget.dataset.widgetId;
+    button.setAttribute("aria-label", "Widget entfernen");
+    button.textContent = "×";
+    widget.appendChild(button);
+  });
 }
 
 function setEditMode(value) {
   editMode = !!value;
+  const onDesktop = currentPage === 1;
   document.body.classList.toggle("edit-mode", editMode);
-  editBtn.setAttribute("aria-label", editMode ? "Anpassen beenden" : "Home-Screen anpassen");
-  showToast(editMode ? "Home anpassen aktiv" : "Anpassen beendet");
+  document.body.classList.toggle("desktop-page", currentPage === 1);
+  editBtn.setAttribute("aria-label", editMode ? "Bearbeiten beenden" : (onDesktop ? "Desktop anpassen" : "Home anpassen"));
+  refreshWidgetEditButtons();
+  if (editMode && onDesktop) renderDesktopLibrary();
+  showToast(editMode ? (onDesktop ? "Desktop anpassen aktiv" : "Home anpassen aktiv") : "Anpassen beendet");
 }
 
 function visibleWidgetIds() {
@@ -403,18 +848,28 @@ function renderAppSheet(appId, html) {
   sheetContent.innerHTML = html;
   cancelSheetSwipe();
   appSheet.classList.remove("hidden");
+  document.body.classList.add("sheet-open");
   const card = appSheet.querySelector(".sheet-card");
   if (card) {
     card.scrollTop = 0;
     card.classList.remove("sheet-dragging");
     card.style.transform = "";
     card.style.opacity = "";
+    requestAnimationFrame(() => {
+      card.scrollTop = 0;
+    });
   }
+}
+
+function closeAppSheetVisual() {
+  appSheet.classList.add("hidden");
+  document.body.classList.remove("sheet-open");
+  currentApp = null;
 }
 
 function settingsTemplate() {
   return `
-    ${appHero("Einstellungen", "NOCO Core Mobile", "Steuere Design, Bewegung und das mobile App-Gefühl direkt auf dem iPhone.")}
+    ${appHero("Core", "NOCO Core Mobile", "Steuere Design, Bewegung und das mobile App-Gefühl direkt auf dem iPhone.")}
     <div class="toggle-list">
       ${toggleRow("liveWallpaper", "Live Wallpaper", "Ruhige animierte Hintergrund-Bubbles")}
       ${toggleRow("glassBoost", "Mehr Liquid Glass", "Stärkerer Glaslook für Karten und Apps")}
@@ -441,13 +896,38 @@ function settingsTemplateV2() {
           <div class="overview-tile"><span>Pay</span><strong>${formatEuro(settings.payBalance)}</strong><small>Wallet</small></div>
           <div class="overview-tile"><span>Exclusive</span><strong>${isExclusiveActive() ? "Aktiv" : "Offen"}</strong><small>Premium</small></div>
         </div>
-        <div class="settings-row"><span>Version</span><strong>Mobile 1.1</strong></div>
-        <div class="settings-row"><span>Installation</span><strong>PWA Fullscreen</strong></div>
-        <div class="settings-row"><span>Navigation</span><strong>Home + Desktop</strong></div>
+        <div class="settings-mini-grid">
+          <div class="settings-row"><span>Version</span><strong>Mobile 1.1</strong></div>
+          <div class="settings-row"><span>Installation</span><strong>PWA Fullscreen</strong></div>
+          <div class="settings-row"><span>Navigation</span><strong>Home + Desktop</strong></div>
+        </div>
         ${toggleRow("liveWallpaper", "Live Wallpaper", "Ruhiger animierter Hintergrund")}
         ${toggleRow("glassBoost", "Mehr Liquid Glass", "Staerkerer Glaslook fuer Karten und Apps")}
         ${toggleRow("motion", "Animationen", "Sanfte Uebergaenge und App-Starts")}
+        ${toggleRow("nativeFeel", "App Handling", "Weniger Webseiten-Gefuehl, mehr iPhone-App")}
+        ${toggleRow("compactTiles", "Kompakte Kacheln", "Mehr Platz bei vielen Apps und Listen")}
+        ${toggleRow("autoLock", "Auto-Lock", "Nach 1 Minute Ruhe Sperrbildschirm zeigen")}
         <button class="settings-row" data-app="themes"><span>Themes</span><strong>Oeffnen</strong></button>
+      `
+    },
+    lock: {
+      title: "Lock Screen",
+      text: "Sperrbildschirm, Auto-Lock und Widgets.",
+      content: `
+        <div class="overview-grid">
+          <div class="overview-tile"><span>Auto-Lock</span><strong>${settings.autoLock ? "An" : "Aus"}</strong><small>${settings.autoLockSeconds || 60} Sekunden</small></div>
+          <div class="overview-tile"><span>Widgets</span><strong>${(settings.lockWidgets || []).length || 3}</strong><small>Angeheftet</small></div>
+        </div>
+        ${toggleRow("autoLock", "Auto-Lock aktivieren", "Nach Inaktivitaet automatisch sperren")}
+        <div class="settings-row"><span>Inaktivitaet</span><strong>${settings.autoLockSeconds || 60}s</strong></div>
+        <div class="lock-time-grid">
+          ${[30, 60, 120, 300].map((seconds) => `<button class="${Number(settings.autoLockSeconds || 60) === seconds ? "active" : ""}" data-lock-time="${seconds}">${seconds < 60 ? seconds + "s" : seconds / 60 + "min"}</button>`).join("")}
+        </div>
+        <div class="core-section-title"><p class="eyebrow">Widgets</p><h3>Auf dem Lockscreen anheften</h3></div>
+        <div class="lock-widget-picker">
+          ${Object.entries(lockWidgetDefinitions()).map(([id, item]) => `<button class="${(settings.lockWidgets || []).includes(id) ? "active" : ""}" data-lock-widget-core="${id}"><span>${item.title}</span><strong>${item.value}</strong></button>`).join("")}
+        </div>
+        <button class="settings-row" data-action="preview-lock"><span>Lock Screen ansehen</span><strong>Preview</strong></button>
       `
     },
     shield: {
@@ -459,7 +939,9 @@ function settingsTemplateV2() {
         <div class="settings-row"><span>Nach Neustart</span><strong>${settings.requireCodeOnLaunch || settings.passkeyEnabled ? "Pflicht" : "Aus"}</strong></div>
         <div class="settings-row"><span>Schutzstatus</span><strong>${settings.codeLock ? "Aktiv" : "Offen"}</strong></div>
         ${toggleRow("codeLock", "Schutz aktivieren", "Code fuer sensible Aktionen nutzen")}
+        ${toggleRow("passkeyEnabled", "Passkey verwenden", "Face ID / Passkey zuerst versuchen")}
         ${toggleRow("requireCodeOnLaunch", "Login-Code", "Nach Reload wieder Code verlangen")}
+        ${toggleRow("strictSecurity", "Strenger Modus", "Installieren, Loeschen und Keycards immer freigeben")}
       `
     },
     vault: {
@@ -471,7 +953,7 @@ function settingsTemplateV2() {
         <button class="settings-row" data-app="forge"><span>NOCO Forge</span><strong>Store</strong></button>
         <button class="settings-row" data-go-page="1"><span>App Desktop</span><strong>Anzeigen</strong></button>
         <button class="settings-row" data-app="toon"><span>NOCO Toon</span><strong>Zeitung</strong></button>
-        <div class="settings-row"><span>Cache-Version</span><strong>v28</strong></div>
+        <div class="settings-row"><span>Cache-Version</span><strong>v36</strong></div>
         <button class="settings-row exclusive-row" data-app="exclusive"><span>Exclusive</span><strong>${isExclusiveActive() ? "Member" : "Upgrade ansehen"}</strong></button>
         <button class="settings-row" data-action="exclusive-trial"><span>1 Tag testen</span><strong>${settings.exclusiveTrialUsed ? "Genutzt" : "Gratis"}</strong></button>
       `
@@ -479,7 +961,7 @@ function settingsTemplateV2() {
   };
   const active = sections[settingsActiveSection] ? settingsActiveSection : "deck";
   return appShell(`
-    ${appHero("Einstellungen", "NOCO Core Mobile", "Der kleine Bruder von NOCO Workspace: Deck, ShieldGate, SessionVault und Mobile-Systemsteuerung.")}
+    ${appHero("Core", "NOCO Core Mobile", "Der kleine Bruder von NOCO Workspace: Deck, ShieldGate, SessionVault und Mobile-Systemsteuerung.")}
     <div class="menu-picker">
       ${Object.entries(sections).map(([id, section]) => `
         <button class="${active === id ? "active" : ""}" data-settings-section="${id}">
@@ -680,19 +1162,35 @@ function forgeTemplateV2() {
   const standardApps = apps.filter((app) => !app.exclusive && !installed.includes(app.id));
   const installedStoreApps = apps.filter((app) => installed.includes(app.id));
   const exclusiveStoreApps = apps.filter((app) => app.exclusive);
+  const sections = {
+    discover: { title: "Entdecken", text: "Neue Apps", items: standardApps },
+    installed: { title: "Installiert", text: "Öffnen oder löschen", items: installedStoreApps },
+    exclusive: { title: "Exclusive", text: "Member Apps", items: exclusiveStoreApps }
+  };
+  const active = sections[forgeActiveSection] ? forgeActiveSection : "discover";
   const appCards = (items) => items.map((app) => `
     <div class="app-card ${app.exclusive ? "exclusive-row" : ""}">
       <span class="icon-orb ${app.className}">${app.icon}</span>
       <span><strong>${app.title}</strong>${app.exclusive ? `<em class="exclusive-badge">Exclusive</em>` : ""}<br><small>${app.text}</small></span>
-      <button class="forge-install" ${installed.includes(app.id) ? `data-app="${app.id}"` : `data-install="${app.id}"`}>${installed.includes(app.id) ? "Oeffnen" : app.exclusive && !isExclusiveActive() ? "Exclusive holen" : "Installieren"}</button>
+      <span class="forge-actions">
+        <button class="forge-install" ${installed.includes(app.id) ? `data-app="${app.id}"` : `data-install="${app.id}"`}>${installed.includes(app.id) ? "Öffnen" : app.exclusive && !isExclusiveActive() ? "Exclusive holen" : "Installieren"}</button>
+        ${installed.includes(app.id) ? `<button class="forge-delete" data-uninstall="${app.id}">Löschen</button>` : ""}
+      </span>
     </div>
   `).join("") || `<div class="settings-row"><span>Nichts gefunden</span><strong>Suche aendern</strong></div>`;
   return appShell(`
     ${appHero("Forge", "NOCO App Store", "Sauberer Mobile-Store mit Suche, echten Installationskarten und klaren Buttons.")}
     <input class="search-glass" data-forge-search value="${forgeSearch.replace(/"/g, "&quot;")}" placeholder="Apps suchen..." aria-label="NOCO Forge Suche" />
-    ${subMenu("Entdecken", "Neue Apps", `<div class="forge-grid">${appCards(standardApps)}</div>`, true)}
-    ${subMenu("Installiert", "Deine Apps", `<div class="forge-grid">${appCards(installedStoreApps)}</div>`)}
-    ${subMenu("Exclusive", "Member Apps", `<div class="forge-grid">${appCards(exclusiveStoreApps)}</div>`)}
+    <div class="menu-picker menu-picker-compact">
+      ${Object.entries(sections).map(([id, section]) => `
+        <button class="${active === id ? "active" : ""}" data-forge-section="${id}">
+          <strong>${section.title}</strong><small>${section.text}</small>
+        </button>
+      `).join("")}
+    </div>
+    <section class="menu-content forge-menu-content">
+      ${subMenu(sections[active].title, sections[active].text, `<div class="forge-grid">${appCards(sections[active].items)}</div>`, true)}
+    </section>
   `);
 }
 
@@ -785,6 +1283,25 @@ function memoryGridTemplate() {
   `);
 }
 
+function dodgeRunTemplate() {
+  return appShell(`
+    ${appHero("Dodge Run", "NOCO Games", "Zieh den leuchtenden Orb nach links und rechts und weich den fallenden Glas-Blöcken aus.")}
+    <section class="dodge-stage" data-dodge-stage>
+      <div class="dodge-lane"></div>
+      <span class="dodge-player" data-dodge-player style="left:${dodgeGame.playerX}%"></span>
+      <span class="dodge-obstacle" data-dodge-obstacle style="left:${dodgeGame.obstacleX}%; top:${dodgeGame.obstacleY}%"></span>
+      <div class="dodge-hud">
+        <strong data-dodge-score>${dodgeGame.score}</strong>
+        <small>Best ${dodgeGame.best}</small>
+      </div>
+    </section>
+    <div class="game-grid">
+      <button class="settings-row" data-action="dodge-start"><span>${dodgeGame.running ? "Läuft" : "Runde"}</span><strong>${dodgeGame.running ? "Ausweichen!" : "Start"}</strong></button>
+      <button class="settings-row" data-action="dodge-reset"><span>Highscore</span><strong>Reset</strong></button>
+    </div>
+  `);
+}
+
 function toggleRow(id, title, text) {
   return `
     <button class="toggle-card" data-toggle-setting="${id}">
@@ -819,15 +1336,44 @@ function extraTemplateForApp(appId) {
       ["Liste", "3 Ideen"],
       ["Sync", "Keycard"]
     ]),
+    mood: () => simpleAppTemplate("Mood Board", "NOCO Mood", "Farben, Vibes und Wallpaper-Ideen sammeln.", [
+      ["Stimmung", "Ruhig"],
+      ["Farbe", "Aurora"],
+      ["Sync", "Lokal"]
+    ]),
+    vault: () => simpleAppTemplate("Vault Mini", "NOCO Vault", "Private Checkliste fuer sensible Mobile-Daten.", [
+      ["Eintraege", "3"],
+      ["Schutz", "ShieldGate"],
+      ["Sync", "Keycard"]
+    ]),
+    glowcam: () => simpleAppTemplate("GlowCam", "NOCO Kamera", "Fake-Kamera mit Glas-Licht und Profilkarten.", [
+      ["Modus", "Portrait"],
+      ["Licht", "Mint"],
+      ["Filter", "Glass"]
+    ]),
+    wallet: () => payTemplate(),
+    "exclusive-lab": () => simpleAppTemplate("Exclusive Lab", "NOCO Exclusive", "Premium-Labor mit fruehen Features.", [
+      ["Status", isExclusiveActive() ? "Member" : "Gesperrt"],
+      ["Lab", "Aktiv"],
+      ["Sync", "Keycard"]
+    ]),
+    "deep-scan": () => simpleAppTemplate("Deep Scan", "NOCO Security", "Erweiterter Security-Scan fuer Exclusive.", [
+      ["Scan", "Bereit"],
+      ["Risiko", "Niedrig"],
+      ["Shield", "Aktiv"]
+    ]),
+    "pro-themes": () => themesTemplate(),
     tapdash: tapDashTemplate,
     colorcatch: colorCatchTemplate,
-    memorygrid: memoryGridTemplate
+    memorygrid: memoryGridTemplate,
+    dodgerun: dodgeRunTemplate
   };
   return templates[appId] || null;
 }
 
 async function openApp(appId) {
   if (editMode) return;
+  if (currentApp === "dodgerun" && appId !== "dodgerun") stopDodgeGame(false);
   if (currentPage === 1 && desktopNeedsUnlock(1) && !(await unlockDesktop())) {
     return;
   }
@@ -899,31 +1445,36 @@ async function openApp(appId) {
       ["Status", "Pünktlich"]
     ])
   };
+  const meta = getAppMeta(appId);
   const renderer = templates[appId] || extraTemplateForApp(appId) || (forgeApp
     ? () => simpleAppTemplate(forgeApp.title, "NOCO Mobile App", forgeApp.text, [["Status", "Installiert"], ["Sync", "Keycard bereit"], ["Exclusive", forgeApp.exclusive ? "Ja" : "Nein"]])
-    : () => simpleAppTemplate(appId, "NOCO App", "Diese App startet bald.", []));
+    : () => simpleAppTemplate(meta.title, "NOCO Mobile", "Diese App ist auf deinem Geraet bereit.", [["Status", "Bereit"], ["Sync", "Lokal"], ["Version", "1.1"]]));
   renderAppSheet(appId, renderer());
 }
 
 async function closeAppToPage(page) {
   if (appSheet.classList.contains("hidden")) return;
+  stopDodgeGame(false);
   const target = Math.max(0, Math.min(1, page));
   if (target === 1 && desktopNeedsUnlock(1) && !(await unlockDesktop())) {
     return;
   }
   cancelSheetSwipe();
-  appSheet.classList.add("hidden");
-  currentApp = null;
+  closeAppSheetVisual();
   setPage(target);
 }
 
 function runShortcut(id) {
-  if (["settings", "web", "themes", "cloud", "focus", "sync", "security", "exclusive", "pay"].includes(id)) {
+  if (id === "hub") {
+    openHub();
+    return;
+  }
+  if (forgeApps.some((app) => app.id === id) || baseDesktopApps.some((app) => app.id === id) || ["web", "themes", "cloud", "focus", "notes", "pay", "exclusive", "toon"].includes(id)) {
     openApp(id);
     return;
   }
   hapticTap();
-  showToast(shortcutById(id).title + " aktiviert");
+  showToast(shortcutById(id).title + " geoeffnet");
 }
 
 const feedItems = [
@@ -933,15 +1484,22 @@ const feedItems = [
   ["Nächster Schritt", "Cloud-Sync und Mobile Unlock brauchen später ein echtes Backend."]
 ];
 
-feedItems.forEach(([title, text]) => {
-  const row = document.createElement("div");
-  row.className = "list-item";
-  row.innerHTML = `<strong>${title}</strong><span>${text}</span>`;
-  demoList.appendChild(row);
-});
+if (demoList) {
+  feedItems.forEach(([title, text]) => {
+    const row = document.createElement("div");
+    row.className = "list-item";
+    row.innerHTML = `<strong>${title}</strong><span>${text}</span>`;
+    demoList.appendChild(row);
+  });
+}
 
 editBtn.addEventListener("click", () => setEditMode(!editMode));
 widgetBtn.addEventListener("click", () => {
+  if (currentPage === 1) {
+    renderDesktopLibrary();
+    desktopPanel?.classList.remove("hidden");
+    return;
+  }
   renderWidgetLibrary();
   widgetPanel.classList.remove("hidden");
 });
@@ -958,18 +1516,126 @@ document.querySelectorAll("[data-page]").forEach((dot) => {
 });
 
 document.addEventListener("click", async (event) => {
+  resetAutoLockTimer();
   if (Date.now() < suppressClickUntil) {
     event.preventDefault();
     event.stopPropagation();
     return;
   }
 
+  const firstLightToggle = !firstLightPanel?.classList.contains("hidden") && event.target.closest("[data-toggle-setting]");
+  if (firstLightToggle) {
+    const key = firstLightToggle.dataset.toggleSetting;
+    settings[key] = !settings[key];
+    saveSettings();
+    applySettings();
+    renderFirstLight();
+    showToast("FirstLight Einstellung gesetzt");
+    return;
+  }
+
   const app = event.target.closest("[data-app]");
-  if (app) await openApp(app.dataset.app);
+  if (app && !editMode) await openApp(app.dataset.app);
 
   const pageJump = event.target.closest("[data-go-page]");
   if (pageJump) {
     await goToPage(Number(pageJump.dataset.goPage));
+  }
+
+  const beamOpen = event.target.closest("[data-action='open-beam'], [data-action='open-spotlight']");
+  if (beamOpen && !editMode && !event.target.closest(".beam-glyph")) {
+    openBeam();
+  }
+
+  if (event.target.closest("[data-close-spotlight]") || event.target === spotlightPanel) {
+    closeBeam();
+  }
+
+  const desktopRemove = event.target.closest("[data-desktop-remove]");
+  if (desktopRemove && editMode) {
+    hideDesktopBlock(desktopRemove.dataset.desktopRemove);
+    return;
+  }
+
+  const desktopAdd = event.target.closest("[data-desktop-add]");
+  if (desktopAdd && !desktopAdd.disabled) {
+    showDesktopBlock(desktopAdd.dataset.desktopAdd);
+    return;
+  }
+
+  if (event.target.closest("[data-close-desktop-panel]")) {
+    desktopPanel?.classList.add("hidden");
+  }
+
+  const spotlightOpen = event.target.closest("[data-spotlight-open]");
+  if (spotlightOpen) {
+    const item = searchIndex.find((entry) => entry.id === spotlightOpen.dataset.spotlightOpen);
+    closeSpotlight();
+    if (item) resolveSearchItem(item);
+  }
+
+  const folder = event.target.closest("[data-folder]");
+  if (folder && !editMode) {
+    openFolder(folder.dataset.folder);
+  }
+
+  if (event.target.closest("[data-firstlight-next]")) {
+    firstLightStep += 1;
+    renderFirstLight();
+  }
+
+  if (event.target.closest("[data-firstlight-skip]")) {
+    finishFirstLight();
+  }
+
+  if (event.target.closest("[data-firstlight-finish]")) {
+    finishFirstLight();
+  }
+
+  if (event.target.closest("[data-firstlight-export]")) {
+    await exportMobileKeycard({ skipAuth: true });
+    finishFirstLight();
+  }
+
+  if (event.target === unlockBtn) {
+    await unlockFromLockScreen();
+  }
+
+  if (event.target === lockEditBtn) {
+    lockEditMode = !lockEditMode;
+    renderLockWidgets();
+    showToast(lockEditMode ? "Lock Widgets bearbeiten" : "Lock Widgets gespeichert");
+  }
+
+  if (event.target === lockWaitBtn) {
+    const seconds = Math.max(15, Number(settings.autoLockSeconds || 60));
+    showToast("Auto-Lock in " + seconds + " Sekunden");
+    if (lockTimer) window.clearTimeout(lockTimer);
+    lockTimer = window.setTimeout(() => showLockScreen(seconds + " Sekunden vorbei"), seconds * 1000);
+  }
+
+  const lockWidget = event.target.closest("[data-lock-widget]");
+  if (lockWidget && lockEditMode) {
+    toggleLockWidget(lockWidget.dataset.lockWidget);
+  }
+
+  const lockWidgetCore = event.target.closest("[data-lock-widget-core]");
+  if (lockWidgetCore) {
+    toggleLockWidget(lockWidgetCore.dataset.lockWidgetCore);
+    if (currentApp === "settings") openApp("settings");
+  }
+
+  const lockTime = event.target.closest("[data-lock-time]");
+  if (lockTime) {
+    settings.autoLockSeconds = Number(lockTime.dataset.lockTime || 60);
+    saveSettings();
+    resetAutoLockTimer();
+    openApp("settings");
+    showToast("Auto-Lock: " + settings.autoLockSeconds + " Sekunden");
+  }
+
+  if (event.target.closest("[data-action='preview-lock']")) {
+    showLockScreen("Lock Screen Preview");
   }
 
   const shortcut = event.target.closest("[data-shortcut]");
@@ -1001,6 +1667,8 @@ document.addEventListener("click", async (event) => {
   const widgetRemove = event.target.closest("[data-widget-remove]");
   if (widgetRemove) {
     toggleWidget(widgetRemove.dataset.widgetRemove);
+    refreshWidgetEditButtons();
+    return;
   }
 
   const choice = event.target.closest("[data-shortcut-choice]");
@@ -1030,7 +1698,22 @@ document.addEventListener("click", async (event) => {
   const toggle = event.target.closest("[data-toggle-setting]");
   if (toggle) {
     const key = toggle.dataset.toggleSetting;
-    if (settings.codeLock && !sessionStorage.getItem("noco_mobile_unlocked") && !(await unlockDesktop())) {
+    if (key === "passkeyEnabled") {
+      if (!settings.passkeyEnabled) {
+        await setupPasskey();
+        return;
+      }
+      if (!(await authorizeSensitiveAction("Passkey deaktivieren? Bitte freigeben."))) return;
+      localStorage.removeItem("noco_mobile_passkey_id");
+      settings.passkeyEnabled = false;
+      saveSettings();
+      applySettings();
+      openApp(currentApp === "security" ? "security" : "settings");
+      showToast("Passkey deaktiviert");
+      return;
+    }
+    const sensitiveToggle = ["codeLock", "requireCodeOnLaunch", "strictSecurity"].includes(key);
+    if (sensitiveToggle && (settings.strictSecurity || settings.codeLock || settings.passkeyEnabled) && !(await authorizeSensitiveAction("Sicherheitseinstellung aendern? Bitte freigeben."))) {
       return;
     }
     if (key === "codeLock" && !settings.codeLock && !settings.mobileCode && !settings.passkeyEnabled) {
@@ -1039,9 +1722,10 @@ document.addEventListener("click", async (event) => {
       return;
     }
     settings[key] = !settings[key];
-    if (key === "codeLock" && !settings[key]) {
-      sessionStorage.removeItem("noco_mobile_unlocked");
-    }
+  if (key === "codeLock" && !settings[key]) {
+    sessionStorage.removeItem("noco_mobile_unlocked");
+    sessionStorage.removeItem("noco_mobile_launch_unlocked");
+  }
     saveSettings();
     applySettings();
     if (currentApp === "security") openApp("security");
@@ -1057,6 +1741,12 @@ document.addEventListener("click", async (event) => {
   if (settingsSection) {
     settingsActiveSection = settingsSection.dataset.settingsSection || "deck";
     openApp("settings");
+  }
+
+  const forgeSection = event.target.closest("[data-forge-section]");
+  if (forgeSection) {
+    forgeActiveSection = forgeSection.dataset.forgeSection || "discover";
+    openApp("forge");
   }
 
   if (event.target.closest("[data-action='set-mobile-code']")) {
@@ -1096,7 +1786,7 @@ document.addEventListener("click", async (event) => {
   }
 
   if (event.target.closest("[data-action='export-mobile-keycard']")) {
-    exportMobileKeycard();
+    await exportMobileKeycard();
   }
 
   if (event.target.closest("[data-action='exclusive-trial']")) {
@@ -1215,6 +1905,19 @@ document.addEventListener("click", async (event) => {
     openApp("memorygrid");
   }
 
+  if (event.target.closest("[data-action='dodge-start']")) {
+    startDodgeGame();
+  }
+
+  if (event.target.closest("[data-action='dodge-reset']")) {
+    stopDodgeGame(false);
+    dodgeGame.score = 0;
+    dodgeGame.best = 0;
+    localStorage.setItem("noco_mobile_dodge_best", "0");
+    openApp("dodgerun");
+    showToast("Dodge Run zurueckgesetzt");
+  }
+
   if (event.target.closest("[data-open-hub]")) {
     openHub();
   }
@@ -1240,6 +1943,7 @@ document.addEventListener("click", async (event) => {
 });
 
 document.addEventListener("input", (event) => {
+  resetAutoLockTimer();
   if (event.target.matches("[data-forge-search]")) {
     forgeSearch = event.target.value;
     openApp("forge");
@@ -1249,11 +1953,30 @@ document.addEventListener("input", (event) => {
       input.setSelectionRange(input.value.length, input.value.length);
     }
   }
+  if (event.target === spotlightInput) {
+    renderSpotlightResults(spotlightInput.value);
+  }
 });
 
-document.addEventListener("change", (event) => {
+document.addEventListener("pointermove", (event) => {
+  resetAutoLockTimer();
+  const stage = event.target.closest?.("[data-dodge-stage]");
+  if (!stage || !dodgeGame.running) return;
+  const rect = stage.getBoundingClientRect();
+  const x = ((event.clientX - rect.left) / Math.max(1, rect.width)) * 100;
+  dodgeGame.playerX = Math.max(8, Math.min(92, x));
+  updateDodgeDom();
+});
+
+document.addEventListener("change", async (event) => {
+  resetAutoLockTimer();
   if (event.target?.id === "keycardInput") {
-    importKeycard(event.target.files?.[0]);
+    await importKeycard(event.target.files?.[0]);
+  }
+  if (event.target?.id === "firstLightKeycardInput") {
+    await importKeycard(event.target.files?.[0], { skipAuth: true, stayInFirstLight: true });
+    firstLightStep = Math.max(firstLightStep, 2);
+    renderFirstLight();
   }
 });
 
@@ -1266,7 +1989,7 @@ function desktopNeedsUnlock(nextPage) {
 }
 
 function launchNeedsUnlock() {
-  return false;
+  return (settings.passkeyEnabled || settings.requireCodeOnLaunch) && !sessionStorage.getItem("noco_mobile_launch_unlocked");
 }
 
 function isWeakCode(code) {
@@ -1298,20 +2021,22 @@ function finishCodeRequest(value) {
 }
 
 async function authorizeSensitiveAction(reason = "Diese Aktion ist geschuetzt.") {
-  if (!settings.codeLock) return true;
-  if (sessionStorage.getItem("noco_mobile_unlocked")) return true;
+  const protectedMode = settings.strictSecurity || settings.codeLock || settings.passkeyEnabled;
+  if (!protectedMode) return true;
   if (settings.passkeyEnabled && await tryPasskeyUnlock()) {
-    sessionStorage.setItem("noco_mobile_unlocked", "1");
     showToast("Face ID akzeptiert");
     return true;
   }
-  if (!settings.mobileCode) return false;
+  if (!settings.mobileCode) {
+    showToast("Bitte zuerst Code oder Passkey einrichten");
+    await setMobileCode();
+    return !!settings.mobileCode || !!settings.passkeyEnabled;
+  }
   const entered = await requestCode({
     title: "Freigabe erforderlich",
     text: reason
   });
   if (entered && entered === settings.mobileCode) {
-    sessionStorage.setItem("noco_mobile_unlocked", "1");
     showToast("Freigegeben");
     return true;
   }
@@ -1320,18 +2045,17 @@ async function authorizeSensitiveAction(reason = "Diese Aktion ist geschuetzt.")
 }
 
 async function unlockDesktop() {
-  if (!settings.codeLock) return true;
+  if (!settings.passkeyEnabled && !settings.requireCodeOnLaunch) return true;
   if (unlockInFlight) return unlockInFlight;
   unlockInFlight = (async () => {
   if (settings.passkeyEnabled && await tryPasskeyUnlock()) {
+    sessionStorage.setItem("noco_mobile_launch_unlocked", "1");
     sessionStorage.setItem("noco_mobile_unlocked", "1");
     showToast("Face ID akzeptiert");
     return true;
   }
-  if (!settings.mobileCode) {
-    settings.codeLock = false;
-    saveSettings();
-    showToast("Sperre aus: Bitte erst Code setzen");
+  if (!settings.mobileCode && !settings.passkeyEnabled) {
+    showToast("Bitte erst Code oder Passkey einrichten");
     return false;
   }
   const ok = await authorizeSensitiveAction("NOCO Mobile wurde neu gestartet. Bitte entsperren.");
@@ -1343,13 +2067,12 @@ async function unlockDesktop() {
 async function unlockOnLaunch() {
   if (!launchNeedsUnlock()) return;
   window.setTimeout(async () => {
-    const ok = await unlockDesktop();
-    if (ok) {
-      showToast("NOCO Mobile entsperrt");
-    } else {
-      setPage(0);
-      showToast("Bitte entsperren, um den Desktop zu nutzen");
+    if (hasCompletedFirstLight()) {
+      showLockScreen("NOCO Mobile neu gestartet");
+      return;
     }
+    const ok = await unlockDesktop();
+    if (ok) sessionStorage.setItem("noco_mobile_launch_unlocked", "1");
   }, 260);
 }
 
@@ -1363,10 +2086,7 @@ async function goToPage(page) {
 }
 
 function canStartPageSwipe(event) {
-  if (editMode) return false;
-  if (document.querySelector(".app-sheet:not(.hidden)") || !hubPanel.classList.contains("hidden")) return false;
-  if (event.target.closest("textarea, input, select")) return false;
-  return true;
+  return false;
 }
 
 function getGestureIntent(dx, dy, ratio) {
@@ -1474,24 +2194,8 @@ function endPageDrag() {
 }
 
 function startSheetSwipe(event) {
-  if (event.target.closest("textarea, input, select")) return;
-  const card = event.target.closest(".sheet-card");
-  if (!card || card.classList.contains("code-card")) return;
-  const touch = event.touches[0];
-  const rect = card.getBoundingClientRect();
-  appSwipe = {
-    x: touch.clientX,
-    y: touch.clientY,
-    at: Date.now(),
-    active: false,
-    cancelled: false,
-    card,
-    edge: touch.clientX < rect.left + 34 || touch.clientX > rect.right - 34,
-    topZone: touch.clientY < rect.top + 118,
-    scrollTop: card.scrollTop,
-    dx: 0,
-    dy: 0
-  };
+  appSwipe = null;
+  return;
 }
 
 function moveSheetSwipe(event) {
@@ -1555,8 +2259,12 @@ appSheet.addEventListener("touchcancel", cancelSheetSwipe, { passive: true });
 function saveMobileOrder() {
   const widgetOrder = Array.from(document.querySelectorAll(".draggable-widget:not([hidden])")).map((item) => item.dataset.widgetId);
   const appOrder = Array.from(document.querySelectorAll("#appGrid .app-icon")).map((item) => item.dataset.app);
+  const desktopBlockOrder = Array.from(desktopLayout?.querySelectorAll(".desktop-block:not([hidden])") || []).map((item) => item.dataset.desktopBlock);
+  const folderOrder = Array.from(document.querySelectorAll("#folderStrip .folder-tile")).map((item) => item.dataset.folder);
   localStorage.setItem("noco_mobile_widget_order", JSON.stringify(widgetOrder));
   localStorage.setItem("noco_mobile_app_order", JSON.stringify(appOrder));
+  if (desktopBlockOrder.length) saveDesktopLayout(desktopBlockOrder);
+  if (folderOrder.length) localStorage.setItem("noco_mobile_folder_order", JSON.stringify(folderOrder));
 }
 
 function applyOrder(selector, storageKey, idGetter) {
@@ -1568,6 +2276,12 @@ function applyOrder(selector, storageKey, idGetter) {
   const items = Array.from(document.querySelectorAll(selector));
   if (!items.length) return;
   const parent = items[0].parentElement;
+  const existingIds = new Set(items.map(idGetter).filter(Boolean));
+  if (storageKey === "noco_mobile_app_order" && baseDesktopApps.some((app) => !existingIds.has(app.id))) {
+    localStorage.removeItem(storageKey);
+    ensureBaseDesktopApps();
+    return;
+  }
   order.forEach((id) => {
     const item = items.find((candidate) => idGetter(candidate) === id);
     if (item) parent.appendChild(item);
@@ -1576,7 +2290,11 @@ function applyOrder(selector, storageKey, idGetter) {
 
 function applyMobileOrder() {
   applyOrder(".draggable-widget", "noco_mobile_widget_order", (item) => item.dataset.widgetId);
+  ensureBaseDesktopApps();
   applyOrder("#appGrid .app-icon", "noco_mobile_app_order", (item) => item.dataset.app);
+  ensureBaseDesktopApps();
+  applyDesktopLayout();
+  applyOrder("#folderStrip .folder-tile", "noco_mobile_folder_order", (item) => item.dataset.folder);
 }
 
 function getInstalledApps() {
@@ -1593,53 +2311,65 @@ function saveInstalledApps(installed) {
 }
 
 const baseDesktopApps = [
-  { id: "settings", title: "Einstellungen", icon: "C", className: "core" },
-  { id: "web", title: "Web", icon: "W", className: "explorer" },
+  { id: "settings", title: "Core", icon: "C", className: "core" },
   { id: "security", title: "Security", icon: "S", className: "security" },
   { id: "forge", title: "Forge", icon: "F", className: "forge" },
-  { id: "themes", title: "Themes", icon: "T", className: "themes" },
-  { id: "notes", title: "Notizen", icon: "N", className: "notes" },
-  { id: "cloud", title: "Cloud", icon: "C", className: "cloud" },
-  { id: "focus", title: "Focus", icon: "F", className: "focus" },
-  { id: "pay", title: "Pay", icon: "P", className: "pay" },
-  { id: "sync", title: "Sync", icon: "S", className: "sync" },
-  { id: "exclusive", title: "Exclusive", icon: "X", className: "exclusive" },
-  { id: "toon", title: "Toon", icon: "T", className: "toon" },
-  { id: "tapdash", title: "Tap Dash", icon: "D", className: "forge" },
-  { id: "colorcatch", title: "Color Catch", icon: "C", className: "themes" },
-  { id: "memorygrid", title: "Memory Grid", icon: "M", className: "focus" }
+  { id: "sync", title: "Sync", icon: "S", className: "sync" }
 ];
 
 function createDesktopAppButton(app) {
   const button = document.createElement("button");
-  button.className = "app-icon";
+  button.className = "app-icon desktop-tile";
   button.dataset.app = app.id;
+  button.type = "button";
   button.innerHTML = `<span class="icon-orb ${app.className}">${app.icon}</span><strong>${app.title}</strong>`;
   return button;
+}
+
+function desktopAppsToRender() {
+  const installedApps = getInstalledApps()
+    .map((id) => forgeApps.find((app) => app.id === id))
+    .filter(Boolean)
+    .filter((app) => !baseDesktopApps.some((base) => base.id === app.id));
+  return [...baseDesktopApps, ...installedApps];
+}
+
+function forceRenderDesktopGrid(reason = "render") {
+  const appGrid = document.getElementById("appGrid");
+  if (!appGrid) return;
+  appGrid.hidden = false;
+  appGrid.removeAttribute("hidden");
+  appGrid.innerHTML = "";
+  desktopAppsToRender().forEach((app) => appGrid.appendChild(createDesktopAppButton(app)));
+  appGrid.dataset.rendered = reason;
 }
 
 function ensureBaseDesktopApps() {
   const appGrid = document.getElementById("appGrid");
   if (!appGrid) return;
-  baseDesktopApps.forEach((app) => {
-    if (!appGrid.querySelector(`[data-app="${app.id}"]`)) {
-      appGrid.appendChild(createDesktopAppButton(app));
-    }
-  });
+  const currentIds = Array.from(appGrid.querySelectorAll(".app-icon")).map((button) => button.dataset.app);
+  const missingBase = baseDesktopApps.some((app) => !currentIds.includes(app.id));
+  if (!currentIds.length || missingBase) forceRenderDesktopGrid("ensure");
 }
 
 function renderInstalledApps() {
   const appGrid = document.getElementById("appGrid");
   if (!appGrid) return;
   ensureDesktopGridVisible();
+  forceRenderDesktopGrid("installed");
   ensureBaseDesktopApps();
-  const installed = getInstalledApps();
-  installed.forEach((id) => {
-    if (appGrid.querySelector(`[data-app="${id}"]`)) return;
-    const app = forgeApps.find((item) => item.id === id);
-    if (!app) return;
-    appGrid.appendChild(createDesktopAppButton(app));
-  });
+}
+
+function repairDesktopGrid(reason = "repair") {
+  const appGrid = document.getElementById("appGrid");
+  if (!appGrid) return;
+  ensureDesktopGridVisible();
+  const iconCount = appGrid.querySelectorAll(".app-icon").length;
+  if (iconCount < baseDesktopApps.length) {
+    forceRenderDesktopGrid(reason);
+    ensureBaseDesktopApps();
+  }
+  appGrid.dataset.repaired = reason;
 }
 
 async function installForgeApp(id) {
@@ -1671,6 +2401,64 @@ async function uninstallForgeApp(id) {
   saveMobileOrder();
   openApp("forge");
   showToast(app.title + " deinstalliert");
+}
+
+function updateDodgeDom() {
+  const player = sheetContent.querySelector("[data-dodge-player]");
+  const obstacle = sheetContent.querySelector("[data-dodge-obstacle]");
+  const score = sheetContent.querySelector("[data-dodge-score]");
+  if (player) player.style.left = dodgeGame.playerX + "%";
+  if (obstacle) {
+    obstacle.style.left = dodgeGame.obstacleX + "%";
+    obstacle.style.top = dodgeGame.obstacleY + "%";
+  }
+  if (score) score.textContent = String(dodgeGame.score);
+}
+
+function resetDodgeObstacle() {
+  dodgeGame.obstacleY = -14;
+  dodgeGame.obstacleX = 12 + Math.round(Math.random() * 76);
+}
+
+function stopDodgeGame(showCrash = true) {
+  if (dodgeTimer) window.clearInterval(dodgeTimer);
+  dodgeTimer = null;
+  const wasRunning = dodgeGame.running;
+  dodgeGame.running = false;
+  if (dodgeGame.score > dodgeGame.best) {
+    dodgeGame.best = dodgeGame.score;
+    localStorage.setItem("noco_mobile_dodge_best", String(dodgeGame.best));
+  }
+  if (showCrash && wasRunning) showToast("Crash! Score " + dodgeGame.score);
+}
+
+function startDodgeGame() {
+  stopDodgeGame(false);
+  dodgeGame.running = true;
+  dodgeGame.score = 0;
+  dodgeGame.playerX = 50;
+  resetDodgeObstacle();
+  openApp("dodgerun");
+  dodgeTimer = window.setInterval(() => {
+    if (!dodgeGame.running || currentApp !== "dodgerun") {
+      stopDodgeGame(false);
+      return;
+    }
+    dodgeGame.obstacleY += 4.8 + Math.min(3.2, dodgeGame.score * 0.14);
+    const hitZone = dodgeGame.obstacleY > 70 && dodgeGame.obstacleY < 92;
+    const hitDistance = Math.abs(dodgeGame.obstacleX - dodgeGame.playerX);
+    if (hitZone && hitDistance < 13) {
+      stopDodgeGame(true);
+      openApp("dodgerun");
+      return;
+    }
+    if (dodgeGame.obstacleY > 108) {
+      dodgeGame.score += 1;
+      resetDodgeObstacle();
+    }
+    updateDodgeDom();
+  }, 72);
+  showToast("Dodge Run gestartet");
 }
 
 function loadSyncInfo() {
@@ -1748,8 +2536,9 @@ function openNocoKeyPayload(record) {
   return Object.assign({}, payload, { sessionVaultKey: vaultKey });
 }
 
-async function importKeycard(file) {
+async function importKeycard(file, options = {}) {
   if (!file) return;
+  if (!options.skipAuth && !(await authorizeSensitiveAction("Keycard importieren? Bitte freigeben."))) return;
   try {
     const text = await file.text();
     const data = parseKeycard(text);
@@ -1759,7 +2548,7 @@ async function importKeycard(file) {
       text: applied.length ? "Übernommen: " + applied.join(", ") : "Keycard gespeichert, aber keine direkt passenden Mobile-Daten gefunden.",
       at: Date.now()
     }));
-    openApp("sync");
+    if (!options.stayInFirstLight) openApp("sync");
     showToast("Keycard importiert");
   } catch (error) {
     showToast("Keycard konnte nicht gelesen werden");
@@ -1933,7 +2722,8 @@ function applyKeycardData(data, fileName) {
   return applied;
 }
 
-function exportMobileKeycard() {
+async function exportMobileKeycard(options = {}) {
+  if (!options.skipAuth && !(await authorizeSensitiveAction("Mobile Keycard exportieren? Bitte freigeben."))) return;
   const note = localStorage.getItem("noco_mobile_note") || "";
   const toonNote = localStorage.getItem("noco_mobile_toon_note") || "";
   const installedApps = getInstalledApps();
@@ -2078,6 +2868,7 @@ async function setMobileCode() {
   settings.codeLock = true;
   saveSettings();
   sessionStorage.setItem("noco_mobile_unlocked", "1");
+  sessionStorage.setItem("noco_mobile_launch_unlocked", "1");
   openApp("security");
   showToast("Mobile Code aktiviert");
 }
@@ -2131,6 +2922,7 @@ async function setupPasskey() {
     settings.requireCodeOnLaunch = true;
     saveSettings();
     sessionStorage.setItem("noco_mobile_unlocked", "1");
+    sessionStorage.setItem("noco_mobile_launch_unlocked", "1");
     openApp("security");
     showToast("Face ID / Passkey aktiv");
   } catch (_) {
@@ -2162,7 +2954,9 @@ async function tryPasskeyUnlock() {
 
 function startReorder(event) {
   if (!editMode) return;
-  const target = event.target.closest(".draggable-widget, .app-icon");
+  if (event.target.closest(".edit-remove, .beam-glyph, [data-widget-remove]")) return;
+  const target = event.target.closest(".draggable-widget, .app-icon, .folder-tile")
+    || event.target.closest(".draggable-desktop");
   if (!target || target.closest(".app-sheet")) return;
   event.preventDefault();
   suppressClickUntil = Date.now() + 620;
@@ -2198,13 +2992,14 @@ function moveReorder(event) {
   reorderDrag.ghost.style.top = event.clientY + "px";
   const candidates = document.elementsFromPoint(event.clientX, event.clientY);
   const over = candidates
-    .map((node) => node.closest?.(".draggable-widget, .app-icon"))
+    .map((node) => node.closest?.(".draggable-widget, .app-icon, .folder-tile, .draggable-desktop"))
     .find((node) => node && node !== reorderDrag.item && node.parentElement === reorderDrag.parent);
   document.querySelectorAll(".drop-target").forEach((node) => node.classList.remove("drop-target"));
   if (over) {
     over.classList.add("drop-target");
     const rect = over.getBoundingClientRect();
-    const after = reorderDrag.parent.id === "appGrid"
+    const horizontal = reorderDrag.parent.id === "appGrid" || reorderDrag.parent.id === "folderStrip";
+    const after = horizontal
       ? event.clientX > rect.left + rect.width / 2
       : event.clientY > rect.top + rect.height / 2;
     reorderDrag.parent.insertBefore(reorderDrag.item, after ? over.nextSibling : over);
@@ -2229,6 +3024,14 @@ document.addEventListener("pointermove", moveReorder);
 document.addEventListener("pointerup", endReorder);
 document.addEventListener("pointercancel", endReorder);
 
+document.addEventListener("keydown", (event) => {
+  const beamStrip = event.target.closest?.("[data-action='open-beam']");
+  if (beamStrip && (event.key === "Enter" || event.key === " ")) {
+    event.preventDefault();
+    if (!editMode) openBeam();
+  }
+});
+
 noteInput.addEventListener("keydown", (event) => {
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
     event.preventDefault();
@@ -2246,12 +3049,41 @@ if ("serviceWorker" in navigator) {
   });
 }
 
+function initNativeScroll() {
+  const scrollAllowed = (target) => target?.closest?.(
+    ".screen.is-active, .app-sheet:not(.hidden) .sheet-card, .spotlight-panel:not(.hidden) .beam-card, .spotlight-panel:not(.hidden) .spotlight-card, .firstlight-panel:not(.hidden) .firstlight-card, textarea, input, select, [contenteditable='true']"
+  );
+
+  document.addEventListener("touchmove", (event) => {
+    if (!scrollAllowed(event.target)) event.preventDefault();
+  }, { passive: false });
+}
+
+setPage(0);
+
 applySettings();
+initNativeScroll();
 loadNote();
 renderShortcuts();
-renderInstalledApps();
+ensureBaseDesktopApps();
 applyVisibleWidgets();
 applyMobileOrder();
+ensureBaseDesktopApps();
+applyDesktopLayout();
+updatePageToggle();
 updateClock();
-unlockOnLaunch();
+updateLockClock();
+renderLockWidgets();
+showFirstLight();
+if (hasCompletedFirstLight()) {
+  unlockOnLaunch();
+  resetAutoLockTimer();
+}
 window.setInterval(updateClock, 1000);
+window.setInterval(() => {
+  updateLockClock();
+  if (isLocked) renderLockWidgets();
+}, 1000);
+window.addEventListener("pageshow", () => {
+  if (currentPage === 1) repairDesktopGrid("pageshow");
+});

@@ -17,22 +17,27 @@
 </head>
 <body>
   <main class="phone" aria-label="NOCO OS Mobile">
-    <header class="mobile-topbar">
+    <header class="mobile-topbar liquid-glass-bar">
       <div>
         <p class="eyebrow">NOCO OS Mobile 1.1</p>
         <strong id="screenTitle">Home</strong>
         <span id="exclusiveTopBadge" class="exclusive-top-badge hidden">Exclusive</span>
       </div>
       <div class="top-actions">
-        <button class="hub-button apps-jump" data-go-page="1" onclick="document.documentElement.style.setProperty('--page', '1'); document.getElementById('screenTrack')?.style.setProperty('--page', '1'); document.getElementById('screenTitle').textContent = 'Desktop'; document.querySelectorAll('.dot').forEach((dot) => dot.classList.toggle('active', dot.dataset.page === '1'));" aria-label="Desktop Apps oeffnen">Apps</button>
+        <button class="hub-button page-toggle" id="pageToggleBtn" data-go-page="1" aria-label="Desktop oeffnen">Apps</button>
         <button class="hub-button" data-open-hub aria-label="NOCO Hub öffnen">Hub</button>
         <button id="widgetBtn" class="widget-button" aria-label="Widgets hinzufuegen">+</button>
-        <button id="editBtn" class="edit-button" aria-label="Home-Screen anpassen">Stift</button>
+        <button type="button" id="editBtn" class="edit-button liquid-glass" aria-label="Layout anpassen">
+          <svg class="pencil-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M4 20h3l9.5-9.5-3-3L4 17v3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M13.5 7.5l3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
       </div>
     </header>
 
     <section class="screen-track" id="screenTrack">
-      <section class="screen home-screen" aria-label="Home Screen">
+      <section class="screen home-screen is-active" aria-label="Home Screen">
         <div class="hero-widget widget-card draggable-widget" data-widget-id="hero">
           <div class="noco-mark" aria-hidden="true"><span>NO</span></div>
           <div>
@@ -113,70 +118,59 @@
             <p class="eyebrow">Desktop</p>
             <h1>Apps</h1>
           </div>
-          <button class="page-pill desktop-action" data-app="forge">Forge</button>
+          <div class="desktop-head-actions">
+            <button type="button" class="page-pill desktop-action" data-app="forge">Forge</button>
+          </div>
         </div>
-        <div class="app-grid" id="appGrid">
-          <button class="app-icon" data-app="settings">
-            <span class="icon-orb core">C</span>
-            <strong>Einstellungen</strong>
-          </button>
-          <button class="app-icon" data-app="web">
-            <span class="icon-orb explorer">W</span>
-            <strong>Web</strong>
-          </button>
-          <button class="app-icon" data-app="security">
-            <span class="icon-orb security">S</span>
-            <strong>Security</strong>
-          </button>
-          <button class="app-icon" data-app="forge">
-            <span class="icon-orb forge">F</span>
-            <strong>Forge</strong>
-          </button>
-          <button class="app-icon" data-app="themes">
-            <span class="icon-orb themes">T</span>
-            <strong>Themes</strong>
-          </button>
-          <button class="app-icon" data-app="notes">
-            <span class="icon-orb notes">N</span>
-            <strong>Notizen</strong>
-          </button>
-          <button class="app-icon" data-app="cloud">
-            <span class="icon-orb cloud">C</span>
-            <strong>Cloud</strong>
-          </button>
-          <button class="app-icon" data-app="focus">
-            <span class="icon-orb focus">F</span>
-            <strong>Focus</strong>
-          </button>
-          <button class="app-icon" data-app="pay">
-            <span class="icon-orb pay">P</span>
-            <strong>Pay</strong>
-          </button>
-          <button class="app-icon" data-app="sync">
-            <span class="icon-orb sync">S</span>
-            <strong>Sync</strong>
-          </button>
-          <button class="app-icon" data-app="exclusive">
-            <span class="icon-orb exclusive">X</span>
-            <strong>Exclusive</strong>
-          </button>
-          <button class="app-icon" data-app="toon">
-            <span class="icon-orb toon">T</span>
-            <strong>Toon</strong>
-          </button>
-        </div>
-        <div class="desktop-quickbar" aria-label="Schnellzugriff">
-          <button data-app="settings"><span class="icon-orb core">C</span><strong>Core</strong></button>
-          <button data-app="security"><span class="icon-orb security">S</span><strong>Shield</strong></button>
-          <button data-app="sync"><span class="icon-orb sync">S</span><strong>Sync</strong></button>
-          <button data-app="exclusive"><span class="icon-orb exclusive">X</span><strong>Exclusive</strong></button>
+        <div class="desktop-layout" id="desktopLayout">
+          <div class="desktop-block draggable-desktop" data-desktop-block="beam" id="desktopBlockBeam">
+            <button type="button" class="edit-remove" data-desktop-remove="beam" aria-label="NOCO Beam entfernen">×</button>
+            <div class="beam-strip" data-action="open-beam" role="button" tabindex="0" aria-label="NOCO Beam oeffnen">
+              <span class="beam-glyph" aria-hidden="true">⌕</span>
+              <div class="beam-copy">
+                <span class="beam-label">NOCO Beam</span>
+                <strong>Apps, Core, Sync und Ordner lokal finden</strong>
+              </div>
+            </div>
+          </div>
+          <div class="desktop-block draggable-desktop" data-desktop-block="apps" id="desktopBlockApps">
+            <button type="button" class="edit-remove" data-desktop-remove="apps" aria-label="Haupt-Apps entfernen">×</button>
+            <p class="desktop-section-label">Haupt-Apps</p>
+            <div class="app-grid" id="appGrid" aria-label="Desktop Apps">
+              <button type="button" class="app-icon desktop-tile" data-app="settings">
+                <span class="icon-orb core">C</span>
+                <strong>Core</strong>
+              </button>
+              <button type="button" class="app-icon desktop-tile" data-app="security">
+                <span class="icon-orb security">S</span>
+                <strong>Security</strong>
+              </button>
+              <button type="button" class="app-icon desktop-tile" data-app="forge">
+                <span class="icon-orb forge">F</span>
+                <strong>Forge</strong>
+              </button>
+              <button type="button" class="app-icon desktop-tile" data-app="sync">
+                <span class="icon-orb sync">S</span>
+                <strong>Sync</strong>
+              </button>
+            </div>
+          </div>
+          <div class="desktop-block draggable-desktop" data-desktop-block="folders" id="desktopBlockFolders">
+            <button type="button" class="edit-remove" data-desktop-remove="folders" aria-label="Ordner entfernen">×</button>
+            <p class="desktop-section-label">Ordner</p>
+            <div class="folder-strip" id="folderStrip" aria-label="App Ordner">
+              <button type="button" class="desktop-tile folder-tile" data-folder="games"><span class="icon-orb forge">G</span><strong>Spiele</strong></button>
+              <button type="button" class="desktop-tile folder-tile" data-folder="design"><span class="icon-orb themes">D</span><strong>Design</strong></button>
+              <button type="button" class="desktop-tile folder-tile" data-folder="workspace"><span class="icon-orb core">W</span><strong>Workspace</strong></button>
+            </div>
+          </div>
         </div>
       </section>
     </section>
 
-    <nav class="page-dots" aria-label="Seiten">
-      <button class="dot active" data-page="0" onclick="document.documentElement.style.setProperty('--page', '0'); document.getElementById('screenTrack')?.style.setProperty('--page', '0'); document.getElementById('screenTitle').textContent = 'Home'; document.querySelectorAll('.dot').forEach((dot) => dot.classList.toggle('active', dot.dataset.page === '0'));" aria-label="Home"></button>
-      <button class="dot" data-page="1" onclick="document.documentElement.style.setProperty('--page', '1'); document.getElementById('screenTrack')?.style.setProperty('--page', '1'); document.getElementById('screenTitle').textContent = 'Desktop'; document.querySelectorAll('.dot').forEach((dot) => dot.classList.toggle('active', dot.dataset.page === '1'));" aria-label="Desktop"></button>
+    <nav class="page-dots liquid-glass-pill" aria-label="Seiten">
+      <button class="dot active" data-page="0" aria-label="Home"></button>
+      <button class="dot" data-page="1" aria-label="Desktop"></button>
     </nav>
   </main>
 
@@ -184,6 +178,43 @@
     <div class="sheet-card">
       <button id="closeSheet" class="sheet-close" aria-label="Schließen">x</button>
       <div id="sheetContent"></div>
+    </div>
+  </section>
+
+  <section id="firstLightPanel" class="firstlight-panel hidden" aria-live="polite">
+    <div class="firstlight-card">
+      <div id="firstLightContent"></div>
+    </div>
+  </section>
+
+  <section id="spotlightPanel" class="spotlight-panel beam-panel hidden" aria-live="polite">
+    <div class="spotlight-card beam-card">
+      <div class="beam-panel-head">
+        <div>
+          <p class="eyebrow">NOCO Beam</p>
+          <h2>Lokale Systemsuche</h2>
+        </div>
+        <button class="sheet-close" data-close-spotlight aria-label="NOCO Beam schliessen">x</button>
+      </div>
+      <div class="spotlight-search beam-search">
+        <span class="beam-glyph" aria-hidden="true">⌕</span>
+        <input id="spotlightInput" autocomplete="off" placeholder="Apps, Core, Sync, Ordner..." />
+      </div>
+      <div id="spotlightResults" class="spotlight-results beam-results"></div>
+    </div>
+  </section>
+
+  <section id="lockScreen" class="lock-screen hidden" aria-live="polite">
+    <button id="lockEditBtn" class="lock-edit" aria-label="Sperrbildschirm Widgets bearbeiten">✎</button>
+    <div class="lock-orb" aria-hidden="true"></div>
+    <div class="lock-clock">
+      <span id="lockClock">--:--</span>
+      <small id="lockDate">NOCO Mobile</small>
+    </div>
+    <div id="lockWidgets" class="lock-widgets"></div>
+    <div class="lock-actions">
+      <button id="unlockBtn" class="primary-action">Zum Entsperren halten</button>
+      <button id="lockWaitBtn" class="security-action"><strong>1 Minute warten</strong><small>Auto-Lock Demo starten</small></button>
     </div>
   </section>
 
@@ -202,6 +233,15 @@
       <h2>Widgets</h2>
       <p class="muted">Fuege Home-Widgets hinzu oder entferne sie. Im Stiftmodus kannst du sie danach verschieben.</p>
       <div class="widget-library" id="widgetLibrary"></div>
+    </div>
+  </section>
+
+  <section id="desktopPanel" class="app-sheet hidden" aria-live="polite">
+    <div class="sheet-card compact-sheet">
+      <button class="sheet-close" data-close-desktop-panel aria-label="Schliessen">x</button>
+      <h2>Desktop hinzufuegen</h2>
+      <p class="muted">Blendet entfernte Desktop-Bereiche wieder ein.</p>
+      <div class="widget-library" id="desktopLibrary"></div>
     </div>
   </section>
 
@@ -227,7 +267,7 @@
         <button class="sheet-close" data-close-hub aria-label="NOCO Hub schließen">x</button>
       </div>
       <div class="hub-grid">
-        <button data-hub-app="settings">Einstellungen</button>
+        <button data-hub-app="settings">Core</button>
         <button data-hub-app="security">Security</button>
         <button data-hub-app="sync">Sync</button>
         <button data-hub-app="exclusive">Exclusive</button>

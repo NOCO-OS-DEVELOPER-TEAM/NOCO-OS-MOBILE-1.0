@@ -1,4 +1,4 @@
-const CACHE = "noco-mobile-1-2-ui-ai-v86";
+const CACHE = "noco-mobile-1-2-ui-ai-v94";
 const ASSETS = [
   "./",
   "./index.html",
@@ -11,6 +11,8 @@ const ASSETS = [
   "./noco-reminders.css",
   "./noco-reminders.js",
   "./noco-home-edit.css",
+  "./noco-device.css",
+  "./noco-device.js",
   "./noco-ai-chats.js",
   "./noco-notes.js",
   "./noco-ai-math.js",
@@ -20,6 +22,8 @@ const ASSETS = [
   "./noco-ai-time.js",
   "./noco-ai-ultra.js",
   "./noco-ai-natural.js",
+  "./noco-ai-intent.js",
+  "./noco-ai-lexicon.js",
   "./noco-ai-limits.js",
   "./noco-ai-brain.js",
   "./noco-ai-system.js",

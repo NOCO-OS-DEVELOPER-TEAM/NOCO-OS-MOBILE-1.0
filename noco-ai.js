@@ -8,10 +8,10 @@
   const TYPING_WIDGET_MS = 260;
 
   const APP_ALIASES = [
-    { id: "settings", words: ["core", "settings", "setting", "einstellungen", "einstellung", "system", "deck", "konfiguration", "konfigurieren", "einstellen", "optionen", "preferences", "prefs", "anpassen system"] },
+    { id: "settings", words: ["settings", "setting", "einstellungen", "einstellung", "optionen", "preferences", "prefs", "konfiguration", "systemeinstellungen", "core", "noco core", "system", "deck", "konfigurieren", "einstellen", "anpassen system"] },
     { id: "security", words: ["security", "sicherheit", "shield", "shieldgate", "passkey", "code", "schutz", "scan", "face id", "faceid", "pin", "sperre"] },
     { id: "sync", words: ["sync", "keycard", "import", "export", "backup", "synchron", "verbinden", "key card"] },
-    { id: "forge", words: ["forge", "store", "app store", "installieren", "apps laden", "shop", "appstore"] },
+    { id: "forge", words: ["forge", "store", "app store", "appstore", "apps laden", "apps installieren", "neue apps", "shop", "installieren"] },
     { id: "nocoai", words: ["noco ai", "nocoai", "ki", "ai", "assistent", "chatbot", "copilot", "hilfe ki", "sprachassistent"] },
     { id: "beam", words: ["beam", "noco beam", "suche", "search", "spotlight", "finden", "suchen", "finder"] },
     { id: "themes", words: ["themes", "theme", "design app", "farben", "look", "aurora", "wallpaper", "midnight", "sunset", "forest"] },
@@ -27,7 +27,7 @@
     { id: "exclusive", words: ["exclusive", "premium", "abo", "member", "mitglied"] },
     { id: "toon", words: ["toon", "zeitung", "news", "meldungen"] },
     { id: "web", words: ["web", "browser", "internet", "explorer"] },
-    { id: "pay", words: ["pay", "wallet", "geld", "bezahlen", "konto"] },
+    { id: "pay", words: ["pay", "wallet", "geldbeutel", "guthaben", "kredit", "kontostand", "balance", "geld", "bezahlen", "konto", "nocopay", "noco pay", "aufladen"] },
     { id: "runner", words: ["runner", "laufen", "run", "nocorunner"] },
     { id: "dodgerun", words: ["dodge", "ausweichen", "dodgerun", "dodge run"] },
     { id: "memorygrid", words: ["memory", "merken", "grid", "memory grid"] },
@@ -211,15 +211,14 @@
 
   const DEFAULT_SUGGESTIONS = [
     "Was steht an?",
-    "Wie stelle ich Auto-Lock ein?",
+    "Helligkeit",
+    "Heller",
+    "Theme Midnight",
+    "Hintergrund",
     "Wann ist mein Timer rum?",
-    "Fokus Modus",
     "Inbox",
-    "Was soll ich jetzt tun?",
-    "15 Prozent von 80",
     "Erstelle Notiz",
-    "Empfehl mir was",
-    "Was ist Liquid Glass?",
+    "Live Wallpaper an",
     "Hilfe"
   ];
 
@@ -326,7 +325,9 @@
     if (global.NocoAIInsights?.isInsightQuery?.(q, query)) return true;
     if (global.NocoAIPro?.isProQuery?.(q, query)) return true;
     if (global.NocoAITime?.isTimeQuery?.(q, query)) return true;
-    if (global.NocoAINatural?.isSettingsQuestion?.(q, query)) return true;
+    if (global.NocoAINatural?.isSettingsRelated?.(q, query)) return true;
+    if (global.NocoAILexicon?.isLexiconQuery?.(q, query)) return true;
+    if (global.NocoAIIntent?.isIntentLike?.(q, query)) return true;
     if (global.NocoAIUltra?.isBriefingQuery?.(q)) return true;
     if (global.NocoAIUltra?.isFollowUp?.(q, query)) return true;
     if (global.NocoAICreate?.isCreateIntent?.(query, q)) return false;
@@ -690,7 +691,8 @@
         <li><strong>Smalltalk:</strong> «Wie geht's dir?», «Was kann ich tun?»</li>
         <li><strong>Rechnen:</strong> «3 plus 3», «3*4+5», «3 mal 4 plus 5»</li>
         <li><strong>Daten:</strong> «Inbox», «Meine Notizen», «Offene Aufgaben», «Such ueberall nach …»</li>
-        <li><strong>Fragen:</strong> «Wie stelle ich Auto-Lock ein?», «Wo aendere ich das Theme?» — ich erklaere; «Ja» fuehrt aus</li>
+        <li><strong>Alltagssprache:</strong> Ein Wort reicht — «Timer», «Notizen», «Helligkeit», «Inbox» — ich biete Aktionen oder starte direkt</li>
+        <li><strong>Fragen:</strong> «Wie stelle ich Auto-Lock ein?» — «Ja» fuehrt aus</li>
         <li><strong>Ueberblick:</strong> «Was steht an?», «System Status» — auch «und der Timer?» als Nachfrage</li>
         <li><strong>Zeit:</strong> «Wann ist mein Timer rum?», «Wann ist meine Erinnerung?»</li>
         <li><strong>Modi:</strong> «Fokus Modus», «Tagesplan», «Coach»</li>
@@ -989,6 +991,24 @@
       return naturalEarly;
     }
 
+    const lexiconEarly = global.NocoAILexicon?.process?.(text, helpers);
+    if (lexiconEarly) {
+      if (lexiconEarly.offerRun) {
+        sessionContext.pendingOffer = lexiconEarly.offerRun;
+        sessionContext.pendingOfferLabel = lexiconEarly.offerLabel || null;
+      }
+      return lexiconEarly;
+    }
+
+    const intentEarly = global.NocoAIIntent?.process?.(text, helpers, sessionContext);
+    if (intentEarly) {
+      if (intentEarly.offerRun) {
+        sessionContext.pendingOffer = intentEarly.offerRun;
+        sessionContext.pendingOfferLabel = intentEarly.offerLabel || null;
+      }
+      return intentEarly;
+    }
+
     const ultraEarly = global.NocoAIUltra?.process?.(text, helpers, sessionContext);
     if (ultraEarly) return ultraEarly;
 
@@ -1115,6 +1135,7 @@
     sessionContext.pendingTitle = null;
 
     const smartFb =
+      global.NocoAIIntent?.smartFallback?.(text, helpers, sessionContext) ||
       global.NocoAIUltra?.smartFallback?.(text, helpers) ||
       global.NocoAIPro?.smartFallback?.(text, normalize(text), helpers);
     if (smartFb?.text) {
@@ -1252,6 +1273,22 @@
     if (!log) return;
     const scroller = log.closest(".noco-ai-log-scroll") || log;
     scroller.scrollTop = scroller.scrollHeight;
+  }
+
+  function bindIosKeyboard(root, input) {
+    const vv = window.visualViewport;
+    if (!vv || !input || !root) return;
+    const log = root.querySelector("[data-noco-ai-log]");
+    const update = () => {
+      const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      document.documentElement.style.setProperty("--noco-ai-kb-inset", `${Math.round(inset)}px`);
+      root.classList.toggle("noco-ai-keyboard-open", inset > 8);
+      if (inset > 8) scrollChatToBottom(log);
+    };
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    input.addEventListener("focus", () => window.setTimeout(update, 60));
+    input.addEventListener("blur", () => window.setTimeout(update, 120));
   }
 
   function appendMessage(log, role, html, isHtml = false, options = {}) {
@@ -1573,6 +1610,9 @@
     input.style.overflow = "hidden";
     input.addEventListener("input", resizeInput);
     resizeInput();
+    if (document.body.classList.contains("device-handset") && !options.widget) {
+      bindIosKeyboard(root, input);
+    }
     footer?.addEventListener(
       "wheel",
       (event) => {
@@ -1599,8 +1639,9 @@
         if (typeof input.setSelectionRange === "function") input.setSelectionRange(len, len);
       } catch (_) {}
     };
-    window.setTimeout(focus, 380);
-    window.setTimeout(focus, 820);
+    const handset = document.body.classList.contains("device-handset");
+    window.setTimeout(focus, handset ? 420 : 380);
+    if (!handset) window.setTimeout(focus, 820);
   }
 
   function mount(root, helpers) {

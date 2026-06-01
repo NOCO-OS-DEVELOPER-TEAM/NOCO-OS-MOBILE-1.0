@@ -101,7 +101,8 @@ let timerState = {
   mode: "custom",
   customMinutes: 5,
   timerId: null,
-  endAt: null
+  endAt: null,
+  alarmActive: false
 };
 let memoryPickMinutes = 10;
 let calcState = { display: "0", memory: null, fresh: true };
@@ -169,6 +170,7 @@ const APP_GLYPHS = {
   calculator: "⊞",
   weather: "☁",
   flashlight: "☼",
+  device: "◉",
   quotes: "❝",
   nocoai: "✧",
   "exclusive-lab": "✧",
@@ -246,6 +248,7 @@ const shortcutChoices = [
   { id: "security", title: "Security", icon: "S", className: "security" },
   { id: "exclusive", title: "Exclusive", icon: "X", className: "exclusive" },
   { id: "settings", title: "Core", icon: "C", className: "core" },
+  { id: "device", title: "Geräte", icon: "D", className: "explorer" },
   { id: "web", title: "Web", icon: "W", className: "explorer" }
 ];
 
@@ -299,10 +302,10 @@ let activeShortcuts = loadShortcuts();
 const appFolders = {
   games: ["tapdash", "colorcatch", "memorygrid", "dodgerun", "runner", "arcade"],
   design: ["themes", "sketch", "mood", "pro-themes", "glowcam", "quotes"],
-  workspace: ["settings", "security", "sync", "nocoai", "notes", "tasks", "memories", "calculator", "timer", "weather", "cloud", "toon", "forge", "pay"]
+  workspace: ["settings", "security", "device", "sync", "nocoai", "notes", "tasks", "memories", "calculator", "timer", "weather", "cloud", "toon", "forge", "pay"]
 };
 
-const LIBRARY_CORE_STANDARD = ["settings", "security", "sync", "nocoai"];
+const LIBRARY_CORE_STANDARD = ["settings", "security", "device", "sync", "nocoai"];
 let expandedLibraryId = null;
 let openAppInFlight = false;
 let pendingOpenAppId = null;
@@ -429,6 +432,7 @@ const searchIndex = [
   { id: "calculator", title: "Rechner", type: "App", keywords: "rechner calculator mathe plus minus" },
   { id: "weather", title: "Wetter", type: "App", keywords: "wetter wetterbericht grad sonne regen" },
   { id: "flashlight", title: "Taschenlampe", type: "App", keywords: "licht lampe hell flashlight" },
+  { id: "device", title: "Geräte", type: "App", keywords: "geraet iphone kamera passkey taschenlampe flashlight" },
   { id: "quotes", title: "Daily", type: "App", keywords: "spruch quote daily motivation" },
   { id: "tasks", title: "Tasks", type: "App", keywords: "aufgaben todo liste tasks erledigen" },
   { id: "timer", title: "Timer", type: "App", keywords: "timer countdown fokus pause" },
@@ -522,7 +526,7 @@ function loadSettings() {
       ...JSON.parse(localStorage.getItem("noco_mobile_settings") || "{}")
     };
   } catch (_) {
-    return { theme: "aurora", liveWallpaper: true, glassBoost: true, motion: true, nativeFeel: true, compactTiles: false, keepAppsAlive: true, strictSecurity: true, autoLock: true, autoLockSeconds: 60, lockWidgets: ["clock", "security", "sync"], codeLock: false, passkeyEnabled: false, mobileCode: "", requireCodeOnLaunch: false, nocoExclusive: false, exclusiveTrialUsed: false, exclusivePlan: "", nocoAiPlus: false, payBalance: 24, paymentMethod: false };
+    return { theme: "aurora", liveWallpaper: true, glassBoost: true, uiBrightness: 1, motion: true, nativeFeel: true, compactTiles: false, keepAppsAlive: true, strictSecurity: true, autoLock: true, autoLockSeconds: 60, lockWidgets: ["clock", "security", "sync"], codeLock: false, passkeyEnabled: false, mobileCode: "", requireCodeOnLaunch: false, nocoExclusive: false, exclusiveTrialUsed: false, exclusivePlan: "", nocoAiPlus: false, payBalance: 24, paymentMethod: false };
   }
 }
 
@@ -548,6 +552,12 @@ function applySettings() {
   }
   if (settings.nativeFeel === undefined) settings.nativeFeel = true;
   if (settings.glassBoost === undefined) settings.glassBoost = true;
+  if (settings.uiBrightness == null || Number.isNaN(Number(settings.uiBrightness))) settings.uiBrightness = 1;
+  if (window.NocoDevice?.setWakeLock) {
+    void window.NocoDevice.setWakeLock(!!settings.keepScreenAwake);
+  }
+  const uiBright = Math.max(0.82, Math.min(1.2, Number(settings.uiBrightness) || 1));
+  document.documentElement.style.setProperty("--ui-brightness", String(uiBright));
   document.body.dataset.theme = settings.theme;
   document.body.classList.add("noco-native");
   document.body.classList.toggle("no-live-wallpaper", !settings.liveWallpaper);
@@ -1028,9 +1038,10 @@ function setPageStageTransform(page, dragPx = 0, animate = true) {
 function scrollTrackToPage(page, smooth = false) {
   pageScrollLock = true;
   setPageStageTransform(page, 0, smooth);
+  const ms = smooth ? (isHandsetLayout() ? 340 : 440) : 0;
   window.setTimeout(() => {
     pageScrollLock = false;
-  }, smooth ? 440 : 0);
+  }, ms);
 }
 
 function applyPageState(page, options = {}) {
@@ -1053,15 +1064,22 @@ function applyPageState(page, options = {}) {
   if (scroll) scrollTrackToPage(currentPage, smooth);
   screenTitle.textContent = currentPage === 0 ? "Home" : "Apps";
   updatePageToggle();
-  if (currentPage === 1) {
-    renderLibraryGrid();
-    refreshLibraryExpand();
+  if (currentPage === 1 && previousPage !== currentPage) {
+    const paintDesktop = () => {
+      renderLibraryGrid();
+      refreshLibraryExpand();
+    };
+    if (isHandsetLayout()) {
+      window.requestAnimationFrame(() => window.requestAnimationFrame(paintDesktop));
+    } else {
+      paintDesktop();
+    }
   }
   if (editMode) setEditMode(true);
   updateIslandUI();
   if (haptic && previousPage !== currentPage) {
     hapticTap();
-    showToast(currentPage === 0 ? "Home" : "Apps", 900);
+    if (!isHandsetLayout()) showToast(currentPage === 0 ? "Home" : "Apps", 900);
   }
   updateIslandUI();
 }
@@ -1078,7 +1096,11 @@ function initPageScrollSync() {
       window.clearTimeout(gestureSafetyTimer);
       gestureSafetyTimer = null;
     }
-    if (currentPage === 1) repairDesktopGrid("page-transition");
+    if (currentPage === 1) {
+      const run = () => repairDesktopGrid("page-transition");
+      if (typeof requestIdleCallback === "function") requestIdleCallback(run, { timeout: 500 });
+      else window.setTimeout(run, 80);
+    }
   });
 }
 
@@ -1376,6 +1398,7 @@ function getAppMeta(appId) {
     nocoai: { id: "nocoai", title: "NOCO AI", icon: "✧", className: "core" },
     pay: { id: "pay", title: "Pay", icon: "P", className: "pay" },
     notes: { id: "notes", title: "Notizen", icon: "N", className: "notes" },
+    device: { id: "device", title: "Geräte", icon: "D", className: "explorer" },
     web: { id: "web", title: "Web", icon: "W", className: "explorer" },
     exclusive: { id: "exclusive", title: "Exclusive", icon: "X", className: "exclusive" }
   };
@@ -1648,12 +1671,48 @@ function removeHomeWidgetFromAI(id) {
   refreshWidgetEditButtons();
 }
 
-function setThemeFromAI(themeId) {
+function setThemeFromAI(themeId, options = {}) {
   const allowed = ["aurora", "midnight", "sunset", "forest"];
   if (!allowed.includes(themeId)) return;
   settings.theme = themeId;
+  if (options.syncWallpaper !== false) settings.liveWallpaper = true;
   saveSettings();
   applySettings();
+}
+
+function adjustUiBrightnessFromAI(direction) {
+  const cur = Number(settings.uiBrightness) || 1;
+  if (direction === "up") {
+    settings.uiBrightness = Math.min(1.18, Math.round((cur + 0.07) * 100) / 100);
+    settings.glassBoost = true;
+  } else if (direction === "down") {
+    settings.uiBrightness = Math.max(0.86, Math.round((cur - 0.07) * 100) / 100);
+    if (settings.uiBrightness <= 0.92) settings.glassBoost = false;
+  } else {
+    settings.uiBrightness = 1;
+  }
+  saveSettings();
+  applySettings();
+}
+
+function setSettingToggleFromAI(key, value) {
+  const allowed = [
+    "autoLock",
+    "liveWallpaper",
+    "glassBoost",
+    "motion",
+    "nativeFeel",
+    "keepAppsAlive",
+    "compactTiles",
+    "codeLock",
+    "strictSecurity",
+    "requireCodeOnLaunch"
+  ];
+  if (!allowed.includes(key)) return false;
+  settings[key] = !!value;
+  saveSettings();
+  applySettings();
+  return true;
 }
 
 const HOME_WIDGET_PACKS = {
@@ -1685,6 +1744,7 @@ function getSystemSnapshotForAI() {
     autoLockSeconds: settings.autoLockSeconds || 60,
     glassBoost: settings.glassBoost,
     liveWallpaper: settings.liveWallpaper,
+    uiBrightness: Number(settings.uiBrightness) || 1,
     motion: settings.motion,
     codeLock: settings.codeLock,
     payBalance: formatEuro(settings.payBalance),
@@ -1701,6 +1761,9 @@ function getNocoAIHelpers() {
   return {
     openApp: (id) => {
       void openApp(id);
+    },
+    openDevice: () => {
+      void openApp("device");
     },
     openBeam: () => openBeam(),
     openHub: () => openHub(),
@@ -1804,7 +1867,9 @@ function getNocoAIHelpers() {
     uninstallForgeApp: (id) => {
       void uninstallForgeApp(id, { skipReopen: true });
     },
-    setTheme: (themeId) => setThemeFromAI(themeId),
+    setTheme: (themeId, options) => setThemeFromAI(themeId, options),
+    adjustUiBrightness: (direction) => adjustUiBrightnessFromAI(direction),
+    setSettingToggle: (key, value) => setSettingToggleFromAI(key, value),
     getSystemSnapshot: () => getSystemSnapshotForAI(),
     listHomeWidgets: () => visibleWidgetIds(),
     resetHomeWidgets: () => setHomeWidgetsFromAI(HOME_WIDGET_PACKS.standard),
@@ -1952,14 +2017,13 @@ function toggleWidget(id) {
   showToast(visible.includes(id) ? "Widget entfernt" : "Widget hinzugefuegt");
 }
 
-function appHero(title, eyebrow, text) {
-  return `
-    <section class="app-hero widget-card">
-      <p class="eyebrow">${eyebrow}</p>
-      <h1>${title}</h1>
-      <p>${text}</p>
-    </section>
-  `;
+function appHero(_title, _eyebrow, text) {
+  if (!text) return "";
+  return `<p class="app-lead">${text}</p>`;
+}
+
+function getSheetScrollEl() {
+  return sheetContent?.querySelector("[data-app-scroll-area]") || appSheet?.querySelector(".sheet-card") || null;
 }
 
 function appShell(content, extraClass = "") {
@@ -1977,6 +2041,45 @@ function mountNocoAIIfNeeded(appId) {
   if (!root) return;
   window.NocoAI.mount(root, getNocoAIHelpers());
   window.NocoAI.focusChatInput?.(root);
+}
+
+function deviceTemplate() {
+  const body = window.NocoDevice?.buildTemplate?.({ settings }) || "<p>Geräte-Modul wird geladen …</p>";
+  return appShell(body);
+}
+
+function mountDeviceIfNeeded(appId) {
+  if (appId !== "device" || !window.NocoDevice) return;
+  const root = sheetContent?.querySelector("[data-device-hub]");
+  if (!root || root.dataset.deviceMounted === "1") return;
+  root.dataset.deviceMounted = "1";
+  window.NocoDevice.mount(root, {
+    onToast: (msg) => showToast(msg)
+  });
+}
+
+async function toggleDeviceTorch() {
+  const uiOn = document.body.classList.contains("flashlight-on");
+  const nativeOn = window.NocoDevice?.isNativeTorchOn?.();
+  if (uiOn || nativeOn) {
+    document.body.classList.remove("flashlight-on");
+    await window.NocoDevice?.stopTorch?.();
+    if (currentApp === "device" || currentApp === "flashlight") {
+      invalidateAppCache(currentApp);
+      openApp(currentApp);
+    }
+    showToast("Licht aus");
+    return;
+  }
+  const result = (await window.NocoDevice?.setTorch?.(true)) || { ok: false };
+  document.body.classList.add("flashlight-on");
+  if (result.ok) showToast("LED an");
+  else if (result.mode === "denied") showToast("Kamera-Zugriff nötig — NOCO-Licht an");
+  else showToast("NOCO-Lichtmodus an");
+  if (currentApp === "device" || currentApp === "flashlight") {
+    invalidateAppCache(currentApp);
+    openApp(currentApp);
+  }
 }
 
 function mountNotesIfNeeded(appId) {
@@ -2024,10 +2127,10 @@ function subMenu(title, eyebrow, content, open = false) {
 
 function cacheAppState(appId) {
   if (!appId || settings.keepAppsAlive === false) return;
-  const card = appSheet.querySelector(".sheet-card");
+  const scrollEl = getSheetScrollEl();
   appCache.set(appId, {
     html: sheetContent.innerHTML,
-    scrollTop: card?.scrollTop || 0
+    scrollTop: scrollEl?.scrollTop || 0
   });
 }
 
@@ -2062,36 +2165,46 @@ function formatTimerDisplay(totalSeconds) {
 
 const TIMER_MODE_LABELS = { focus: "Fokus", break: "Pause", quick: "Quick", custom: "Custom" };
 
-function playAlarmSound() {
+function isHandsetLayout() {
+  return document.body.classList.contains("device-handset");
+}
+
+function playAlarmSound(options = {}) {
+  const gentle = options.gentle ?? isHandsetLayout();
   try {
     const Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
     const ctx = new Ctx();
-    const beep = (freq, at, dur) => {
+    const beep = (freq, at, dur, vol = 0.22) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = "sine";
       osc.frequency.value = freq;
       gain.gain.setValueAtTime(0.0001, ctx.currentTime + at);
-      gain.gain.exponentialRampToValueAtTime(0.22, ctx.currentTime + at + 0.02);
+      gain.gain.exponentialRampToValueAtTime(vol, ctx.currentTime + at + 0.02);
       gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + at + dur);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(ctx.currentTime + at);
       osc.stop(ctx.currentTime + at + dur + 0.05);
     };
-    beep(880, 0, 0.12);
-    beep(1046, 0.16, 0.12);
-    beep(1318, 0.32, 0.18);
-    beep(1046, 0.54, 0.2);
+    if (gentle) {
+      beep(784, 0, 0.1, 0.14);
+      beep(988, 0.14, 0.12, 0.12);
+    } else {
+      beep(880, 0, 0.12);
+      beep(1046, 0.16, 0.12);
+      beep(1318, 0.32, 0.18);
+      beep(1046, 0.54, 0.2);
+    }
     window.setTimeout(() => {
       try {
         ctx.close();
       } catch (_) {}
-    }, 1200);
+    }, gentle ? 450 : 1200);
   } catch (_) {}
   if (typeof navigator.vibrate === "function") {
-    navigator.vibrate([120, 80, 120, 80, 200]);
+    navigator.vibrate(gentle ? [80, 60, 80] : [120, 80, 120, 80, 200]);
   }
 }
 
@@ -2210,9 +2323,23 @@ function updateTimerLiveSurfaces() {
   updateIslandUI();
 }
 
+function dismissTimerAlarm() {
+  timerState.alarmActive = false;
+  timerState.running = false;
+  timerState.endAt = null;
+  timerState.seconds = timerState.totalSeconds || timerTotalForMode(timerState.mode);
+  refreshTimerDom();
+  updateTimerLiveSurfaces();
+  if (currentApp === "timer") refreshTimerApp();
+}
+
 function handleTimerFinished() {
   const labels = { focus: "Fokus beendet", break: "Pause beendet", quick: "Quick Timer fertig", custom: "Timer fertig" };
-  playAlarmSound();
+  timerState.alarmActive = true;
+  timerState.running = false;
+  timerState.endAt = null;
+  timerState.seconds = 0;
+  playAlarmSound({ gentle: isHandsetLayout() });
   showToast(labels[timerState.mode] || "Timer fertig");
   hapticTap();
   updateTimerLiveSurfaces();
@@ -2288,14 +2415,20 @@ function getTimerRemaining() {
 }
 
 function refreshTimerDom() {
-  const remaining = getTimerRemaining();
-  timerState.seconds = remaining;
+  const remaining = timerState.alarmActive ? 0 : getTimerRemaining();
+  if (!timerState.alarmActive) timerState.seconds = remaining;
   const label = sheetContent?.querySelector("[data-timer-display]");
   const ring = sheetContent?.querySelector("[data-timer-ring]");
   const status = sheetContent?.querySelector("[data-timer-status]");
   const toggleLabel = sheetContent?.querySelector("[data-timer-toggle-label]");
   if (label) label.textContent = formatTimerDisplay(remaining);
-  if (status) status.textContent = timerState.running ? "Läuft" : "Bereit";
+  if (status) {
+    status.textContent = timerState.alarmActive
+      ? "Fertig — tippe «Fertig»"
+      : timerState.running
+        ? "Läuft"
+        : "Bereit";
+  }
   if (toggleLabel) toggleLabel.textContent = timerState.running ? "Pause" : "Start";
   if (ring) {
     const total = timerState.totalSeconds || timerTotalForMode(timerState.mode) || 1;
@@ -2332,6 +2465,7 @@ function tickFocusTimer() {
 }
 
 function startFocusTimer() {
+  if (timerState.alarmActive) dismissTimerAlarm();
   if (timerState.running) return;
   if (timerState.seconds <= 0) {
     timerState.totalSeconds = timerTotalForMode(timerState.mode);
@@ -2467,15 +2601,12 @@ function refreshCoreSection() {
   const wrapper = document.createElement("div");
   wrapper.innerHTML = settingsTemplateV2();
   const nextContent = wrapper.querySelector(".menu-content");
-  const nextTitle = wrapper.querySelector(".core-section-title");
   const picker = sheetContent.querySelector(".menu-picker");
   picker?.querySelectorAll("[data-settings-section]").forEach((button) => {
     button.classList.toggle("active", button.dataset.settingsSection === settingsActiveSection);
   });
   const menuContent = sheetContent.querySelector(".menu-content");
-  const titleBlock = sheetContent.querySelector(".core-section-title");
   if (nextContent && menuContent) menuContent.innerHTML = nextContent.innerHTML;
-  if (nextTitle && titleBlock) titleBlock.innerHTML = nextTitle.innerHTML;
   cacheAppState("settings");
   hapticTap();
 }
@@ -2487,15 +2618,16 @@ function renderAppSheet(appId, html, options = {}) {
       ? ""
       : `
     <header class="sheet-app-head">
-      <div>
-        <p class="eyebrow">NOCO App</p>
-        <h2 class="sheet-app-title">${meta.title}</h2>
-      </div>
+      <h2 class="sheet-app-title">${meta.title}</h2>
     </header>
   `;
   currentApp = appId;
   sheetContent.innerHTML = header + html;
   document.body.classList.toggle("noco-ai-sheet", appId === "nocoai");
+  if (appId === "nocoai" && isHandsetLayout()) {
+    window.scrollTo(0, 0);
+    document.documentElement.style.setProperty("--noco-ai-kb-inset", "0px");
+  }
   cancelSheetSwipe();
   appSheet.classList.add("app-navigating");
   appSheet.classList.remove("hidden");
@@ -2511,16 +2643,20 @@ function renderAppSheet(appId, html, options = {}) {
     card.classList.remove("sheet-dragging");
     card.style.transform = "";
     card.style.opacity = "";
+  }
+  const scrollEl = getSheetScrollEl();
+  if (scrollEl) {
     const scrollTop = options.restore ? Number(options.scrollTop || 0) : 0;
-    card.scrollTop = scrollTop;
+    scrollEl.scrollTop = scrollTop;
     requestAnimationFrame(() => {
-      card.scrollTop = scrollTop;
+      scrollEl.scrollTop = scrollTop;
     });
   }
   updateIslandUI();
 }
 
 function closeAppSheetVisual() {
+  if (currentApp === "device") window.NocoDevice?.unmount?.();
   if (currentApp) cacheAppState(currentApp);
   appSheet.classList.add("hidden");
   appSheet.classList.remove("app-navigating");
@@ -2626,7 +2762,7 @@ function settingsTemplateV2() {
   };
   const active = sections[settingsActiveSection] ? settingsActiveSection : "deck";
   return appShell(`
-    ${appHero("Core", "NOCO Core Mobile", "Der kleine Bruder von NOCO Workspace: Deck, ShieldGate, SessionVault und Mobile-Systemsteuerung.")}
+    ${appHero("", "", "Deck, ShieldGate, SessionVault und Mobile-Systemsteuerung.")}
     <div class="menu-picker">
       ${Object.entries(sections).map(([id, section]) => `
         <button class="${active === id ? "active" : ""}" data-settings-section="${id}">
@@ -2635,7 +2771,7 @@ function settingsTemplateV2() {
       `).join("")}
     </div>
     <section class="menu-content">
-      <div class="core-section-title"><p class="eyebrow">${sections[active].title}</p><h3>${sections[active].text}</h3></div>
+      <p class="core-section-kicker">${sections[active].text}</p>
       ${sections[active].content}
     </section>
   `);
@@ -2909,29 +3045,37 @@ function forgeTemplateV2() {
     exclusive: { title: "Exclusive", text: "Member Apps", items: exclusiveStoreApps }
   };
   const active = sections[forgeActiveSection] ? forgeActiveSection : "discover";
+  const activeSection = sections[active];
   const appCards = (items) => items.map((app) => `
-    <div class="app-card ${app.exclusive ? "exclusive-row" : ""}">
+    <article class="forge-store-card ${app.exclusive ? "exclusive-row" : ""}">
       ${renderIconOrb(app)}
-      <span><strong>${app.title}</strong>${app.exclusive ? `<em class="exclusive-badge">Exclusive</em>` : ""}<br><small>${app.text}</small></span>
-      <span class="forge-actions">
+      <div class="forge-store-copy">
+        <strong>${app.title}</strong>
+        ${app.exclusive ? `<em class="exclusive-badge">Exclusive</em>` : ""}
+        <small>${app.text}</small>
+      </div>
+      <div class="forge-actions">
         <button class="forge-install" ${installed.includes(app.id) ? `data-app="${app.id}"` : `data-install="${app.id}"`}>${installed.includes(app.id) ? "Öffnen" : app.exclusive && !isExclusiveActive() ? "Exclusive holen" : "Installieren"}</button>
         ${installed.includes(app.id) ? `<button class="forge-delete" data-uninstall="${app.id}">Löschen</button>` : ""}
-      </span>
-    </div>
-  `).join("") || `<div class="settings-row"><span>Nichts gefunden</span><strong>Suche aendern</strong></div>`;
+      </div>
+    </article>
+  `).join("") || `<div class="forge-store-empty"><span>Keine Treffer</span><strong>Suche anpassen</strong></div>`;
   return appShell(`
-    ${appHero("Forge", "NOCO App Store", "Sauberer Mobile-Store mit Suche, echten Installationskarten und klaren Buttons.")}
-    <input class="search-glass" data-forge-search value="${forgeSearch.replace(/"/g, "&quot;")}" placeholder="Apps suchen..." aria-label="NOCO Forge Suche" />
-    <div class="menu-picker menu-picker-compact">
-      ${Object.entries(sections).map(([id, section]) => `
-        <button class="${active === id ? "active" : ""}" data-forge-section="${id}">
-          <strong>${section.title}</strong><small>${section.text}</small>
-        </button>
-      `).join("")}
+    <div class="forge-store-v2">
+      <div class="forge-store-toolbar">
+        <input class="search-glass forge-search-input" data-forge-search value="${forgeSearch.replace(/"/g, "&quot;")}" placeholder="Apps suchen…" aria-label="Forge Suche" />
+        <div class="forge-segments" role="tablist" aria-label="Forge Bereiche">
+          ${Object.entries(sections).map(([id, section]) => `
+            <button type="button" class="forge-segment ${active === id ? "active" : ""}" data-forge-section="${id}" role="tab" aria-selected="${active === id}">
+              <strong>${section.title}</strong>
+              <small>${section.items.length}</small>
+            </button>
+          `).join("")}
+        </div>
+      </div>
+      <p class="forge-store-kicker">${activeSection.text} · ${activeSection.items.length} ${activeSection.items.length === 1 ? "App" : "Apps"}</p>
+      <div class="forge-store-list">${appCards(activeSection.items)}</div>
     </div>
-    <section class="menu-content forge-menu-content">
-      ${subMenu(sections[active].title, sections[active].text, `<div class="forge-grid">${appCards(sections[active].items)}</div>`, true)}
-    </section>
   `);
 }
 
@@ -3276,9 +3420,17 @@ function timerTemplate() {
   const total = timerState.totalSeconds || timerTotalForMode(timerState.mode);
   const pct = total ? (remaining / total) * 100 : 0;
   const presets = [1, 5, 10, 15, 20, 25, 30];
+  const alarmBanner = timerState.alarmActive
+    ? `<div class="timer-finished-banner" role="alert">
+        <p><strong>Timer fertig!</strong></p>
+        <p>Ein kurzer Ton hat gespielt. Tippe unten, um fortzufahren.</p>
+        <button type="button" class="timer-finished-ok" data-action="timer-dismiss-alarm">Fertig</button>
+      </div>`
+    : "";
   return appShell(`
     ${appHero("Timer", "NOCO Countdown", "Eigene Minuten waehlen, starten — laeuft auch wenn du die App schliesst.")}
-    <div class="timer-ring-wrap" data-timer-ring style="--timer-pct:${pct}">
+    ${alarmBanner}
+    <div class="timer-ring-wrap ${timerState.alarmActive ? "is-finished" : ""}" data-timer-ring style="--timer-pct:${pct}">
       <div class="timer-ring-core">
         <strong data-timer-display>${formatTimerDisplay(remaining)}</strong>
         <small data-timer-status>${timerState.running ? "Läuft" : "Bereit"} · ${modes.find((m) => m.id === timerState.mode)?.label || "Custom"}</small>
@@ -3400,13 +3552,15 @@ function weatherTemplate() {
 
 function flashlightTemplate() {
   const on = document.body.classList.contains("flashlight-on");
+  const native = window.NocoDevice?.isNativeTorchOn?.();
   return appShell(`
-    ${appHero("Taschenlampe", "NOCO Tools", "Schaltet einen hellen Lichtmodus im Phone-Frame.")}
+    ${appHero("", "", "Echte LED wenn iOS es erlaubt — sonst heller NOCO-Rahmen.")}
     <section class="flashlight-stage ${on ? "on" : ""}" data-flashlight-stage>
       <span class="flashlight-beam" aria-hidden="true"></span>
-      <strong>${on ? "An" : "Aus"}</strong>
+      <strong>${native ? "LED" : on ? "NOCO" : "Aus"}</strong>
     </section>
-    <button class="primary-action" data-action="flashlight-toggle">${on ? "Ausschalten" : "Einschalten"}</button>
+    <button class="primary-action" data-device-torch-toggle>${on ? "Ausschalten" : "Einschalten"}</button>
+    <button class="settings-row" data-app="device"><span>Alle Geräte-Funktionen</span><strong>Geräte-Hub</strong></button>
   `);
 }
 
@@ -3598,6 +3752,7 @@ async function openApp(appId, options = {}) {
     }
     mountNocoAIIfNeeded(targetId);
     mountNotesIfNeeded(targetId);
+    mountDeviceIfNeeded(targetId);
     return;
   }
   if (currentPage === 1 && desktopNeedsUnlock(1) && !(await unlockDesktop())) {
@@ -3625,6 +3780,7 @@ async function openApp(appId, options = {}) {
     web: webTemplate,
     toon: toonTemplate,
     security: securityTemplate,
+    device: deviceTemplate,
     forge: forgeTemplateV2,
     notes: notesTemplate,
     exclusive: exclusiveTemplate,
@@ -3665,6 +3821,7 @@ async function openApp(appId, options = {}) {
   renderAppSheet(targetId, renderer());
   mountNocoAIIfNeeded(targetId);
   mountNotesIfNeeded(targetId);
+  mountDeviceIfNeeded(targetId);
   if (targetId === "timer") window.setTimeout(() => refreshTimerDom(), 60);
   if (targetId === "memories") window.setTimeout(() => updateMemoryEtas(), 60);
   if (targetId === "memorygrid" && memoryState.phase === "input" && !memoryState.playbackLock && memoryState.playerIndex === 0) {
@@ -3701,7 +3858,7 @@ function runShortcut(id) {
   }
   const openable = forgeApps.some((app) => app.id === id)
     || baseDesktopApps.some((app) => app.id === id)
-    || ["web", "themes", "cloud", "focus", "notes", "pay", "exclusive", "toon", "tasks", "calculator", "timer", "memories", "arcade", "nocoai"].includes(id)
+    || ["web", "themes", "cloud", "focus", "notes", "pay", "exclusive", "toon", "tasks", "calculator", "timer", "memories", "arcade", "nocoai", "device"].includes(id)
     || getInstalledApps().includes(id);
   if (openable) {
     void openApp(id);
@@ -4494,8 +4651,15 @@ document.addEventListener("click", async (event) => {
   }
 
   if (event.target.closest("[data-action='timer-reset']")) {
+    if (timerState.alarmActive) dismissTimerAlarm();
     stopFocusTimer();
     setTimerMode(timerState.mode);
+    refreshTimerApp();
+    hapticTap();
+  }
+
+  if (event.target.closest("[data-action='timer-dismiss-alarm']")) {
+    dismissTimerAlarm();
     refreshTimerApp();
     hapticTap();
   }
@@ -4569,11 +4733,35 @@ document.addEventListener("click", async (event) => {
     showToast("Wetter aktualisiert");
   }
 
-  if (event.target.closest("[data-action='flashlight-toggle']")) {
-    const on = document.body.classList.toggle("flashlight-on");
-    invalidateAppCache("flashlight");
-    openApp("flashlight");
-    showToast(on ? "Licht an" : "Licht aus");
+  if (event.target.closest("[data-action='flashlight-toggle'], [data-device-torch-toggle]")) {
+    void toggleDeviceTorch();
+  }
+
+  if (event.target.closest("[data-device-wake-toggle]")) {
+    const next = !settings.keepScreenAwake;
+    settings.keepScreenAwake = next;
+    saveSettings();
+    if (next) {
+      const ok = await window.NocoDevice?.setWakeLock?.(true);
+      showToast(ok ? "Display bleibt wach" : "Wake Lock nicht verfügbar");
+    } else {
+      await window.NocoDevice?.setWakeLock?.(false);
+      showToast("Wake Lock aus");
+    }
+    invalidateAppCache("device");
+    openApp("device");
+  }
+
+  if (event.target.closest("[data-device-share]")) {
+    try {
+      await window.NocoDevice?.openShare?.({
+        title: "NOCO OS Mobile",
+        text: "Mein mobiles NOCO — Liquid Glass auf dem iPhone.",
+        url: window.location.href
+      });
+    } catch (_) {
+      showToast("Teilen nicht verfügbar");
+    }
   }
 
   if (event.target.closest("[data-action='quote-next']")) {
@@ -4807,7 +4995,7 @@ async function goToPage(page) {
     return;
   }
   document.body.classList.add("noco-transitioning");
-  armGestureSafety(560);
+  armGestureSafety(isHandsetLayout() ? 380 : 560);
   applyPageState(target, { scroll: true, smooth: true, haptic: true });
 }
 
@@ -5012,6 +5200,7 @@ function saveInstalledApps(installed) {
 const baseDesktopApps = [
   { id: "settings", title: "Core", icon: "C", className: "core" },
   { id: "security", title: "Security", icon: "S", className: "security" },
+  { id: "device", title: "Geräte", icon: "D", className: "explorer" },
   { id: "forge", title: "Forge", icon: "F", className: "forge" },
   { id: "sync", title: "Sync", icon: "S", className: "sync" }
 ];
@@ -5761,6 +5950,7 @@ function applyDeviceLayoutClass() {
   const phoneWidth = window.matchMedia("(max-width: 520px)").matches;
   const standalone = window.matchMedia("(display-mode: standalone)").matches;
   const handset = touchPrimary && (phoneWidth || standalone);
+  document.documentElement.classList.toggle("device-handset", handset);
   document.body.classList.toggle("device-handset", handset);
   document.body.classList.toggle("desktop-preview", !handset);
 }

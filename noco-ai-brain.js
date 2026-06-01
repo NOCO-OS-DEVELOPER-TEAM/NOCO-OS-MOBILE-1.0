@@ -37,7 +37,9 @@
 
   function shouldHandle(raw, q) {
     if (global.NocoAIMath?.looksLikeMath?.(raw)) return true;
-    if (global.NocoAINatural?.isSettingsQuestion?.(q, raw)) return true;
+    if (global.NocoAINatural?.isSettingsRelated?.(q, raw)) return true;
+    if (global.NocoAILexicon?.isLexiconQuery?.(q, raw)) return true;
+    if (global.NocoAIIntent?.isIntentLike?.(q, raw)) return true;
     if (global.NocoAIInsights?.isInsightQuery?.(q, raw)) return true;
     if (global.NocoAIPro?.isProQuery?.(q, raw)) return true;
     if (global.NocoAITime?.isTimeQuery?.(q, raw)) return true;
@@ -467,6 +469,10 @@
       island: "Leiste oben: Uhr, Seiten-Wechsel, Schnellmenu, NOCO AI ✧.",
       exclusive: "Premium-Paket: unbegrenzte NOCO AI, Pro-Glas, Deep Scan, Member-Apps.",
       "noco pay": "Demo-Wallet — Guthaben fuer Exclusive-Abo.",
+      wallet: "Alltagssprache fuer NOCO Pay — «Wie viel Guthaben?» zeigt den Betrag.",
+      guthaben: "Dein NOCO-Pay-Guthaben — frag «Wie viel hab ich?».",
+      einstellungen: "Alltagssprache fuer NOCO Core (Theme, Lock, Glas, Wallpaper).",
+      settings: "Wie Einstellungen — App heisst intern NOCO Core.",
       memory: "Erinnerungs-App mit Countdown — auch per Sprachbefehl an mich.",
       timer: "Countdown-App — eigene Minuten, laeuft im Hintergrund.",
       tasks: "Aufgabenliste mit Checkboxen.",
@@ -478,6 +484,10 @@
       calculator: "Vollwertiger Taschenrechner aus Forge.",
       widgets: "Kacheln auf dem Home — per Island → Edit hinzufuegen.",
       autolock: "Sperrt das Geraet nach Inaktivitaet — Zeit in Core.",
+      helligkeit: "UI-Helligkeit im NOCO-Look — sag «Heller» / «Dunkler» (echte Display-Lampe steuert iOS).",
+      brightness: "Wie Helligkeit — NOCO macht Glas & UI heller oder dunkler.",
+      wallpaper: "Live Wallpaper in Core — Farben folgen dem Theme (Aurora, Midnight, …).",
+      hintergrund: "Theme + Live Wallpaper — «Theme Sunset» oder «Hintergrund an».",
       shieldgate: "Security-App: Code, Passkey, Scan.",
       sync: "Keycard Export/Import fuer Backup.",
       themes: "Farb-Themes: Aurora, Midnight, Sunset, Forest.",

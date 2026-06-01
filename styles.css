@@ -182,6 +182,7 @@ body.reduce-noco-motion *::after {
   min-height: 0;
   margin: 0;
   overflow: hidden;
+  filter: brightness(var(--ui-brightness, 1));
   border: 0;
   background:
     radial-gradient(circle at 18% 12%, rgba(117, 216, 255, 0.22), transparent 28%),
@@ -1696,13 +1697,12 @@ body.hub-open .screen-track {
   min-height: 0;
   max-height: 100%;
   margin: 0;
-  overflow-y: auto;
+  overflow: hidden;
   overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
   scroll-behavior: auto;
   border-radius: 0;
-  padding: calc(env(safe-area-inset-top) + 12px) 22px max(92px, calc(env(safe-area-inset-bottom) + 64px));
+  padding: calc(env(safe-area-inset-top) + 10px) 20px 0;
   animation: appOpen 0.38s cubic-bezier(0.18, 0.92, 0.18, 1);
   touch-action: pan-y;
   transition: transform 0.24s cubic-bezier(0.2, 0.88, 0.2, 1), opacity 0.18s ease;
@@ -1731,17 +1731,165 @@ body.noco-native .spotlight-panel:not(.hidden) .spotlight-card {
 }
 
 .mobile-app-body {
-  min-height: auto;
+  flex: 1;
+  min-height: 0;
   display: grid;
   align-content: start;
   gap: 11px;
   width: 100%;
   max-width: 100%;
   margin: 0 auto;
-  padding-top: 54px;
-  padding-bottom: max(42px, env(safe-area-inset-bottom));
+  padding-top: 6px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom, 12px));
   touch-action: pan-y;
-  overflow: visible;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+.app-lead {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.core-section-kicker,
+.forge-store-kicker {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.forge-store-v2 {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+}
+
+.forge-store-toolbar {
+  display: grid;
+  gap: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  padding-bottom: 4px;
+  background:
+    linear-gradient(180deg, rgba(6, 14, 28, 0.96) 0%, rgba(6, 14, 28, 0.88) 72%, transparent 100%);
+}
+
+.forge-search-input {
+  width: 100%;
+}
+
+.forge-segments {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.forge-segment {
+  min-height: 52px;
+  border-radius: 16px;
+  padding: 8px 10px;
+  display: grid;
+  gap: 2px;
+  align-content: center;
+  justify-items: center;
+  text-align: center;
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.forge-segment.active {
+  border-color: rgba(113, 255, 212, 0.42);
+  background:
+    radial-gradient(circle at 20% 0%, rgba(113, 255, 212, 0.2), transparent 48%),
+    rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 24px rgba(113, 255, 212, 0.14);
+}
+
+.forge-segment strong {
+  font-size: 12px;
+}
+
+.forge-segment small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.forge-store-list {
+  display: grid;
+  gap: 10px;
+}
+
+.forge-store-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "icon copy"
+    "actions actions";
+  gap: 10px 12px;
+  align-items: start;
+  padding: 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--blue) 16%, transparent), transparent 42%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.04));
+}
+
+.forge-store-card .icon-orb {
+  grid-area: icon;
+}
+
+.forge-store-copy {
+  grid-area: copy;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.forge-store-copy strong {
+  font-size: 15px;
+}
+
+.forge-store-copy small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.forge-store-card .forge-actions {
+  grid-area: actions;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.forge-store-card .forge-actions .forge-install:only-child {
+  grid-column: 1 / -1;
+}
+
+.forge-store-empty {
+  min-height: 120px;
+  border-radius: 20px;
+  display: grid;
+  place-content: center;
+  gap: 4px;
+  text-align: center;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  color: var(--muted);
+}
+
+.forge-store-empty strong {
+  color: var(--text);
 }
 
 .mobile-app-body .settings-row,
@@ -2846,25 +2994,51 @@ body.noco-native .spotlight-panel:not(.hidden) .spotlight-card {
   to { transform: rotate(360deg); }
 }
 
+html.device-handset,
 body.device-handset {
   display: block;
+  position: fixed;
+  inset: 0;
   padding: 0;
-  height: 100dvh;
-  max-height: 100dvh;
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: -webkit-fill-available;
+  max-height: 100svh;
   overflow: hidden;
+  background: #06111f;
+}
+
+body.device-handset::before,
+body.device-handset::after {
+  display: none;
+}
+
+body.device-handset .noco-stage {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100%;
+  height: 100%;
+  gap: 0;
 }
 
 body.device-handset .phone {
   width: 100%;
-  height: 100dvh;
-  height: 100svh;
+  height: 100%;
+  min-height: 100%;
+  max-height: 100svh;
   max-width: none;
-  max-height: none;
-  min-height: 0;
   margin: 0;
   border: 0;
   border-radius: 0;
   box-shadow: none;
+  box-sizing: border-box;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(117, 216, 255, 0.22), transparent 28%),
+    radial-gradient(circle at 86% 92%, rgba(255, 140, 207, 0.16), transparent 34%),
+    linear-gradient(150deg, var(--bg-a), var(--bg-b) 58%, #091225);
 }
 
 body.device-handset .phone::after {
@@ -2951,13 +3125,12 @@ body.device-handset .firstlight-card {
     width: 100%;
     height: 100%;
     min-height: 0;
-    padding: calc(env(safe-area-inset-top) + 10px) 20px max(92px, calc(env(safe-area-inset-bottom) + 62px));
+    padding: 0;
   }
 
   .mobile-app-body {
     gap: 9px;
-    min-height: auto;
-    padding-bottom: max(48px, env(safe-area-inset-bottom));
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 12px));
   }
 
   .app-hero {
@@ -3387,6 +3560,52 @@ body.device-handset .firstlight-card {
   font-weight: 950;
 }
 
+.timer-ring-wrap.is-finished {
+  animation: timerPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes timerPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(120, 255, 210, 0);
+  }
+  50% {
+    box-shadow: 0 0 28px color-mix(in srgb, var(--mint) 45%, transparent);
+  }
+}
+
+.timer-finished-banner {
+  margin: 0 4px 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  text-align: center;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--mint) 22%, transparent), rgba(6, 16, 32, 0.85));
+  border: 1px solid color-mix(in srgb, var(--mint) 40%, transparent);
+}
+
+.timer-finished-banner p {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.timer-finished-banner p:first-child {
+  font-size: 16px;
+}
+
+.timer-finished-ok {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 4px;
+  border: none;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #041018;
+  background: linear-gradient(135deg, var(--mint), color-mix(in srgb, var(--blue) 40%, var(--mint)));
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--mint) 35%, transparent);
+}
+
 .task-list {
   display: grid;
   gap: 8px;
@@ -3573,8 +3792,6 @@ body.flashlight-on .phone {
 /* === NOCO 1.2 — Layout & Design Redesign === */
 
 body.device-handset {
-  position: fixed;
-  inset: 0;
   overflow: hidden;
 }
 
@@ -3636,7 +3853,11 @@ body.desktop-preview .phone-frame {
 
 body.device-handset .phone-frame {
   width: 100%;
+  flex: 1;
+  min-height: 0;
   height: 100%;
+  display: flex;
+  flex-direction: column;
   padding: 0;
   border-radius: 0;
   background: transparent;
@@ -3671,16 +3892,6 @@ body.desktop-preview .phone {
   border-radius: var(--phone-radius);
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-}
-
-body.device-handset .phone {
-  width: 100%;
-  height: 100dvh;
-  height: 100svh;
-  max-height: none;
-  border-radius: 0;
-  border: 0;
-  box-shadow: none;
 }
 
 .mobile-topbar {

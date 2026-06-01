@@ -13,12 +13,37 @@
     liveWallpaper: {
       label: "Live Wallpaper",
       section: "deck",
-      aliases: ["live wallpaper", "live hintergrund", "animierter hintergrund", "bewegter hintergrund", "hintergrund animation"]
+      aliases: [
+        "live wallpaper",
+        "live hintergrund",
+        "animierter hintergrund",
+        "bewegter hintergrund",
+        "hintergrund animation",
+        "hintergrundbild",
+        "hintergrund bild",
+        "wallpaper",
+        "background",
+        "bildschirm hintergrund"
+      ]
     },
     glassBoost: {
       label: "Liquid Glass Boost",
       section: "deck",
-      aliases: ["glass boost", "liquid glass boost", "glas boost", "glas effekt", "glass effekt"]
+      aliases: [
+        "glass boost",
+        "liquid glass boost",
+        "glas boost",
+        "glas effekt",
+        "glass effekt",
+        "helligkeit",
+        "brightness",
+        "heller",
+        "dunkler",
+        "display helligkeit",
+        "bildschirm helligkeit",
+        "mehr helligkeit",
+        "weniger helligkeit"
+      ]
     },
     motion: {
       label: "Animationen",
@@ -392,11 +417,12 @@
       /\b(wie viel|guthaben|kontostand|wallet|pay balance)\b/.test(q) ||
       (/\b(pay|wallet)\b/.test(q) && /\b(zeig|wie viel|status)\b/.test(q))
     ) {
+      const lex = global.NocoAILexicon?.process?.(text, helpers);
+      if (lex) return lex;
       const snap = helpers.getSystemSnapshot?.();
       return {
-        type: "action",
-        text: `Dein Guthaben: <strong>${snap?.payBalance || "?"}</strong> — oeffne NOCO Pay …`,
-        run: () => helpers.openPay?.()
+        type: "text",
+        text: `<p>Dein Guthaben: <strong>${snap?.payBalance || "?"}</strong> (NOCO Pay).</p><p><small>«Oeffne Wallet» nur wenn du die App brauchst.</small></p>`
       };
     }
 
@@ -467,14 +493,35 @@
     }
 
     const theme = resolveTheme(q);
-    if (theme && (/\b(theme|design|look|farbe|stimmung)\b/.test(q) || /\b(stell|setz|wechsel|mach|auf)\b/.test(q))) {
+    const themeIntent =
+      theme &&
+      (/\b(theme|design|look|farbe|stimmung|hintergrund|wallpaper)\b/.test(q) ||
+        /\b(stell|setz|wechsel|mach|auf|will|moechte|mochte)\b/.test(q) ||
+        q === theme ||
+        q === `theme ${theme}`);
+    if (themeIntent) {
       return {
         type: "action",
-        text: `Theme <strong>${theme}</strong> wird gesetzt …`,
+        text: `Theme <strong>${theme}</strong> — Hintergrund & Farben passen sich an …`,
         run: () => {
-          helpers.setTheme?.(theme);
+          helpers.setTheme?.(theme, { syncWallpaper: true });
           helpers.openThemes?.();
         }
+      };
+    }
+
+    if (/\b(heller|hell|aufhellen|brightness up|more bright)\b/.test(q) && q.length < 48) {
+      return {
+        type: "action",
+        text: "Mache das UI <strong>heller</strong> (Glas-Boost + Helligkeit) …",
+        run: () => helpers.adjustUiBrightness?.("up")
+      };
+    }
+    if (/\b(dunkler|dunkel|abdunkeln|brightness down|dimmer|weniger hell)\b/.test(q) && q.length < 48) {
+      return {
+        type: "action",
+        text: "Mache das UI <strong>dunkler</strong> …",
+        run: () => helpers.adjustUiBrightness?.("down")
       };
     }
 

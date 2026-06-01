@@ -44,7 +44,7 @@ const codeConfirm = document.getElementById("codeConfirm");
 
 let currentPage = 0;
 let editMode = false;
-let pageDrag = null;
+let pageScrollLock = false;
 let appSwipe = null;
 let reorderDrag = null;
 let currentApp = null;
@@ -565,18 +565,22 @@ function getTrackWidth() {
   return screenTrack?.clientWidth || Math.min(window.innerWidth, 430);
 }
 
-function updateScreenTrackPosition(animate = true) {
+function scrollTrackToPage(page, smooth = false) {
   if (!screenTrack) return;
-  const width = getTrackWidth();
-  screenTrack.classList.toggle("dragging", !animate);
-  screenTrack.style.transform = `translate3d(${-currentPage * width}px, 0, 0)`;
+  const left = page * getTrackWidth();
+  pageScrollLock = true;
+  screenTrack.scrollTo({ left, behavior: smooth ? "smooth" : "auto" });
+  window.setTimeout(() => {
+    pageScrollLock = false;
+  }, smooth ? 420 : 0);
 }
 
-function setPage(page) {
+function applyPageState(page, options = {}) {
+  const { scroll = false, smooth = false, haptic = true } = options;
   const previousPage = currentPage;
   currentPage = Math.max(0, Math.min(1, page));
   document.documentElement.style.setProperty("--page", currentPage);
-  screenTrack.style.setProperty("--page", currentPage);
+  screenTrack?.style.setProperty("--page", currentPage);
   document.body.classList.toggle("desktop-page", currentPage === 1);
   document.querySelectorAll(".screen-track > .screen").forEach((screen, index) => {
     const active = index === currentPage;
@@ -586,18 +590,34 @@ function setPage(page) {
       screen.scrollTop = 0;
     }
   });
-  updateScreenTrackPosition(true);
+  if (scroll) scrollTrackToPage(currentPage, smooth);
   screenTitle.textContent = currentPage === 0 ? "Home" : "Desktop";
   updatePageToggle();
   if (currentPage === 1) {
     repairDesktopGrid("page");
     applyDesktopLayout();
+    ensureDesktopGridVisible();
   }
   if (editMode) setEditMode(true);
   document.querySelectorAll(".dot").forEach((dot) => {
     dot.classList.toggle("active", Number(dot.dataset.page) === currentPage);
   });
-  hapticTap();
+  if (haptic && previousPage !== currentPage) hapticTap();
+}
+
+function setPage(page) {
+  applyPageState(page, { scroll: true, smooth: false, haptic: true });
+}
+
+function initPageScrollSync() {
+  screenTrack?.addEventListener("scroll", () => {
+    if (pageScrollLock) return;
+    const width = getTrackWidth();
+    if (!width) return;
+    const next = Math.round(screenTrack.scrollLeft / width);
+    if (next === currentPage) return;
+    applyPageState(next, { scroll: false, haptic: true });
+  }, { passive: true });
 }
 
 function normalizeSearch(value) {
@@ -2244,22 +2264,6 @@ async function goToPage(page) {
   setPage(target);
 }
 
-function canStartPageSwipe(event) {
-  if (editMode) return false;
-  if (document.body.classList.contains("sheet-open")) return false;
-  if (!spotlightPanel?.classList.contains("hidden")) return false;
-  if (!hubPanel?.classList.contains("hidden")) return false;
-  if (!appSheet?.classList.contains("hidden")) return false;
-  if (!lockScreen?.classList.contains("hidden")) return false;
-  if (!firstLightPanel?.classList.contains("hidden")) return false;
-  const target = event.target;
-  if (!target?.closest?.(".screen-track")) return false;
-  if (target.closest(".mobile-topbar, .page-dots")) return false;
-  if (target.closest("textarea, input, select, [contenteditable='true']")) return false;
-  if (target.closest(".edit-remove, .beam-glyph")) return false;
-  return true;
-}
-
 function getGestureIntent(dx, dy, ratio) {
   const absX = Math.abs(dx);
   const absY = Math.abs(dy);
@@ -2302,67 +2306,6 @@ function runHubAction(action) {
     closeHub();
     goToPage(1);
   }
-}
-
-function startPageDrag(event) {
-  if (!canStartPageSwipe(event)) return;
-  const touch = event.touches[0];
-  pageDrag = {
-    x: touch.clientX,
-    y: touch.clientY,
-    at: Date.now(),
-    active: false,
-    cancelled: false,
-    base: currentPage,
-    dx: 0,
-    rawDx: 0
-  };
-}
-
-function movePageDrag(event) {
-  if (!pageDrag || pageDrag.cancelled) return;
-  const touch = event.touches[0];
-  const dx = touch.clientX - pageDrag.x;
-  const dy = touch.clientY - pageDrag.y;
-  if (!pageDrag.active) {
-    if (Math.max(Math.abs(dx), Math.abs(dy)) < GESTURE.pageStart) return;
-    const intent = getGestureIntent(dx, dy, GESTURE.pageRatio);
-    if (intent === "vertical") {
-      pageDrag.cancelled = true;
-      pageDrag = null;
-      return;
-    }
-    if (intent !== "horizontal") return;
-    pageDrag.active = true;
-    screenTrack.classList.add("dragging");
-  }
-  if (event.cancelable) event.preventDefault();
-  suppressClickUntil = Date.now() + GESTURE.clickSuppressMs;
-  const width = getTrackWidth();
-  const atEdge = (pageDrag.base === 0 && dx > 0) || (pageDrag.base === 1 && dx < 0);
-  const easedDx = atEdge ? dx * 0.16 : dx * 0.98;
-  pageDrag.dx = easedDx;
-  pageDrag.rawDx = dx;
-  screenTrack.style.transform = `translate3d(${(-pageDrag.base * width) + easedDx}px, 0, 0)`;
-}
-
-function endPageDrag() {
-  if (!pageDrag) return;
-  const width = getTrackWidth();
-  const base = pageDrag.base;
-  const wasActive = pageDrag.active;
-  const velocity = Math.abs(pageDrag.rawDx) / Math.max(1, Date.now() - pageDrag.at);
-  let next = base;
-  if (wasActive && (Math.abs(pageDrag.rawDx) > width * GESTURE.pageSnap || velocity > GESTURE.pageVelocity)) {
-    next = pageDrag.rawDx < 0 ? base + 1 : base - 1;
-  }
-  pageDrag = null;
-  screenTrack.classList.remove("dragging");
-  if (!wasActive) {
-    updateScreenTrackPosition(true);
-    return;
-  }
-  goToPage(next);
 }
 
 function startSheetSwipe(event) {
@@ -2417,11 +2360,6 @@ function cancelSheetSwipe() {
   appSwipe = null;
   resetSheetGestureTransform();
 }
-
-screenTrack?.addEventListener("touchstart", startPageDrag, { passive: true });
-document.addEventListener("touchmove", movePageDrag, { passive: false });
-document.addEventListener("touchend", endPageDrag, { passive: true });
-document.addEventListener("touchcancel", endPageDrag, { passive: true });
 
 appSheet.addEventListener("touchstart", startSheetSwipe, { passive: true });
 appSheet.addEventListener("touchmove", moveSheetSwipe, { passive: false });
@@ -3222,26 +3160,25 @@ if ("serviceWorker" in navigator) {
 }
 
 function initNativeScroll() {
-  const scrollAllowed = (target) => {
-    if (pageDrag?.active) return false;
-    return target?.closest?.(
-      ".screen-track > .screen, .app-sheet:not(.hidden) .sheet-card, .spotlight-panel:not(.hidden) .beam-card, .spotlight-panel:not(.hidden) .spotlight-card, .hub-panel:not(.hidden) .hub-card, .firstlight-panel:not(.hidden) .firstlight-card, textarea, input, select, [contenteditable='true']"
-    );
-  };
+  const scrollAllowed = (target) => target?.closest?.(
+    ".screen-track, .screen-track > .screen, .app-sheet:not(.hidden) .sheet-card, .spotlight-panel:not(.hidden) .beam-card, .spotlight-panel:not(.hidden) .spotlight-card, .hub-panel:not(.hidden) .hub-card, .firstlight-panel:not(.hidden) .firstlight-card, textarea, input, select, [contenteditable='true']"
+  );
 
   document.addEventListener("touchmove", (event) => {
-    if (pageDrag?.active) return;
     if (!scrollAllowed(event.target)) event.preventDefault();
   }, { passive: false });
 }
 
 initSearchIndex();
+initPageScrollSync();
 setPage(0);
 
 applySettings();
 initNativeScroll();
 window.addEventListener("resize", () => {
-  if (!pageDrag) updateScreenTrackPosition(false);
+  pageScrollLock = true;
+  if (screenTrack) screenTrack.scrollLeft = currentPage * getTrackWidth();
+  pageScrollLock = false;
 });
 loadNote();
 renderShortcuts();

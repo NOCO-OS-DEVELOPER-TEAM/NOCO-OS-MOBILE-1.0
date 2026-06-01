@@ -1,4 +1,4 @@
-const CACHE = "noco-mobile-1-1-glass-v46";
+const CACHE = "noco-mobile-1-1-glass-v47";
 const ASSETS = ["./", "./index.html", "./styles.css", "./app.js", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", (event) => {

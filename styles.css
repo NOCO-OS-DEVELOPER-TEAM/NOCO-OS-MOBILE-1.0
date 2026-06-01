@@ -409,15 +409,17 @@ button {
   flex-direction: row;
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
   user-select: none;
-  touch-action: pan-x;
-  will-change: transform;
-  transition: transform 0.42s cubic-bezier(0.22, 0.94, 0.22, 1);
 }
 
-.screen-track.dragging {
-  transition: none;
+.screen-track::-webkit-scrollbar {
+  display: none;
 }
 
 .screen {
@@ -428,6 +430,8 @@ button {
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
   scrollbar-width: none;
   padding: calc(env(safe-area-inset-top) + 98px) 24px max(108px, calc(env(safe-area-inset-bottom) + 92px));
   overscroll-behavior-y: contain;
@@ -437,6 +441,8 @@ button {
   visibility: visible;
   pointer-events: none;
   scroll-behavior: auto;
+  transform: none;
+  backface-visibility: visible;
 }
 
 .screen.is-active {
@@ -455,6 +461,25 @@ body.noco-native .screen.is-active {
   display: block;
   padding-bottom: max(140px, calc(env(safe-area-inset-bottom) + 118px));
   min-height: min-content;
+  isolation: isolate;
+  z-index: 1;
+}
+
+.desktop-screen .desktop-layout,
+.desktop-screen .app-grid,
+.desktop-screen .desktop-block {
+  position: relative;
+  z-index: 2;
+  opacity: 1;
+  visibility: visible;
+}
+
+.desktop-screen .app-icon,
+.desktop-screen .desktop-tile,
+.desktop-screen .beam-strip,
+.desktop-screen .icon-orb {
+  transform: none;
+  backface-visibility: visible;
 }
 
 .home-screen {
@@ -486,7 +511,6 @@ body.noco-native .screen.is-active {
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   overflow: hidden;
-  transform: translateZ(0);
 }
 
 .widget-card::after,
@@ -592,7 +616,6 @@ body.noco-native .screen.is-active {
 .widget-card {
   user-select: none;
   -webkit-user-select: none;
-  backface-visibility: hidden;
 }
 
 .section-title {
@@ -1963,6 +1986,10 @@ body.noco-native .spotlight-panel:not(.hidden) .spotlight-card {
 
 .settings-row {
   min-height: 58px;
+}
+
+.native-feel .screen-track {
+  scroll-snap-type: x mandatory;
 }
 
 .native-feel .screen.is-active,

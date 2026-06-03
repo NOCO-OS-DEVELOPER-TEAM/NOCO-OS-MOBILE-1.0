@@ -65,9 +65,11 @@
 
   function readWakePref() {
     try {
-      return localStorage.getItem(WAKE_KEY) === "1";
+      const v = localStorage.getItem(WAKE_KEY);
+      if (v === null) return true;
+      return v === "1";
     } catch (_) {
-      return false;
+      return true;
     }
   }
 
@@ -186,6 +188,22 @@
     setStatus(wakeEnabled ? "NOCO AD 1.0 — Aktivierungswort" : "", wakeEnabled ? "wake" : "");
   }
 
+  function rebuildWakeEngine() {
+    const AD = global.NocoAudioDetection || global.NocoWakeEngine;
+    if (!AD?.create) return null;
+    try {
+      wakeEngine?.release?.();
+    } catch (_) {}
+    wakeEngine = AD.create({
+      onStatus: (text, mode) => setStatus(text, mode === "listen" ? "wake" : mode === "hit" ? "wake" : "wake"),
+      onWake: (hit) => {
+        if (hit?.soft && Number(global.NocoAudioDetection?.getWakeConfig?.().sensitivity) < 2) return;
+        triggerWake(hit?.command || "");
+      }
+    });
+    return wakeEngine;
+  }
+
   function startWakeLoop() {
     if (!wakeEnabled || !micConsented) return;
     if (listeningDictation) return;
@@ -195,27 +213,29 @@
       return;
     }
 
-    if (!wakeEngine) {
-      wakeEngine = AD.create({
-        onStatus: (text, mode) => setStatus(text, mode === "listen" ? "wake" : mode === "hit" ? "wake" : "wake"),
-        onWake: (hit) => {
-          triggerWake(hit?.command || "");
-        }
-      });
-    }
+    if (!wakeEngine) rebuildWakeEngine();
 
     wakeEngine
       .start()
       .then((ok) => {
         listeningWake = !!ok;
         if (!ok) {
-          getHelpers().showToast?.("NOCO AD 1.0 — Mikro nicht bereit");
-          setWakeEnabled(false);
+          rebuildWakeEngine();
+          return wakeEngine?.start?.().then((retry) => {
+            listeningWake = !!retry;
+            if (!retry) {
+              getHelpers().showToast?.("NOCO AD 1.0 — Mikro nicht bereit (Tab neu laden)");
+              setWakeEnabled(false);
+            }
+          });
         }
       })
       .catch(() => {
         listeningWake = false;
-        setWakeEnabled(false);
+        rebuildWakeEngine();
+        window.setTimeout(() => {
+          if (wakeEnabled && micConsented) startWakeLoop();
+        }, 1200);
       });
   }
 
@@ -552,14 +572,14 @@
   function init(helpersFactory) {
     getHelpers = typeof helpersFactory === "function" ? helpersFactory : () => helpersFactory || {};
     initMicConsentUI();
+    bindGlobalWakeLifecycle();
     micConsented = readMicConsent();
-    wakeEnabled = micConsented && readWakePref();
-    if (micConsented && wakeEnabled === false) {
-      writeWakePref(true);
-      wakeEnabled = true;
-    }
-    if (micConsented) {
-      window.setTimeout(startWakeLoop, 900);
+    const prefOn = readWakePref();
+    wakeEnabled = micConsented && prefOn !== false;
+    if (micConsented && prefOn === false) wakeEnabled = false;
+    if (micConsented && wakeEnabled) {
+      window.setTimeout(startWakeLoop, 700);
+      window.setTimeout(resumeWakeListening, 2400);
       document.body.classList.add("noco-ai-wake-on");
     }
   }
@@ -567,6 +587,40 @@
   function resumeWakeListening() {
     if (!micConsented || !wakeEnabled) return;
     window.setTimeout(startWakeLoop, 400);
+  }
+
+  function applyWakeSettings(cfg = {}) {
+    const AD = global.NocoAudioDetection || global.NocoWakeEngine;
+    if (AD?.setWakeConfig) {
+      AD.setWakeConfig({
+        sensitivity: cfg.sensitivity,
+        enabledProfiles: cfg.phrases
+      });
+    }
+    if (cfg.enabled != null) {
+      if (!micConsented && cfg.enabled) {
+        showMicConsentIfNeeded(consentRoot || document.querySelector("[data-noco-ai-root]"), { force: true });
+        return;
+      }
+      setWakeEnabled(!!cfg.enabled);
+    } else if (micConsented && wakeEnabled) {
+      resumeWakeListening();
+    }
+  }
+
+  function bindGlobalWakeLifecycle() {
+    if (global.__nocoWakeLifecycle) return;
+    global.__nocoWakeLifecycle = true;
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") {
+        wakeEngine?.stop?.();
+        listeningWake = false;
+        return;
+      }
+      resumeWakeListening();
+    });
+    global.addEventListener("pageshow", () => resumeWakeListening());
+    global.addEventListener("focus", () => resumeWakeListening());
   }
 
   function stopAll() {
@@ -591,6 +645,7 @@
     stopDictation,
     stopAll,
     resumeWakeListening,
+    applyWakeSettings,
     bindStatusElement,
     bindMicButton,
     bindWakeToggle,

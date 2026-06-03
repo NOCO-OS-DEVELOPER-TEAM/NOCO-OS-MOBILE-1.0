@@ -7,7 +7,7 @@ const largeClock = document.getElementById("largeClock");
 const largeDate = document.getElementById("largeDate");
 const screenTrack = document.getElementById("screenTrack");
 const pageStage = document.getElementById("pageStage");
-const NOCO_BUILD = window.NOCO_BUILD || "160";
+const NOCO_BUILD = window.NOCO_BUILD || "161";
 const screenTitle = document.getElementById("screenTitle");
 
 /** Doppelte/veraltete Topbars entfernen — phone-chrome Titelzeile behalten. */
@@ -142,33 +142,6 @@ let dodgeGame = {
   obstacleX: 50,
   obstacleY: -14
 };
-let reactTap = {
-  phase: "idle",
-  lastMs: 0,
-  best: Number(localStorage.getItem("noco_mobile_reacttap_best") || 0),
-  waitTimer: null,
-  goAt: 0
-};
-let blitzMath = {
-  score: 0,
-  best: Number(localStorage.getItem("noco_mobile_blitzmath_best") || 0),
-  a: 2,
-  b: 3,
-  op: "+",
-  answer: 5,
-  options: []
-};
-let laneSwap = {
-  lane: 1,
-  score: 0,
-  best: Number(localStorage.getItem("noco_mobile_laneswap_best") || 0),
-  running: false,
-  timer: null,
-  prizeY: -12,
-  hazardY: -20,
-  prizeLane: 1,
-  hazardLane: 2
-};
 
 const UNLOCK_HOLD_MS = 2000;
 let unlockHoldRaf = 0;
@@ -212,9 +185,6 @@ const APP_GLYPHS = {
   colorcatch: "◉",
   memorygrid: "▦",
   dodgerun: "➤",
-  reacttap: "◎",
-  blitzmath: "∑",
-  laneswap: "⇆",
   runner: "▸",
   transit: "⌁",
   mood: "◑",
@@ -321,9 +291,6 @@ const forgeApps = [
   { id: "colorcatch", title: "Color Catch", icon: "C", className: "themes", text: "Triff die richtige Farbe, bevor NOCO den Vibe wechselt." },
   { id: "memorygrid", title: "Memory Grid", icon: "M", className: "focus", text: "Merke dir die leuchtende Reihenfolge und spiele sie nach." },
   { id: "dodgerun", title: "Dodge Run", icon: "R", className: "forge", text: "Ein echtes kleines Ausweich-Spiel: bewege den Orb und weich den Blöcken aus." },
-  { id: "reacttap", title: "React Tap", icon: "!", className: "forge", text: "Warte auf Gruen — dann so schnell wie moeglich tippen. Zu frueh kostet Punkte." },
-  { id: "blitzmath", title: "Blitz Math", icon: "M", className: "focus", text: "Loese Mini-Aufgaben unter Zeitdruck und halte deine Combo." },
-  { id: "laneswap", title: "Lane Swap", icon: "L", className: "forge", text: "Wechsle die Spur, sammle Sterne und weiche den Glas-Bloecken aus." },
   { id: "transit", title: "Transit", icon: "T", className: "cloud", text: "Fake-Reiseplaner im NOCO Look." },
   { id: "mood", title: "Mood Board", icon: "M", className: "themes", text: "Sammelt Farben, Vibes und Wallpaper-Ideen fuer dein Setup." },
   { id: "wallet", title: "Wallet Watch", icon: "W", className: "pay", text: "Kleiner NOCO Pay Verlauf mit Budget-Gefuehl." },
@@ -363,7 +330,7 @@ const widgetDefinitions = {
 let activeShortcuts = loadShortcuts();
 
 const appFolders = {
-  games: ["tapdash", "colorcatch", "memorygrid", "dodgerun", "reacttap", "blitzmath", "laneswap", "runner", "arcade"],
+  games: ["tapdash", "colorcatch", "memorygrid", "dodgerun", "runner", "arcade"],
   design: ["themes", "sketch", "mood", "pro-themes", "glowcam", "quotes"],
   workspace: ["settings", "security", "device", "sync", "nocoai", "notes", "tasks", "memories", "calculator", "timer", "weather", "cloud", "toon", "forge", "pay"]
 };
@@ -376,16 +343,7 @@ let pendingOpenAppId = null;
 
 const LIBRARY_QUICK_DEFAULT = ["nocoai", "notes", "tasks", "calculator", "weather", "themes"];
 const MAX_LIBRARY_QUICK = 8;
-function dedupeQuickIds(ids) {
-  const seen = new Set();
-  return ids.filter((id) => {
-    if (!id || seen.has(id)) return false;
-    seen.add(id);
-    return true;
-  });
-}
-
-let libraryQuickIds = dedupeQuickIds(loadLibraryQuickIds());
+let libraryQuickIds = loadLibraryQuickIds();
 
 function getLibraryFolderApps(folderId) {
   const installed = new Set(getInstalledApps());
@@ -461,28 +419,15 @@ function loadLibraryQuickIds() {
     const saved = JSON.parse(localStorage.getItem("noco_mobile_library_quick") || "[]");
     if (Array.isArray(saved) && saved.length) {
       const valid = saved.filter((id) => shortcutChoices.some((choice) => choice.id === id) || id === "beam");
-      if (valid.length) return dedupeQuickIds(valid.filter((id) => id !== "beam")).slice(0, MAX_LIBRARY_QUICK);
+      if (valid.length) return valid.filter((id) => id !== "beam").slice(0, MAX_LIBRARY_QUICK);
     }
   } catch (_) {}
   return [...LIBRARY_QUICK_DEFAULT];
 }
 
 function saveLibraryQuickIds() {
-  libraryQuickIds = dedupeQuickIds(libraryQuickIds);
   localStorage.setItem("noco_mobile_library_quick", JSON.stringify(libraryQuickIds));
 }
-
-(function migrateLibraryQuickDedupe() {
-  try {
-    const raw = JSON.parse(localStorage.getItem("noco_mobile_library_quick") || "[]");
-    const rawArr = Array.isArray(raw) ? raw : [];
-    const clean = dedupeQuickIds(rawArr.filter((id) => id && id !== "beam"));
-    if (clean.length !== rawArr.length) {
-      libraryQuickIds = clean.length ? clean.slice(0, MAX_LIBRARY_QUICK) : [...LIBRARY_QUICK_DEFAULT];
-      saveLibraryQuickIds();
-    }
-  } catch (_) {}
-})();
 
 function libraryQuickChoices() {
   const installed = new Set(getInstalledApps());
@@ -496,7 +441,6 @@ function libraryQuickChoices() {
 function renderLibraryQuick() {
   const el = document.getElementById("libraryQuick");
   if (!el) return;
-  libraryQuickIds = dedupeQuickIds(libraryQuickIds);
   const installed = new Set(getInstalledApps());
   const ids = libraryQuickIds.filter((id) => {
     if (id === "nocoai" || id === "notes") return true;
@@ -640,6 +584,9 @@ function loadSettings() {
       exclusiveTrialUsed: false,
       exclusivePlan: "",
       nocoAiPlus: false,
+      nocoAiWakeOn: true,
+      nocoAiWakeSensitivity: 1,
+      nocoAiWakePhrases: ["hey-noko", "hey-noco", "noco-ai", "hey-noco-ai"],
       aiNickname: "",
       payBalance: 24,
       paymentMethod: false,
@@ -704,7 +651,62 @@ function applySettings() {
   const showExclusiveBadge = isExclusiveActive() && settings.exclusivePlan !== "trial";
   exclusiveTopBadge?.classList.toggle("hidden", !showExclusiveBadge);
   if (exclusiveTopBadge) exclusiveTopBadge.textContent = "Exclusive";
+  syncNocoAiWakeSettings();
   syncCoreToggleStates();
+}
+
+function syncNocoAiWakeSettings() {
+  if (!window.NocoAIVoice?.applyWakeSettings) return;
+  if (settings.nocoAiWakePhrases == null || !settings.nocoAiWakePhrases.length) {
+    settings.nocoAiWakePhrases = ["hey-noko", "hey-noco", "noco-ai", "hey-noco-ai"];
+  }
+  if (settings.nocoAiWakeSensitivity == null) settings.nocoAiWakeSensitivity = 1;
+  window.NocoAIVoice.applyWakeSettings({
+    enabled: settings.nocoAiWakeOn !== false,
+    sensitivity: Number(settings.nocoAiWakeSensitivity),
+    phrases: settings.nocoAiWakePhrases
+  });
+}
+
+function nocoAiWakeSettingsHtml() {
+  const profiles = window.NocoAudioDetection?.WAKE_PROFILES || [
+    { id: "hey-noko", label: "Hey Noko" },
+    { id: "hey-noco", label: "Hey NOCO" },
+    { id: "noco-ai", label: "NOCO AI" },
+    { id: "hey-noco-ai", label: "Hey NOCO AI" },
+    { id: "noko", label: "Noko" },
+    { id: "noco", label: "NOCO" },
+    { id: "ok-noco", label: "OK NOCO" }
+  ];
+  const enabled = new Set(
+    Array.isArray(settings.nocoAiWakePhrases) && settings.nocoAiWakePhrases.length
+      ? settings.nocoAiWakePhrases
+      : ["hey-noko", "hey-noco", "noco-ai", "hey-noco-ai"]
+  );
+  const sens = Number(settings.nocoAiWakeSensitivity ?? 1);
+  const wakeOn = settings.nocoAiWakeOn !== false;
+  return `
+    ${toggleRow("nocoAiWakeOn", "NOCO Audio Detection 1.0", "Auf der ganzen Website zuhoeren — oeffnet NOCO AI bei Aktivierungswort")}
+    <div class="settings-row"><span>Mikro</span><strong>${window.NocoAIVoice?.hasMicConsent?.() ? "Freigegeben" : "Noch nicht erlaubt"}</strong></div>
+    <button class="settings-row" data-action="noco-ai-mic-setup"><span>Mikrofon einrichten</span><strong>${window.NocoAIVoice?.hasMicConsent?.() ? "OK" : "Start"}</strong></button>
+    <div class="core-section-title"><p class="eyebrow">Aktivierungswoerter</p><h3>z. B. Hey Noco</h3></div>
+    <div class="lock-time-grid noco-wake-phrase-grid">
+      ${profiles
+        .map(
+          (p) =>
+            `<button type="button" class="${enabled.has(p.id) ? "active" : ""}" data-noco-wake-phrase="${p.id}">${p.label}</button>`
+        )
+        .join("")}
+    </div>
+    <div class="core-section-title"><p class="eyebrow">Empfindlichkeit</p><h3>Weniger Fehlalarme = Streng</h3></div>
+    <div class="lock-time-grid">
+      <button type="button" class="${sens === 0 ? "active" : ""}" data-noco-wake-sens="0">Streng</button>
+      <button type="button" class="${sens === 1 ? "active" : ""}" data-noco-wake-sens="1">Normal</button>
+      <button type="button" class="${sens === 2 ? "active" : ""}" data-noco-wake-sens="2">Empfindlich</button>
+    </div>
+    <div class="settings-row"><span>AD 1.0 Status</span><strong>${wakeOn && window.NocoAIVoice?.hasMicConsent?.() ? "Aktiv" : "Aus / wartet"}</strong></div>
+    <button class="settings-row" data-app="nocoai"><span>NOCO AI testen</span><strong>Oeffnen</strong></button>
+  `;
 }
 
 function syncCoreToggleStates() {
@@ -712,7 +714,10 @@ function syncCoreToggleStates() {
   root.querySelectorAll("[data-toggle-setting]").forEach((btn) => {
     const key = btn.dataset.toggleSetting;
     const sw = btn.querySelector(".switch");
-    if (key && sw) sw.classList.toggle("active", !!settings[key]);
+    if (key && sw) {
+      const on = key === "nocoAiWakeOn" ? settings.nocoAiWakeOn !== false : !!settings[key];
+      sw.classList.toggle("active", on);
+    }
   });
   root.querySelectorAll("[data-lock-time]").forEach((btn) => {
     const sec = Number(btn.dataset.lockTime || 60);
@@ -762,16 +767,14 @@ function formatClockTime(date = new Date()) {
 function updateClock() {
   const now = new Date();
   const timeText = formatClockTime(now);
-  document.querySelectorAll("#largeClock, [data-noco-home-clock], .bento-clock [data-noco-home-clock]").forEach((el) => {
+  document.querySelectorAll("#largeClock, [data-noco-home-clock]").forEach((el) => {
     el.textContent = timeText;
-    el.removeAttribute("hidden");
     el.style.visibility = "visible";
   });
-  const island = document.getElementById("islandClock");
+  const island = islandClock || document.getElementById("islandClock");
   if (island) {
     island.textContent = timeText;
     island.hidden = false;
-    island.removeAttribute("aria-hidden");
     island.style.visibility = "visible";
   }
   const dateEl = largeDate || document.getElementById("largeDate");
@@ -857,17 +860,6 @@ function updateIslandUI() {
   });
   if (screenTitle) {
     screenTitle.textContent = currentPage === 0 ? "Home" : "Apps";
-  }
-  const modeIcon = document.getElementById("islandModeIcon");
-  if (modeIcon) {
-    const statusVisible = islandStatus && !islandStatus.hidden;
-    modeIcon.hidden = statusVisible;
-    modeIcon.setAttribute("aria-hidden", statusVisible ? "true" : "false");
-    if (!statusVisible) {
-      modeIcon.textContent = currentPage === 0 ? "⌂" : "▦";
-      modeIcon.setAttribute("aria-label", currentPage === 0 ? "Zu Apps wechseln" : "Zu Home wechseln");
-      modeIcon.classList.toggle("is-apps", currentPage === 1);
-    }
   }
   updateClock();
 }
@@ -1773,7 +1765,6 @@ function openLibraryQuickEditor() {
 
 function renderLibraryQuickEditor() {
   if (!shortcutEditor) return;
-  libraryQuickIds = dedupeQuickIds(libraryQuickIds);
   const selected = libraryQuickIds
     .map((id) => shortcutById(id))
     .map((choice) => `
@@ -2370,19 +2361,15 @@ function getNocoAIHelpers() {
       void openApp("nocoai", { force: true });
       const focusReady = () => {
         const root = sheetContent?.querySelector("[data-noco-ai-root]");
-        if (!root) return;
         window.NocoAI?.focusChatInput?.(root);
-        const input = root.querySelector("[data-noco-ai-input]");
+        const input = root?.querySelector("[data-noco-ai-input]");
         if (!input) return;
         try {
           input.focus({ preventScroll: true });
-          const len = input.value.length;
-          if (typeof input.setSelectionRange === "function") input.setSelectionRange(len, len);
         } catch (_) {}
       };
       window.setTimeout(focusReady, 420);
-      window.setTimeout(focusReady, 920);
-      window.setTimeout(focusReady, 1500);
+      window.setTimeout(focusReady, 1000);
     }
   };
 }
@@ -2494,13 +2481,6 @@ function appHero(_title, _eyebrow, text) {
 }
 
 function getSheetScrollEl() {
-  if (currentApp === "nocoai") {
-    return (
-      sheetContent?.querySelector(".noco-ai-log-scroll") ||
-      sheetContent?.querySelector("[data-noco-ai-root]") ||
-      null
-    );
-  }
   return sheetContent?.querySelector("[data-app-scroll-area]") || appSheet?.querySelector(".sheet-card") || null;
 }
 
@@ -2630,7 +2610,7 @@ function cacheAppState(appId) {
 }
 
 const VOLATILE_APP_IDS = new Set([
-  "tapdash", "colorcatch", "memorygrid", "dodgerun", "reacttap", "blitzmath", "laneswap", "runner",
+  "tapdash", "colorcatch", "memorygrid", "dodgerun", "runner",
   "calculator", "timer", "memories", "tasks", "weather", "flashlight", "quotes", "sketch", "breath", "nocoai", "notes"
 ]);
 
@@ -3267,6 +3247,11 @@ function settingsTemplateV2() {
         ${toggleRow("strictSecurity", "Strenger Modus", "Installieren, Loeschen und Keycards immer freigeben")}
       `
     },
+    nocoai: {
+      title: "NOCO AI",
+      text: "Sprachaktivierung, Hey Noco und Audio Detection 1.0.",
+      content: nocoAiWakeSettingsHtml()
+    },
     vault: {
       title: "SessionVault",
       text: "Apps, Dev, Exclusive und Keycard-Daten.",
@@ -3677,16 +3662,13 @@ function simpleAppTemplate(title, eyebrow, text, rows) {
 
 function arcadeHubTemplate() {
   return appShell(`
-    ${appHero("Arcade", "NOCO Games 1.2", "Neue Reaktions- und Mathe-Spiele plus Klassiker im Liquid-Glass-Look.")}
+    ${appHero("Arcade", "NOCO Games 1.2", "Drei Mini-Spiele und ein kleiner Runner im Liquid-Glass-Look.")}
     <div class="settings-list">
-      <button class="settings-row" data-app="reacttap"><span>React Tap</span><strong>Neu</strong></button>
-      <button class="settings-row" data-app="blitzmath"><span>Blitz Math</span><strong>Neu</strong></button>
-      <button class="settings-row" data-app="laneswap"><span>Lane Swap</span><strong>Neu</strong></button>
       <button class="settings-row" data-app="dodgerun"><span>Dodge Run</span><strong>Ausweichen</strong></button>
       <button class="settings-row" data-app="tapdash"><span>Tap Dash</span><strong>Speed Tap</strong></button>
       <button class="settings-row" data-app="colorcatch"><span>Color Catch</span><strong>Farben</strong></button>
       <button class="settings-row" data-app="memorygrid"><span>Memory Grid</span><strong>Merken</strong></button>
-      <button class="settings-row" data-app="runner"><span>NOCO Runner</span><strong>Runner</strong></button>
+      <button class="settings-row" data-app="runner"><span>NOCO Runner</span><strong>Neu in 1.2</strong></button>
     </div>
   `);
 }
@@ -4152,167 +4134,6 @@ function focusTemplateV2() {
   `);
 }
 
-function reactTapLabel() {
-  if (reactTap.phase === "wait") return "Warte …";
-  if (reactTap.phase === "go") return "TAP!";
-  if (reactTap.phase === "early") return "Zu frueh!";
-  if (reactTap.phase === "done") return "Nice!";
-  return "Bereit";
-}
-
-function reactTapTemplate() {
-  return appShell(`
-    ${appHero("React Tap", "NOCO Games", "Warte auf Gruen — dann sofort tippen. Zu frueh = Minus.")}
-    <section class="game-panel react-tap-panel">
-      <small>${reactTap.lastMs ? reactTap.lastMs + " ms" : "—"} · Best ${reactTap.best || "—"} ms</small>
-      <strong data-reacttap-label>${reactTapLabel()}</strong>
-      <button type="button" class="game-big-button react-tap-btn react-tap-btn--${reactTap.phase}" data-action="reacttap-tap">${reactTapLabel()}</button>
-    </section>
-    <div class="game-grid">
-      <button class="settings-row" data-action="reacttap-start"><span>Start</span><strong>Neue Runde</strong></button>
-      <button class="settings-row" data-action="reacttap-reset"><span>Reset</span><strong>0</strong></button>
-    </div>
-  `);
-}
-
-function nextBlitzRound() {
-  const ops = ["+", "-", "×"];
-  blitzMath.op = ops[Math.floor(Math.random() * ops.length)];
-  blitzMath.a = 2 + Math.floor(Math.random() * 11);
-  blitzMath.b = 2 + Math.floor(Math.random() * 9);
-  if (blitzMath.op === "-" && blitzMath.b > blitzMath.a) {
-    const t = blitzMath.a;
-    blitzMath.a = blitzMath.b;
-    blitzMath.b = t;
-  }
-  blitzMath.answer =
-    blitzMath.op === "+"
-      ? blitzMath.a + blitzMath.b
-      : blitzMath.op === "-"
-        ? blitzMath.a - blitzMath.b
-        : blitzMath.a * blitzMath.b;
-  const wrong = new Set();
-  while (wrong.size < 3) {
-    const w = blitzMath.answer + Math.floor(Math.random() * 9) - 4;
-    if (w !== blitzMath.answer && w > -5) wrong.add(w);
-  }
-  blitzMath.options = [blitzMath.answer, ...wrong].sort(() => Math.random() - 0.5);
-}
-
-function blitzMathTemplate() {
-  if (!blitzMath.options.length) nextBlitzRound();
-  return appShell(`
-    ${appHero("Blitz Math", "NOCO Games", "Tippe die richtige Antwort — Combo gibt Bonus.")}
-    <section class="game-panel">
-      <small>Score ${blitzMath.score} · Best ${blitzMath.best}</small>
-      <strong>${blitzMath.a} ${blitzMath.op} ${blitzMath.b}</strong>
-    </section>
-    <div class="blitz-math-grid">
-      ${blitzMath.options.map((n) => `<button type="button" class="settings-row" data-blitz-answer="${n}"><span>Antwort</span><strong>${n}</strong></button>`).join("")}
-    </div>
-    <button class="settings-row" data-action="blitzmath-reset"><span>Reset</span><strong>0</strong></button>
-  `);
-}
-
-function laneSwapTemplate() {
-  const lanes = [0, 1, 2];
-  return appShell(`
-    ${appHero("Lane Swap", "NOCO Games", "Tippe links/rechts oder die Spur — sammle ★ und weiche ■ aus.")}
-    <section class="lane-swap-stage" data-lane-stage>
-      ${lanes
-        .map(
-          (lane) => `
-        <div class="lane-swap-col ${laneSwap.lane === lane ? "is-active" : ""}" data-lane-col="${lane}">
-          <span class="lane-swap-prize ${laneSwap.prizeLane === lane ? "is-visible" : ""}" data-lane-prize="${lane}" style="top:${laneSwap.prizeY}%">★</span>
-          <span class="lane-swap-hazard ${laneSwap.hazardLane === lane ? "is-visible" : ""}" data-lane-hazard="${lane}" style="top:${laneSwap.hazardY}%">■</span>
-          <span class="lane-swap-orb" data-lane-orb="${lane}">◉</span>
-        </div>`
-        )
-        .join("")}
-      <div class="lane-swap-hud">
-        <strong data-lane-score>${laneSwap.score}</strong>
-        <small>Best ${laneSwap.best}</small>
-      </div>
-    </section>
-    <div class="game-grid">
-      <button class="settings-row" data-action="lane-left"><span>←</span><strong>Links</strong></button>
-      <button class="settings-row" data-action="lane-right"><span>→</span><strong>Rechts</strong></button>
-      <button class="settings-row" data-action="lane-start"><span>${laneSwap.running ? "Läuft" : "Start"}</span><strong>Runde</strong></button>
-    </div>
-  `);
-}
-
-function clearReactTapTimers() {
-  if (reactTap.waitTimer) window.clearTimeout(reactTap.waitTimer);
-  reactTap.waitTimer = null;
-}
-
-function scheduleReactTapRound() {
-  clearReactTapTimers();
-  reactTap.phase = "wait";
-  const delay = 900 + Math.floor(Math.random() * 2200);
-  reactTap.waitTimer = window.setTimeout(() => {
-    reactTap.phase = "go";
-    reactTap.goAt = Date.now();
-    invalidateAppCache("reacttap");
-    if (currentApp === "reacttap") openApp("reacttap");
-  }, delay);
-}
-
-function stopLaneSwap(showToastMsg) {
-  if (laneSwap.timer) window.clearInterval(laneSwap.timer);
-  laneSwap.timer = null;
-  laneSwap.running = false;
-  if (showToastMsg) showToast(showToastMsg);
-}
-
-function startLaneSwap() {
-  stopLaneSwap(false);
-  laneSwap.running = true;
-  laneSwap.score = 0;
-  laneSwap.lane = 1;
-  laneSwap.prizeY = -12;
-  laneSwap.hazardY = -22;
-  laneSwap.prizeLane = Math.floor(Math.random() * 3);
-  laneSwap.hazardLane = Math.floor(Math.random() * 3);
-  openApp("laneswap");
-  laneSwap.timer = window.setInterval(() => {
-    if (!laneSwap.running || currentApp !== "laneswap") {
-      stopLaneSwap(false);
-      return;
-    }
-    laneSwap.prizeY += 5.2;
-    laneSwap.hazardY += 6.1;
-    if (laneSwap.prizeY > 88 && Math.abs(laneSwap.lane - laneSwap.prizeLane) < 0.1) {
-      laneSwap.score += 1;
-      laneSwap.prizeY = -12;
-      laneSwap.prizeLane = Math.floor(Math.random() * 3);
-      if (laneSwap.score > laneSwap.best) {
-        laneSwap.best = laneSwap.score;
-        localStorage.setItem("noco_mobile_laneswap_best", String(laneSwap.best));
-      }
-      showToast("Stern +1");
-    }
-    if (laneSwap.hazardY > 82 && laneSwap.hazardLane === laneSwap.lane) {
-      stopLaneSwap("Crash! Score " + laneSwap.score);
-      invalidateAppCache("laneswap");
-      openApp("laneswap");
-      return;
-    }
-    if (laneSwap.prizeY > 110) {
-      laneSwap.prizeY = -12;
-      laneSwap.prizeLane = Math.floor(Math.random() * 3);
-    }
-    if (laneSwap.hazardY > 110) {
-      laneSwap.hazardY = -22;
-      laneSwap.hazardLane = Math.floor(Math.random() * 3);
-    }
-    invalidateAppCache("laneswap");
-    if (currentApp === "laneswap") openApp("laneswap");
-  }, 80);
-  showToast("Lane Swap — weiche aus!");
-}
-
 function dodgeRunTemplate() {
   return appShell(`
     ${appHero("Dodge Run", "NOCO Games", "Zieh den leuchtenden Orb nach links und rechts und weich den fallenden Glas-Blöcken aus.")}
@@ -4395,10 +4216,7 @@ function extraTemplateForApp(appId) {
     tapdash: tapDashTemplate,
     colorcatch: colorCatchTemplate,
     memorygrid: memoryGridTemplate,
-    dodgerun: dodgeRunTemplate,
-    reacttap: reactTapTemplate,
-    blitzmath: blitzMathTemplate,
-    laneswap: laneSwapTemplate
+    dodgerun: dodgeRunTemplate
   };
   return templates[appId] || null;
 }
@@ -4429,8 +4247,6 @@ async function openApp(appId, options = {}) {
   shortcutPanel?.classList.add("hidden");
   desktopPanel?.classList.add("hidden");
   if (currentApp === "dodgerun" && targetId !== "dodgerun") stopDodgeGame(false);
-  if (currentApp === "laneswap" && targetId !== "laneswap") stopLaneSwap(false);
-  if (currentApp === "reacttap" && targetId !== "reacttap") clearReactTapTimers();
   if (currentApp === "runner" && targetId !== "runner") stopRunnerGame(false);
   if (settings.keepAppsAlive !== false && appCache.has(targetId) && !VOLATILE_APP_IDS.has(targetId)) {
     const cached = appCache.get(targetId);
@@ -4669,25 +4485,7 @@ libraryQuickEditFab?.addEventListener("click", (event) => {
   openLibraryQuickEditor();
 });
 saveBtn.addEventListener("click", saveNote);
-closeSheet?.addEventListener("click", () => closeAppToPage(currentPage));
-
-document.getElementById("sheetDragHandle")?.addEventListener("click", () => {
-  if (appSheet && !appSheet.classList.contains("hidden")) void closeAppToPage(currentPage);
-});
-
-function closeShortcutPanelAndEdit() {
-  shortcutPanel?.classList.add("hidden");
-  if (appSheet?.classList.contains("hidden") && widgetPanel?.classList.contains("hidden")) {
-    document.body.classList.remove("sheet-open");
-  }
-  if (editMode) setEditMode(false);
-}
-
-document.querySelectorAll("[data-sheet-exit-close]").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    if (appSheet && !appSheet.classList.contains("hidden")) void closeAppToPage(currentPage);
-  });
-});
+closeSheet.addEventListener("click", () => closeAppToPage(currentPage));
 
 document.getElementById("coachDismiss")?.addEventListener("click", dismissCoach);
 
@@ -4726,16 +4524,19 @@ document.querySelectorAll(".island-page-tab[data-page], .chrome-page-tab[data-pa
   });
 });
 
-document.getElementById("islandModeIcon")?.addEventListener("click", (event) => {
+document.querySelector(".island-pips")?.addEventListener("click", (event) => {
+  const pip = event.target.closest("[data-island-pip]");
+  if (!pip) return;
   event.stopPropagation();
   setIslandExpanded(false);
-  hapticTap();
-  const next = currentPage === 0 ? 1 : 0;
   if (document.body.classList.contains("island-app-mode")) {
-    void closeAppToPage(next);
+    hapticTap();
+    const page = Number(pip.dataset.islandPip);
+    if (!Number.isNaN(page)) void closeAppToPage(page);
     return;
   }
-  void goToPage(next);
+  const page = Number(pip.dataset.islandPip);
+  if (!Number.isNaN(page)) void goToPage(page);
 });
 
 function openNocoAIFromIsland(event) {
@@ -5024,7 +4825,10 @@ document.addEventListener("click", async (event) => {
   }
 
   if (event.target.closest("[data-close-panel]")) {
-    closeShortcutPanelAndEdit();
+    shortcutPanel?.classList.add("hidden");
+    if (appSheet?.classList.contains("hidden") && widgetPanel?.classList.contains("hidden")) {
+      document.body.classList.remove("sheet-open");
+    }
   }
 
   if (event.target.closest("[data-close-widget-panel]")) {
@@ -5085,7 +4889,7 @@ document.addEventListener("click", async (event) => {
       showToast(`Maximal ${MAX_LIBRARY_QUICK} Apps im Schnellzugriff`);
       return;
     }
-    libraryQuickIds = dedupeQuickIds([...libraryQuickIds, picked]);
+    libraryQuickIds = [...libraryQuickIds, picked];
     saveLibraryQuickIds();
     renderLibraryQuick();
     renderLibraryQuickEditor();
@@ -5095,7 +4899,7 @@ document.addEventListener("click", async (event) => {
   const libraryQuickRemove = event.target.closest("[data-library-quick-remove]");
   if (libraryQuickRemove) {
     const picked = libraryQuickRemove.dataset.libraryQuickRemove;
-    libraryQuickIds = dedupeQuickIds(libraryQuickIds.filter((id) => id !== picked));
+    libraryQuickIds = libraryQuickIds.filter((id) => id !== picked);
     if (!libraryQuickIds.length) libraryQuickIds = ["nocoai"];
     saveLibraryQuickIds();
     renderLibraryQuick();
@@ -5110,6 +4914,44 @@ document.addEventListener("click", async (event) => {
     applySettings();
     openApp("themes");
     showToast("Theme aktiviert");
+  }
+
+  const wakePhraseBtn = event.target.closest("[data-noco-wake-phrase]");
+  if (wakePhraseBtn) {
+    const id = wakePhraseBtn.dataset.nocoWakePhrase;
+    const list = [...(settings.nocoAiWakePhrases || ["hey-noko", "hey-noco", "noco-ai", "hey-noco-ai"])];
+    const idx = list.indexOf(id);
+    if (idx >= 0) list.splice(idx, 1);
+    else list.push(id);
+    if (!list.length) {
+      showToast("Mindestens ein Aktivierungswort waehlen");
+      return;
+    }
+    settings.nocoAiWakePhrases = list;
+    saveSettings();
+    applySettings();
+    if (currentApp === "settings") refreshCoreSection();
+    showToast("Aktivierungswort aktualisiert");
+    return;
+  }
+
+  const wakeSensBtn = event.target.closest("[data-noco-wake-sens]");
+  if (wakeSensBtn) {
+    settings.nocoAiWakeSensitivity = Number(wakeSensBtn.dataset.nocoWakeSens || 1);
+    saveSettings();
+    applySettings();
+    if (currentApp === "settings") refreshCoreSection();
+    showToast("Empfindlichkeit: " + (settings.nocoAiWakeSensitivity === 0 ? "Streng" : settings.nocoAiWakeSensitivity === 2 ? "Empfindlich" : "Normal"));
+    return;
+  }
+
+  if (event.target.closest("[data-action='noco-ai-mic-setup']")) {
+    void openApp("nocoai", { force: true });
+    window.setTimeout(() => {
+      const root = sheetContent?.querySelector("[data-noco-ai-root]");
+      window.NocoAIVoice?.showMicConsentIfNeeded?.(root, { force: true });
+    }, 520);
+    return;
   }
 
   const toggle = event.target.closest("[data-toggle-setting]");
@@ -5139,6 +4981,11 @@ document.addEventListener("click", async (event) => {
       return;
     }
     settings[key] = !settings[key];
+    if (key === "nocoAiWakeOn") {
+      try {
+        localStorage.setItem("noco_ai_wake_v1", settings.nocoAiWakeOn ? "1" : "0");
+      } catch (_) {}
+    }
   if (key === "codeLock" && !settings[key]) {
     sessionStorage.removeItem("noco_mobile_unlocked");
     sessionStorage.removeItem("noco_mobile_launch_unlocked");
@@ -5647,109 +5494,6 @@ document.addEventListener("click", async (event) => {
     showToast("Pulse aktualisiert");
   }
 
-  if (event.target.closest("[data-action='reacttap-start']")) {
-    clearReactTapTimers();
-    reactTap.phase = "idle";
-    scheduleReactTapRound();
-    invalidateAppCache("reacttap");
-    openApp("reacttap");
-    showToast("Warte auf Gruen …");
-  }
-
-  if (event.target.closest("[data-action='reacttap-reset']")) {
-    clearReactTapTimers();
-    reactTap.lastMs = 0;
-    reactTap.best = 0;
-    reactTap.phase = "idle";
-    localStorage.setItem("noco_mobile_reacttap_best", "0");
-    invalidateAppCache("reacttap");
-    openApp("reacttap");
-  }
-
-  if (event.target.closest("[data-action='reacttap-tap']")) {
-    if (reactTap.phase === "wait") {
-      reactTap.phase = "early";
-      clearReactTapTimers();
-      showToast("Zu frueh!");
-      invalidateAppCache("reacttap");
-      openApp("reacttap");
-      window.setTimeout(() => scheduleReactTapRound(), 700);
-    } else if (reactTap.phase === "go") {
-      const ms = Date.now() - reactTap.goAt;
-      reactTap.lastMs = ms;
-      if (ms < reactTap.best || reactTap.best === 0) {
-        reactTap.best = ms;
-        localStorage.setItem("noco_mobile_reacttap_best", String(reactTap.best));
-      }
-      reactTap.phase = "done";
-      showToast(ms + " ms — nice!");
-      invalidateAppCache("reacttap");
-      openApp("reacttap");
-      window.setTimeout(() => scheduleReactTapRound(), 900);
-    } else if (reactTap.phase === "idle") {
-      scheduleReactTapRound();
-      invalidateAppCache("reacttap");
-      openApp("reacttap");
-    }
-    hapticTap();
-  }
-
-  const blitzPick = event.target.closest("[data-blitz-answer]");
-  if (blitzPick) {
-    const n = Number(blitzPick.dataset.blitzAnswer);
-    if (n === blitzMath.answer) {
-      blitzMath.score += 1;
-      if (blitzMath.score > blitzMath.best) {
-        blitzMath.best = blitzMath.score;
-        localStorage.setItem("noco_mobile_blitzmath_best", String(blitzMath.best));
-      }
-      showToast("Richtig!");
-    } else {
-      blitzMath.score = 0;
-      showToast("Falsch — Combo weg");
-    }
-    nextBlitzRound();
-    invalidateAppCache("blitzmath");
-    openApp("blitzmath");
-    hapticTap();
-  }
-
-  if (event.target.closest("[data-action='blitzmath-reset']")) {
-    blitzMath.score = 0;
-    blitzMath.best = 0;
-    localStorage.setItem("noco_mobile_blitzmath_best", "0");
-    nextBlitzRound();
-    invalidateAppCache("blitzmath");
-    openApp("blitzmath");
-  }
-
-  if (event.target.closest("[data-action='lane-start']")) {
-    startLaneSwap();
-    hapticTap();
-  }
-
-  if (event.target.closest("[data-action='lane-left']")) {
-    laneSwap.lane = Math.max(0, laneSwap.lane - 1);
-    invalidateAppCache("laneswap");
-    openApp("laneswap");
-    hapticTap();
-  }
-
-  if (event.target.closest("[data-action='lane-right']")) {
-    laneSwap.lane = Math.min(2, laneSwap.lane + 1);
-    invalidateAppCache("laneswap");
-    openApp("laneswap");
-    hapticTap();
-  }
-
-  const laneCol = event.target.closest("[data-lane-col]");
-  if (laneCol && laneSwap.running) {
-    laneSwap.lane = Number(laneCol.dataset.laneCol);
-    invalidateAppCache("laneswap");
-    openApp("laneswap");
-    hapticTap();
-  }
-
   if (event.target.closest("[data-action='dodge-start']")) {
     startDodgeGame();
   }
@@ -5987,16 +5731,7 @@ function runHubAction(action) {
 
 function startSheetSwipe(event) {
   if (editMode || appSheet.classList.contains("hidden")) return;
-  if (currentApp === "nocoai") return;
-  if (event.target.closest("[data-noco-ai-root]")) return;
-  if (event.target.closest("[data-noco-ai-ad-feature], .noco-ai-ad-feature-card, [data-noco-ai-mic-consent], .noco-ai-mic-consent-card, [data-noco-ai-plus-sheet], [data-noco-ai-rename-sheet], [data-noco-ai-tools-sheet], .noco-ai-tools-scroll")) return;
-  if (
-    event.target.closest(
-      ".noco-ai-log-scroll, [data-noco-ai-log], .noco-ai-chats-overlay, [data-noco-ai-chats-list], [data-noco-ai-chats-drawer], .noco-ai-quick-strip, .noco-ai-top, .noco-ai-dock, .noco-ai-footer, .noco-ai-compose-rail, .noco-ai-rail-btn, .noco-ai-rail-mini"
-    )
-  )
-    return;
-  if (event.target.closest("textarea, input, select, .code-keypad, .code-key, .runner-stage, .dodge-stage, .memory-grid, .color-game-grid, .react-tap-stage, .blitz-math-grid, .lane-swap-stage")) return;
+  if (event.target.closest("textarea, input, select, .code-keypad, .code-key, .runner-stage, .dodge-stage, .memory-grid, .color-game-grid")) return;
   const touch = event.touches[0];
   appSwipe = {
     x: touch.clientX,
@@ -6985,10 +6720,6 @@ if (hasCompletedFirstLight()) {
 window.setInterval(updateClock, 1000);
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") cleanupGestureState();
-  if (document.visibilityState === "visible" && timerState.running) {
-    tickFocusTimer();
-    refreshTimerDom();
-  }
 });
 window.setInterval(() => {
   updateLockClock();

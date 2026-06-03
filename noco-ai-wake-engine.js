@@ -7,9 +7,21 @@
   const FRAME_MS = 40;
   const MIN_SPEECH_MS = 260;
   const MAX_CAPTURE_MS = 2600;
-  const COOLDOWN_MS = 1200;
-  const MATCH_THRESHOLD = 0.36;
-  const SOFT_THRESHOLD = 0.26;
+  const COOLDOWN_MS = 1600;
+  const DEFAULT_PROFILES = ["hey-noko", "hey-noco", "noco-ai", "hey-noco-ai"];
+
+  let wakeConfig = {
+    sensitivity: 1,
+    enabledProfiles: DEFAULT_PROFILES.slice(),
+    allowSoft: false
+  };
+
+  function getThresholds() {
+    const s = Number(wakeConfig.sensitivity);
+    if (s === 0) return { match: 0.54, soft: 0.99, noiseMult: 3.35, minSpeech: 340 };
+    if (s === 2) return { match: 0.4, soft: 0.34, noiseMult: 2.35, minSpeech: 280 };
+    return { match: 0.5, soft: 0.99, noiseMult: 2.85, minSpeech: 300 };
+  }
 
   const WAKE_PROFILES = [
     { id: "hey-noko", label: "Hey Noko", envelope: [0.06, 0.22, 0.78, 0.52, 0.2, 0.08, 0.12, 0.38, 0.82, 0.58, 0.24, 0.1] },
@@ -49,7 +61,7 @@
       /noco|noko|nocho|nacho/.test(compact);
     const hasHey = /\b(hey|hallo|ok|yo|hi|hello|hei)\b/.test(n) || /^he/.test(compact);
 
-    if (hasNoco || (hasHey && compact.length >= 4) || (hasAi && compact.length <= 6)) {
+    if (hasNoco || (hasHey && compact.length >= 5)) {
       const after = raw
         .replace(/\b(hey|hallo|ok|yo|hi|hello|hei)\b/gi, " ")
         .replace(/\b(noco|noko|no\s*co|no\s*ko|nocho)\s*(ai|ei|ay|a\.?\s*i\.?|i)?\b/gi, " ")
@@ -165,24 +177,33 @@
     return Math.min(0.92, score);
   }
 
+  function activeProfiles() {
+    const ids = wakeConfig.enabledProfiles;
+    if (!Array.isArray(ids) || !ids.length) return WAKE_PROFILES;
+    const set = new Set(ids);
+    const filtered = WAKE_PROFILES.filter((p) => set.has(p.id));
+    return filtered.length ? filtered : WAKE_PROFILES;
+  }
+
   function matchCapture(samples) {
     if (samples.length < 4) return null;
+    const th = getThresholds();
     let best = null;
-    WAKE_PROFILES.forEach((profile) => {
+    activeProfiles().forEach((profile) => {
       const score = scoreProfile(samples, profile);
       if (!best || score > best.score) best = { profile, score };
     });
     const heuristic = scoreHeuristic(samples);
-    const top = Math.max(best?.score || 0, heuristic);
+    const top = Math.max(best?.score || 0, heuristic * 0.92);
     const pick =
-      best && best.score >= heuristic
+      best && best.score >= heuristic * 0.92
         ? best
         : { profile: { id: "ad-heuristic", label: "NOCO AD" }, score: heuristic };
 
-    if (top >= MATCH_THRESHOLD) {
+    if (top >= th.match) {
       return { profile: pick.profile, score: top, command: "" };
     }
-    if (top >= SOFT_THRESHOLD) {
+    if (wakeConfig.allowSoft && top >= th.soft) {
       return { profile: pick.profile, score: top, command: "", soft: true };
     }
     return null;
@@ -207,7 +228,12 @@
     }
 
     async ensureStream() {
-      if (this.stream?.active) return this.stream;
+      const live = this.stream?.getTracks?.().some((t) => t.readyState === "live");
+      if (live) return this.stream;
+      if (this.stream) {
+        this.stream.getTracks?.().forEach((t) => t.stop());
+        this.stream = null;
+      }
       if (!navigator.mediaDevices?.getUserMedia) throw new Error("no-mic");
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
@@ -245,7 +271,8 @@
       }
       const rms = Math.sqrt(sum / buf.length);
       this.noiseFloor = this.noiseFloor * 0.94 + rms * 0.06;
-      const threshold = Math.max(0.014, this.noiseFloor * 2.15);
+      const th = getThresholds();
+      const threshold = Math.max(0.018, this.noiseFloor * th.noiseMult);
       const speaking = rms > threshold;
 
       const freq = new Uint8Array(this.analyser.frequencyBinCount);
@@ -285,7 +312,8 @@
       this.capture = [];
       this.speechMs = 0;
       this.silenceMs = 0;
-      if (samples.length * FRAME_MS < MIN_SPEECH_MS) {
+      const minMs = getThresholds().minSpeech || MIN_SPEECH_MS;
+      if (samples.length * FRAME_MS < minMs) {
         this.onStatus("NOCO AD 1.0 — Hey Noco · NOCO · AI", "idle");
         return;
       }
@@ -353,11 +381,35 @@
     }
   }
 
+  function setWakeConfig(cfg = {}) {
+    if (cfg.sensitivity != null) wakeConfig.sensitivity = Number(cfg.sensitivity);
+    if (Array.isArray(cfg.enabledProfiles) && cfg.enabledProfiles.length) {
+      wakeConfig.enabledProfiles = cfg.enabledProfiles.slice();
+    }
+    if (cfg.allowSoft != null) wakeConfig.allowSoft = !!cfg.allowSoft;
+    if (wakeConfig.sensitivity === 2) wakeConfig.allowSoft = true;
+    else wakeConfig.allowSoft = false;
+    try {
+      localStorage.setItem("noco_ai_wake_cfg_v1", JSON.stringify(wakeConfig));
+    } catch (_) {}
+  }
+
+  function loadWakeConfig() {
+    try {
+      const raw = localStorage.getItem("noco_ai_wake_cfg_v1");
+      if (raw) setWakeConfig(JSON.parse(raw));
+    } catch (_) {}
+  }
+
+  loadWakeConfig();
+
   const api = {
     VERSION,
     create: (opts) => new NocoAudioDetectionEngine(opts),
     fuzzyWakeMatch,
-    WAKE_PROFILES
+    WAKE_PROFILES,
+    setWakeConfig,
+    getWakeConfig: () => ({ ...wakeConfig, thresholds: getThresholds() })
   };
 
   global.NocoAudioDetection = api;

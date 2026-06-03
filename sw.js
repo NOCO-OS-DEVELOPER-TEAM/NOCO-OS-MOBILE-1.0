@@ -1,4 +1,4 @@
-const CACHE = "noco-mobile-1-2-ui-ai-v94";
+const CACHE = "noco-mobile-1-2-ui-ai-v101";
 const ASSETS = [
   "./",
   "./index.html",

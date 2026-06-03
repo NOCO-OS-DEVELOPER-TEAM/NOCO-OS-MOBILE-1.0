@@ -21,8 +21,8 @@ body.noco-ai-sheet .app-sheet #sheetContent {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding: 44px 0 0;
-  touch-action: none;
+  padding: 0;
+  touch-action: manipulation;
   background: transparent;
 }
 
@@ -48,7 +48,7 @@ body.device-handset.noco-ai-sheet .app-sheet .sheet-card {
 body.device-handset.noco-ai-sheet .app-sheet #sheetContent {
   height: 100%;
   max-height: 100svh;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding: 0;
 }
 
 body.device-handset.noco-ai-sheet .noco-ai-wrap.noco-ai-keyboard-open .noco-ai-footer {
@@ -85,9 +85,9 @@ body.noco-ai-sheet .mobile-app-body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  gap: 8px;
-  padding: 0 8px 6px;
-  border-radius: 0 0 24px 24px;
+  gap: 0;
+  padding: 0;
+  border-radius: 0;
   isolation: isolate;
 }
 
@@ -252,41 +252,117 @@ body.noco-ai-sheet .mobile-app-body {
   margin-bottom: 8px;
 }
 
-.noco-ai-brand {
-  display: flex;
+.noco-ai-hero-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
   align-items: center;
-  gap: 10px;
-  padding: 2px 0 4px;
 }
 
-.noco-ai-brand-glyph {
-  width: 36px;
-  height: 36px;
+.noco-ai-model-orb {
+  position: relative;
+  width: 52px;
+  height: 52px;
   display: grid;
   place-items: center;
-  border-radius: 14px;
-  font-size: 18px;
-  color: #f8fcff;
-  background: linear-gradient(145deg, #a88bff, #4da8ff 48%, #2ee8c8);
+  flex-shrink: 0;
+}
+
+.noco-ai-model-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.35);
+  background:
+    conic-gradient(from 210deg, color-mix(in srgb, var(--violet) 70%, transparent), color-mix(in srgb, var(--blue) 65%, transparent), color-mix(in srgb, var(--mint) 70%, transparent), color-mix(in srgb, var(--violet) 70%, transparent));
+  mask: radial-gradient(circle, transparent 58%, #000 60%);
+  -webkit-mask: radial-gradient(circle, transparent 58%, #000 60%);
+  animation: aiModelSpin 12s linear infinite;
+  opacity: 0.9;
+}
+
+.noco-ai-model-core {
+  position: relative;
+  z-index: 1;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 20px;
+  color: #f8fcff;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.55), transparent 42%),
+    linear-gradient(145deg, #a88bff, #4da8ff 48%, #2ee8c8);
   box-shadow:
-    0 0 28px color-mix(in srgb, var(--mint) 40%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    0 0 32px color-mix(in srgb, var(--mint) 45%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+@keyframes aiModelSpin {
+  to { transform: rotate(360deg); }
+}
+
+.noco-ai-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.noco-ai-brand-titles {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .noco-ai-brand strong {
   display: block;
-  font-size: 15px;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
+  font-size: clamp(18px, 5vw, 22px);
+  letter-spacing: -0.04em;
+  line-height: 1.05;
 }
 
-.noco-ai-brand span {
+.noco-ai-brand-sub,
+.noco-ai-brand span.noco-ai-brand-sub {
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--mint) 70%, var(--muted));
+  color: color-mix(in srgb, var(--mint) 65%, var(--muted));
+  line-height: 1.35;
+}
+
+.noco-ai-version-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f4f8ff;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--violet) 55%, transparent), color-mix(in srgb, var(--blue) 45%, transparent));
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--violet) 30%, transparent);
+}
+
+.noco-ai-version-pill--sm {
+  min-height: 18px;
+  padding: 0 7px;
+  font-size: 9px;
+  vertical-align: middle;
+}
+
+.noco-ai-status--compact {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  text-align: right;
 }
 
 .noco-ai-header {
@@ -295,19 +371,16 @@ body.noco-ai-sheet .mobile-app-body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 10px 12px 12px;
-  border-radius: 20px;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 12px;
+  border-radius: 0;
   background:
-    linear-gradient(168deg, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0.06) 42%, rgba(8, 14, 28, 0.5) 100%),
-    rgba(6, 12, 24, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.26);
-  backdrop-filter: blur(32px) saturate(2) brightness(1.06);
-  -webkit-backdrop-filter: blur(32px) saturate(2) brightness(1.06);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.42),
-    inset 0 -12px 32px color-mix(in srgb, var(--violet) 10%, transparent),
-    0 0 48px color-mix(in srgb, var(--violet) 22%, transparent),
-    0 10px 32px rgba(0, 0, 0, 0.28);
+    linear-gradient(180deg, rgba(8, 14, 28, 0.72) 0%, rgba(6, 12, 24, 0.42) 100%),
+    radial-gradient(ellipse 120% 80% at 50% -30%, color-mix(in srgb, var(--violet) 28%, transparent), transparent 58%);
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(28px) saturate(1.9) brightness(1.04);
+  -webkit-backdrop-filter: blur(28px) saturate(1.9) brightness(1.04);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .noco-ai-log-scroll {
@@ -318,19 +391,16 @@ body.noco-ai-sheet .mobile-app-body {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   touch-action: pan-y;
-  border-radius: 20px;
+  border-radius: 0;
   margin: 0;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 40%, rgba(2, 8, 20, 0.55) 100%),
-    rgba(2, 8, 18, 0.35);
-  backdrop-filter: blur(28px) saturate(1.85) brightness(1.04);
-  -webkit-backdrop-filter: blur(28px) saturate(1.85) brightness(1.04);
-  box-shadow:
-    inset 0 0 72px color-mix(in srgb, var(--blue) 14%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.15),
-    0 0 56px color-mix(in srgb, var(--mint) 12%, transparent);
+    linear-gradient(180deg, rgba(2, 8, 20, 0.35) 0%, rgba(2, 8, 18, 0.62) 100%),
+    radial-gradient(ellipse 90% 60% at 50% 0%, color-mix(in srgb, var(--blue) 16%, transparent), transparent 55%);
+  backdrop-filter: blur(20px) saturate(1.7);
+  -webkit-backdrop-filter: blur(20px) saturate(1.7);
 }
 
 .noco-ai-log-scroll::-webkit-scrollbar {
@@ -388,20 +458,16 @@ body.noco-ai-sheet .mobile-app-body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 10px 8px 6px;
+  padding: 10px 12px max(10px, env(safe-area-inset-bottom, 0px));
   touch-action: manipulation;
-  border-radius: 20px;
+  border-radius: 0;
   background:
-    linear-gradient(168deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.04) 50%, rgba(4, 10, 22, 0.65) 100%),
-    rgba(6, 12, 24, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  backdrop-filter: blur(32px) saturate(2) brightness(1.05);
-  -webkit-backdrop-filter: blur(32px) saturate(2) brightness(1.05);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    inset 0 0 40px color-mix(in srgb, var(--mint) 8%, transparent),
-    0 0 48px color-mix(in srgb, var(--mint) 18%, transparent),
-    0 -6px 28px rgba(0, 0, 0, 0.28);
+    linear-gradient(0deg, rgba(4, 10, 22, 0.88) 0%, rgba(6, 12, 24, 0.55) 100%),
+    rgba(6, 12, 24, 0.45);
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(28px) saturate(1.9);
+  -webkit-backdrop-filter: blur(28px) saturate(1.9);
 }
 
 .noco-ai-tips {
@@ -556,7 +622,7 @@ body.noco-ai-sheet .mobile-app-body {
 }
 
 .noco-ai-msg {
-  max-width: 94%;
+  max-width: min(100%, 640px);
   padding: 11px 13px;
   border-radius: 18px;
   font-size: 13px;
@@ -709,18 +775,65 @@ body.noco-ai-sheet .mobile-app-body {
 /* —— Home Widget —— */
 .noco-ai-widget.widget-card,
 .bento-nocoai {
+  width: 100%;
+  grid-column: 1 / -1;
   border-radius: 26px;
-  min-height: 280px;
+  min-height: 0;
+  overflow: visible;
   background:
-    linear-gradient(165deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.03)),
-    radial-gradient(ellipse 80% 50% at 100% 0%, color-mix(in srgb, var(--violet) 20%, transparent), transparent 50%);
+    linear-gradient(165deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.03)),
+    radial-gradient(ellipse 100% 70% at 0% 0%, color-mix(in srgb, var(--violet) 24%, transparent), transparent 52%),
+    radial-gradient(ellipse 80% 60% at 100% 100%, color-mix(in srgb, var(--mint) 18%, transparent), transparent 50%);
 }
 
 .noco-ai-widget-inner {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  min-height: 240px;
+  gap: 12px;
+  min-height: 0;
+  width: 100%;
+}
+
+.noco-ai-widget-hero {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.noco-ai-widget-orb {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 18px;
+  color: #f8fcff;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.5), transparent 40%),
+    linear-gradient(145deg, #a88bff, #4da8ff 48%, #2ee8c8);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--mint) 35%, transparent);
+}
+
+.noco-ai-widget-brand {
+  min-width: 0;
+}
+
+.noco-ai-widget-brand h2 {
+  margin: 0;
+  font-size: clamp(18px, 5vw, 22px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+body.device-handset .bento-nocoai {
+  min-height: 300px;
+}
+
+body.device-handset .noco-ai-widget-inner {
+  min-height: 260px;
 }
 
 .noco-ai-widget-teaser {
@@ -743,17 +856,19 @@ body.noco-ai-sheet .mobile-app-body {
 }
 
 .noco-ai-widget-log {
-  flex: 1;
-  min-height: 100px;
-  max-height: 140px;
+  flex: 1 1 auto;
+  min-height: 120px;
+  max-height: min(42vh, 220px);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 10px;
-  border-radius: 16px;
-  background: rgba(2, 8, 18, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 12px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(2, 8, 18, 0.5), rgba(2, 8, 18, 0.72)),
+    radial-gradient(ellipse 80% 50% at 50% 0%, color-mix(in srgb, var(--blue) 14%, transparent), transparent 55%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .noco-ai-widget-log .noco-ai-msg {
@@ -1072,6 +1187,7 @@ body.noco-ai-sheet .mobile-app-body {
 }
 
 body.noco-ai-sheet .app-sheet .sheet-close {
+  top: 18px;
   background:
     linear-gradient(165deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.05)),
     rgba(8, 14, 28, 0.65);
@@ -1081,6 +1197,10 @@ body.noco-ai-sheet .app-sheet .sheet-close {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.35),
     0 0 24px color-mix(in srgb, var(--mint) 20%, transparent);
+}
+
+body.device-handset.noco-ai-sheet .app-sheet .sheet-close {
+  top: auto;
 }
 
 .noco-ai-ultra-footer {
@@ -1098,7 +1218,12 @@ body.noco-ai-sheet .app-sheet .sheet-close {
   .noco-ai-dot,
   .noco-ai-msg,
   .noco-ai-wrap::before,
-  .noco-ai-glass-orb {
+  .noco-ai-glass-orb,
+  .noco-ai-model-ring {
     animation: none !important;
   }
+}
+
+body.reduce-noco-motion .noco-ai-model-ring {
+  animation: none !important;
 }

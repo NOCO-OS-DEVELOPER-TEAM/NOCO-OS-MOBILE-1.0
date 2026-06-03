@@ -1,11 +1,11 @@
-/* App-Bibliothek — Schnellzugriff + 4 Kacheln + Ausklapp-Animation */
+/* App-Bibliothek — Tabs + statisches Grid (ohne Ausklapp-Lag) */
 
 .desktop-head .desktop-hint {
   margin: 0;
 }
 
 .library-quick {
-  margin: 10px 0 14px;
+  margin: 8px 0 12px;
 }
 
 .library-quick-label {
@@ -39,7 +39,7 @@
 }
 
 .library-quick-app:active {
-  transform: scale(0.96);
+  transform: scale(0.97);
 }
 
 .library-quick-app span {
@@ -47,136 +47,59 @@
   text-align: center;
 }
 
-.library-grid {
+.library-shell {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 8px;
+  gap: 10px;
+  margin-top: 4px;
 }
 
-.library-card {
-  position: relative;
-  border-radius: 26px;
-  background: var(--glass-surface-deep, linear-gradient(155deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04)));
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.28);
-  backdrop-filter: var(--glass-blur, blur(40px) saturate(1.7));
-  -webkit-backdrop-filter: var(--glass-blur, blur(40px) saturate(1.7));
-  overflow: hidden;
-  transition:
-    transform 0.35s cubic-bezier(0.22, 0.94, 0.22, 1),
-    box-shadow 0.35s ease,
-    border-color 0.35s ease;
-}
-
-.library-card.is-expanded {
-  grid-column: 1 / -1;
-  border-color: color-mix(in srgb, var(--mint) 35%, transparent);
-  box-shadow:
-    var(--glass-shadow),
-    0 0 40px color-mix(in srgb, var(--mint) 18%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
-}
-
-.library-head {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.library-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  padding: 16px 12px 14px;
-  text-align: center;
-  background: transparent;
-  border: 0;
+}
+
+.library-tab {
+  min-height: 44px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--text);
-  touch-action: manipulation;
-  cursor: pointer;
-  transition: transform 0.22s ease;
-}
-
-.library-head:active {
-  transform: scale(0.96);
-}
-
-.library-head .icon-orb {
-  margin: 0 auto;
-}
-
-.library-head strong {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 900;
-  letter-spacing: 0.02em;
+  touch-action: manipulation;
 }
 
-.library-head small {
-  font-size: 10px;
-  color: var(--muted);
-  font-weight: 700;
-  line-height: 1.3;
+.library-tab.active {
+  border-color: color-mix(in srgb, var(--mint) 42%, transparent);
+  background:
+    radial-gradient(circle at 20% 0%, color-mix(in srgb, var(--mint) 22%, transparent), transparent 48%),
+    rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--mint) 14%, transparent);
 }
 
-.library-chevron {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-size: 11px;
-  color: var(--muted);
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  transition: transform 0.4s cubic-bezier(0.22, 0.94, 0.22, 1), color 0.3s ease;
+.library-tab:active {
+  transform: scale(0.97);
 }
 
-.library-card.is-expanded .library-chevron {
-  transform: rotate(180deg);
-  color: var(--mint);
-}
-
-.library-card[data-library-root="beam"] .library-chevron {
-  display: none;
-}
-
-.library-expand {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.45s cubic-bezier(0.22, 0.94, 0.22, 1);
-}
-
-.library-card.is-expanded .library-expand {
-  grid-template-rows: 1fr;
-}
-
-.library-expand-inner {
-  overflow: hidden;
-  min-height: 0;
+.library-panel {
+  min-height: 120px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 10px 8px 12px;
 }
 
 .library-apps {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px 8px;
-  padding: 0 12px 14px;
-  opacity: 0;
-  transform: translateY(-8px);
 }
 
-.library-card.is-expanded .library-apps {
-  animation: libraryAppsIn 0.42s cubic-bezier(0.22, 0.94, 0.22, 1) 0.08s both;
-}
-
-@keyframes libraryAppsIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+.library-apps--static .library-app {
+  opacity: 1;
+  transform: none;
+  animation: none;
 }
 
 .library-app {
@@ -190,83 +113,40 @@
   color: var(--text);
   touch-action: manipulation;
   cursor: pointer;
-  opacity: 0;
-  animation: libraryAppPop 0.38s cubic-bezier(0.22, 0.94, 0.22, 1) both;
 }
 
-.library-app:nth-child(1) { animation-delay: 0.06s; }
-.library-app:nth-child(2) { animation-delay: 0.1s; }
-.library-app:nth-child(3) { animation-delay: 0.14s; }
-.library-app:nth-child(4) { animation-delay: 0.18s; }
-.library-app:nth-child(5) { animation-delay: 0.22s; }
-.library-app:nth-child(6) { animation-delay: 0.26s; }
-.library-app:nth-child(7) { animation-delay: 0.3s; }
-.library-app:nth-child(8) { animation-delay: 0.34s; }
-.library-app:nth-child(n+9) { animation-delay: 0.38s; }
-
-@keyframes libraryAppPop {
-  from {
-    opacity: 0;
-    transform: scale(0.82) translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-.library-app .icon-orb {
-  margin: 0;
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
+.library-app:active {
+  transform: scale(0.96);
 }
 
 .library-app span {
   font-size: 10px;
-  font-weight: 900;
-  line-height: 1.15;
+  font-weight: 800;
+  line-height: 1.2;
   text-align: center;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.library-app:active {
-  transform: scale(0.92);
 }
 
 .library-empty {
-  grid-column: 1 / -1;
-  padding: 8px 12px 14px;
+  margin: 0;
+  padding: 24px 12px;
   text-align: center;
-  font-size: 12px;
   color: var(--muted);
-  font-weight: 700;
+  font-size: 13px;
 }
 
-.desktop-quickbar,
-.desktop-layout {
-  display: none !important;
+body.device-handset .library-panel {
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+}
+
+body.device-handset .library-tab,
+body.device-handset .library-quick-app {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 @media (max-width: 360px) {
   .library-apps {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-body.reduce-noco-motion .library-expand,
-body.reduce-noco-motion .library-apps,
-body.reduce-noco-motion .library-app {
-  animation: none !important;
-  transition-duration: 0.01ms !important;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .library-apps,
-  .library-app {
-    animation: none !important;
   }
 }

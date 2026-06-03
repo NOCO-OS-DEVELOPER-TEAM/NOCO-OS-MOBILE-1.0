@@ -421,6 +421,14 @@ button {
   height: 100%;
   min-height: 0;
   transition: transform 0.42s cubic-bezier(0.22, 0.94, 0.22, 1);
+}
+
+body.device-handset .page-stage {
+  transition: none;
+  will-change: auto;
+}
+
+body.device-handset .page-stage.page-swiping {
   will-change: transform;
 }
 
@@ -457,6 +465,10 @@ button {
   scroll-behavior: auto;
   transform: none;
   backface-visibility: visible;
+}
+
+body.device-handset .screen {
+  padding: 8px 16px max(12px, env(safe-area-inset-bottom, 0px));
 }
 
 .screen.is-active {
@@ -1934,7 +1946,7 @@ body.noco-native .spotlight-panel:not(.hidden) .spotlight-card {
 .app-sheet .sheet-card > .sheet-close,
 #closeSheet {
   position: absolute;
-  top: calc(env(safe-area-inset-top) + 10px);
+  top: calc(env(safe-area-inset-top) + 16px);
   right: 16px;
 }
 
@@ -1943,7 +1955,7 @@ body.noco-native .spotlight-panel:not(.hidden) .spotlight-card {
 #desktopPanel .sheet-close,
 #codePanel .sheet-close,
 #shortcutPanel .sheet-close {
-  top: 14px;
+  top: 20px;
   right: 14px;
 }
 
@@ -1973,6 +1985,44 @@ body.noco-native .spotlight-panel:not(.hidden) .spotlight-card {
 .toon-stack {
   display: grid;
   gap: 10px;
+}
+
+#shortcutPanel {
+  padding: calc(env(safe-area-inset-top) + 58px) 12px max(14px, env(safe-area-inset-bottom));
+  background: rgba(2, 6, 14, 0.28);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+#shortcutPanel .sheet-card {
+  height: auto;
+  min-height: 0;
+  max-height: 100%;
+  margin-top: 0;
+  border-radius: 26px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 14px 12px max(14px, env(safe-area-inset-bottom, 0px));
+}
+
+#shortcutPanel .shortcut-editor {
+  max-height: none;
+  overflow: visible;
+}
+
+.quickaccess-option {
+  min-height: 64px;
+}
+
+.quickaccess-option strong:last-child {
+  color: color-mix(in srgb, var(--mint) 78%, white);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.quickaccess-option:disabled {
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 .settings-tabs {
@@ -3019,8 +3069,10 @@ body.device-handset .noco-stage {
   display: flex;
   flex-direction: column;
   width: 100%;
-  min-height: 100%;
-  height: 100%;
+  min-height: 100dvh;
+  min-height: 100svh;
+  height: 100dvh;
+  height: 100svh;
   gap: 0;
 }
 
@@ -3955,14 +4007,22 @@ body.desktop-preview .phone {
   right: 0;
   z-index: 25;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
   gap: 8px;
   pointer-events: none;
 }
 
-.island-zone > * {
+.island-zone > .dynamic-island,
+.island-zone > .island-ai-btn,
+.island-zone > .island-menu {
   pointer-events: auto;
+}
+
+.island-zone > .island-menu.hidden {
+  pointer-events: none;
 }
 
 .dynamic-island {
@@ -4017,7 +4077,11 @@ body.desktop-preview .phone {
 }
 
 .island-menu {
-  width: min(100% - 24px, 320px);
+  flex: 0 0 100%;
+  width: min(calc(100% - 24px), 320px);
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
   padding: 10px;
   border-radius: 24px;
   border: 1px solid rgba(255, 255, 255, 0.16);
@@ -4153,6 +4217,17 @@ body.device-handset .screen {
   grid-template-columns: 1fr 1fr;
   gap: 12px;
   align-items: stretch;
+}
+
+.home-row-duo > .widget-card[hidden],
+.home-row-duo > .widget-card.is-widget-hidden,
+.home-bento > .widget-card[hidden],
+.home-bento > .widget-card.is-widget-hidden {
+  display: none !important;
+}
+
+.home-row-duo:not(:has(> .widget-card:not([hidden]):not(.is-widget-hidden))) {
+  display: none;
 }
 
 .home-row-duo > .widget-card {

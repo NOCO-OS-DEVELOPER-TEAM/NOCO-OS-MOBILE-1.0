@@ -2,13 +2,17 @@
 
 .phone > .home-edit-chrome {
   position: absolute;
-  right: 14px;
+  left: 0;
+  right: 0;
   bottom: max(14px, env(safe-area-inset-bottom));
   z-index: 24;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: flex-end;
+  justify-content: center;
   gap: 10px;
+  padding: 0 14px;
+  box-sizing: border-box;
   pointer-events: none;
 }
 
@@ -67,6 +71,18 @@ body.edit-mode.home-page .edit-fab {
 
 body.edit-mode.home-page .widget-add-fab {
   animation-delay: 0.04s;
+  margin: 0 auto;
+  position: relative;
+  left: auto;
+  right: auto;
+  transform: none;
+}
+
+body.edit-mode.home-page .edit-fab {
+  position: absolute;
+  right: 14px;
+  bottom: 0;
+  margin: 0;
 }
 
 body.edit-mode.home-page .edit-fab {
@@ -132,18 +148,59 @@ body.island-open .home-edit-chrome {
 #widgetPanel .widget-library {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-height: min(58vh, 420px);
+  gap: 10px;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 2px;
+  padding-bottom: max(14px, env(safe-area-inset-bottom, 0px));
 }
 
 .widget-choice {
   text-align: left;
+  align-items: flex-start;
+  gap: 14px;
+  min-height: 78px;
+  padding: 14px 16px;
 }
 
 .widget-choice strong:last-child {
-  color: color-mix(in srgb, var(--mint) 75%, white);
-  font-size: 11px;
+  color: color-mix(in srgb, var(--mint) 80%, white);
+  font-size: 13px;
+  line-height: 1;
+  align-self: center;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.widget-choice span {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.widget-choice span strong {
+  font-size: 16px;
+  line-height: 1.15;
+}
+
+.widget-choice span small {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--muted);
+  white-space: normal;
+}
+
+#widgetPanel .sheet-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  margin-top: 0;
+  padding: max(16px, calc(env(safe-area-inset-top) + 8px)) 12px max(10px, env(safe-area-inset-bottom, 0px));
 }
 
 .widget-section-label {

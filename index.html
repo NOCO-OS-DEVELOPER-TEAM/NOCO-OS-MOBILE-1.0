@@ -39,10 +39,10 @@
                   <span class="island-pip active" data-island-pip="0"></span>
                   <span class="island-pip" data-island-pip="1"></span>
                 </span>
-                <button type="button" class="island-ai-btn" data-open-nocoai aria-label="NOCO AI öffnen" title="NOCO AI">✧</button>
                 <span id="islandStatus" class="island-status" hidden aria-hidden="true"></span>
               </span>
             </button>
+            <button type="button" class="island-ai-btn" data-open-nocoai aria-label="NOCO AI 1.1 oeffnen" title="NOCO AI 1.1">✧</button>
             <div id="islandMenu" class="island-menu hidden" role="menu" aria-label="Schnellaktionen">
               <div class="island-pages" role="tablist">
                 <button type="button" class="island-page-tab active" data-page="0" role="tab">Home</button>
@@ -52,7 +52,6 @@
                 <button type="button" class="island-action" data-action="open-beam" role="menuitem">Beam</button>
                 <button type="button" class="island-action" data-open-hub role="menuitem">Hub</button>
                 <button type="button" class="island-action" id="editBtn" role="menuitem">Edit</button>
-                <button type="button" class="island-action" id="widgetBtn" role="menuitem">Widgets</button>
               </div>
             </div>
           </div>
@@ -160,61 +159,17 @@
             <section class="screen desktop-screen noco-glass-scroll" aria-label="App Desktop">
               <div class="desktop-head">
                 <p class="eyebrow">App-Bibliothek</p>
-                <p class="desktop-hint">Schnellzugriff unten · Ordner zum Ausklappen</p>
               </div>
 
               <div class="library-quick" id="libraryQuick" aria-label="Schnellzugriff Apps"></div>
 
-              <div class="library-grid" id="libraryGrid" aria-label="NOCO App Bibliothek">
-                <article class="library-card" data-library-root="beam">
-                  <button type="button" class="library-head" data-action="open-beam">
-                    <span class="icon-orb core" data-app-icon="beam"><span class="icon-orb-shine"></span><span class="icon-orb-glyph">⌕</span></span>
-                    <strong>Beam</strong>
-                    <small>Suche &amp; Tools</small>
-                  </button>
-                </article>
-
-                <article class="library-card" data-library-root="forge">
-                  <span class="library-chevron" aria-hidden="true">▾</span>
-                  <button type="button" class="library-head" data-library-folder="forge">
-                    <span class="icon-orb forge" data-app-icon="forge"><span class="icon-orb-shine"></span><span class="icon-orb-glyph">✦</span></span>
-                    <strong>Forge</strong>
-                    <small>Store &amp; installierte Apps</small>
-                  </button>
-                  <div class="library-expand">
-                    <div class="library-expand-inner">
-                      <div class="library-apps" data-library-apps="forge" aria-label="Forge Apps"></div>
-                    </div>
-                  </div>
-                </article>
-
-                <article class="library-card" data-library-root="games">
-                  <span class="library-chevron" aria-hidden="true">▾</span>
-                  <button type="button" class="library-head" data-library-folder="games">
-                    <span class="icon-orb forge" data-app-icon="arcade"><span class="icon-orb-shine"></span><span class="icon-orb-glyph">▣</span></span>
-                    <strong>Spiele</strong>
-                    <small>Arcade &amp; Mini-Games</small>
-                  </button>
-                  <div class="library-expand">
-                    <div class="library-expand-inner">
-                      <div class="library-apps" data-library-apps="games" aria-label="Spiele Apps"></div>
-                    </div>
-                  </div>
-                </article>
-
-                <article class="library-card" data-library-root="core">
-                  <span class="library-chevron" aria-hidden="true">▾</span>
-                  <button type="button" class="library-head" data-library-folder="core">
-                    <span class="icon-orb core" data-app-icon="settings"><span class="icon-orb-shine"></span><span class="icon-orb-glyph">⚙</span></span>
-                    <strong>Core</strong>
-                    <small>System, AI &amp; Workspace</small>
-                  </button>
-                  <div class="library-expand">
-                    <div class="library-expand-inner">
-                      <div class="library-apps" data-library-apps="core" aria-label="Core Apps"></div>
-                    </div>
-                  </div>
-                </article>
+              <div class="library-shell" id="libraryShell" aria-label="NOCO App Bibliothek">
+                <div class="library-tabs" role="tablist" aria-label="Bibliothek Bereiche">
+                  <button type="button" class="library-tab active" data-library-tab="core" role="tab" aria-selected="true">Core</button>
+                  <button type="button" class="library-tab" data-library-tab="forge" role="tab" aria-selected="false">Forge</button>
+                  <button type="button" class="library-tab" data-library-tab="games" role="tab" aria-selected="false">Spiele</button>
+                </div>
+                <div class="library-panel" id="libraryAppsPanel" role="tabpanel" aria-live="polite"></div>
               </div>
 
               <div id="appGrid" hidden aria-hidden="true"></div>
@@ -224,7 +179,7 @@
         </section>
 
         <div id="coachBanner" class="coach-banner hidden" role="status">
-          <p>Wische nach links für Apps · Island: Home, Apps, Beam, Hub, Edit, Widgets · ✧ für NOCO AI.</p>
+          <p>Wische nach links für Apps · Island: Home &amp; Apps · NOCO AI auf dem Home-Screen.</p>
           <button type="button" id="coachDismiss">OK</button>
         </div>
 
@@ -287,8 +242,8 @@
         <section id="shortcutPanel" class="app-sheet hidden" aria-live="polite">
           <div class="sheet-card noco-glass-scroll">
             <button type="button" class="sheet-close" data-close-panel aria-label="Schliessen">×</button>
-            <h2>Shortcuts</h2>
-            <p class="muted">Vier Aktionen fuer den Home-Screen.</p>
+            <h2 id="shortcutPanelTitle">Schnellzugriff</h2>
+            <p class="muted" id="shortcutPanelHint">Apps auf Home hinzufuegen oder entfernen.</p>
             <div class="shortcut-editor" id="shortcutEditor"></div>
           </div>
         </section>
@@ -336,6 +291,7 @@
               <button type="button" class="sheet-close" data-close-hub aria-label="Schliessen">×</button>
             </div>
             <div class="hub-grid">
+              <button type="button" data-hub-app="nocoai">NOCO AI</button>
               <button type="button" data-hub-app="settings">Core</button>
               <button type="button" data-hub-app="security">Security</button>
               <button type="button" data-hub-app="sync">Sync</button>

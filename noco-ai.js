@@ -1163,20 +1163,26 @@
         <div class="noco-ai-glass-orb noco-ai-glass-orb--mint" aria-hidden="true"></div>
         <div class="noco-ai-glass-orb noco-ai-glass-orb--pink" aria-hidden="true"></div>
         <header class="noco-ai-header">
-          <div class="noco-ai-brand">
-            <span class="noco-ai-brand-glyph" aria-hidden="true">✧</span>
-            <div>
-              <strong>NOCO AI</strong>
-              <span>Offline · versteht Fragen</span>
+          <div class="noco-ai-hero-row">
+            <div class="noco-ai-model-orb" aria-hidden="true">
+              <span class="noco-ai-model-ring"></span>
+              <span class="noco-ai-model-core">✧</span>
+            </div>
+            <div class="noco-ai-brand">
+              <div class="noco-ai-brand-titles">
+                <strong>NOCO AI</strong>
+                <span class="noco-ai-version-pill">1.1</span>
+              </div>
+              <span class="noco-ai-brand-sub">Offline-Sprachmodell · Apps & Aufgaben</span>
+            </div>
+            <div class="noco-ai-status noco-ai-status--compact" aria-hidden="true">
+              <span class="noco-ai-dot"></span>
+              <span>Bereit</span>
             </div>
           </div>
           <div class="noco-ai-quota-row" data-noco-ai-quota-wrap>
             <span class="noco-ai-quota-text" data-noco-ai-quota-text>20 Nachrichten heute</span>
             <button type="button" class="noco-ai-quota-plus" data-noco-ai-plus-toggle>Exclusive</button>
-          </div>
-          <div class="noco-ai-status" aria-hidden="true">
-            <span class="noco-ai-dot"></span>
-            <span>Bereit</span>
           </div>
           <div class="noco-ai-toolbar">
             <button type="button" class="noco-ai-toolbar-btn" data-noco-ai-chats-toggle aria-expanded="false">Chats</button>
@@ -1245,14 +1251,15 @@
   function buildWidgetMarkup() {
     return `
       <div class="noco-ai-widget-inner" data-noco-ai-widget>
-        <div class="section-title section-title-tight">
-          <div>
-            <p class="eyebrow">Assistent</p>
-            <h2>NOCO AI</h2>
+        <div class="noco-ai-widget-hero">
+          <div class="noco-ai-widget-orb" aria-hidden="true"><span>✧</span></div>
+          <div class="noco-ai-widget-brand">
+            <p class="eyebrow">Sprachmodell</p>
+            <h2>NOCO AI <span class="noco-ai-version-pill noco-ai-version-pill--sm">1.1</span></h2>
           </div>
           <button type="button" class="mini-action" data-app="nocoai">Vollbild</button>
         </div>
-        <p class="noco-ai-widget-teaser">Offline-KI — kurz fragen oder Apps oeffnen.</p>
+        <p class="noco-ai-widget-teaser">Frag mich alles — Apps oeffnen, Notizen, Tasks, System.</p>
         <div class="noco-ai-widget-chips" data-noco-ai-chips></div>
         <div class="noco-ai-widget-log" data-noco-ai-log role="log"></div>
         <div class="noco-ai-widget-row">

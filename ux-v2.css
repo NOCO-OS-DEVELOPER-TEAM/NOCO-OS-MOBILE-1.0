@@ -10,10 +10,10 @@
   --ux-font: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
 
   /* Chrome-Stack: Island + Titel — reservierter Platz ohne Überlapp */
-  --island-h: 44px;
-  --chrome-gap: 10px;
-  --chrome-title-h: 56px;
-  --chrome-title-pad: 20px;
+  --island-h: 42px;
+  --chrome-gap: 6px;
+  --chrome-title-h: 50px;
+  --chrome-title-pad: 10px;
   --chrome-stack-h: calc(env(safe-area-inset-top) + var(--island-h) + var(--chrome-gap) + var(--chrome-title-h) + var(--chrome-title-pad));
 
   /* Indirekte Akzentfarben — nur als Glow / Wash, nie flächig */
@@ -70,8 +70,9 @@ body.glass-boost {
   }
 }
 
-/* —— Phone: Chrome im Flow, Inhalt darunter (kein Überlappen) —— */
+/* —— Phone: Chrome als Overlay, Inhalt darunter —— */
 .phone {
+  position: relative;
   display: flex;
   flex-direction: column;
 }
@@ -79,17 +80,15 @@ body.glass-boost {
 .screen-track {
   flex: 1;
   min-height: 0;
-  height: auto !important;
+  height: 100% !important;
 }
 
-/* —— Chrome-Stack: Island oben, Titel darunter —— */
 .phone-chrome {
-  position: relative !important;
-  top: auto !important;
-  left: auto !important;
-  right: auto !important;
-  flex-shrink: 0;
-  z-index: 25;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 86;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -97,7 +96,17 @@ body.glass-boost {
   padding-top: env(safe-area-inset-top);
 }
 
-.phone-chrome .island-zone,
+/* Nur Insel + AI fangen Taps — Rest durchklickbar (z. B. App-Schliessen) */
+.phone-chrome .island-zone {
+  pointer-events: none;
+}
+
+.phone-chrome .island-zone .dynamic-island,
+.phone-chrome .island-zone .island-ai-btn,
+.phone-chrome .island-zone .island-menu:not(.hidden) {
+  pointer-events: auto;
+}
+
 .phone-chrome .chrome-title-bar {
   pointer-events: auto;
 }
@@ -120,17 +129,30 @@ body.glass-boost {
 
 .phone-chrome .island-zone {
   position: relative !important;
-  top: auto !important;
-  left: auto !important;
-  right: auto !important;
   z-index: 2;
   flex-shrink: 0;
   min-height: var(--island-h);
   padding: 4px 0 0;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
+  align-content: flex-start;
   gap: 8px;
+}
+
+.phone-chrome .island-zone .dynamic-island,
+.phone-chrome .island-zone .island-ai-btn {
+  flex: 0 0 auto;
+}
+
+.phone-chrome .island-zone .island-menu:not(.hidden) {
+  flex: 0 0 100%;
+  width: min(calc(100% - 28px), 320px);
+  max-width: 320px;
+  margin: 2px auto 0;
+  order: 10;
 }
 
 .chrome-title-bar.mobile-topbar,
@@ -205,10 +227,6 @@ body.glass-boost {
   padding-right: 20px !important;
 }
 
-.page-stage > .screen.home-screen {
-  padding-top: 10px !important;
-}
-
 .home-screen .home-bento {
   margin-top: 0;
   gap: 14px;
@@ -218,8 +236,55 @@ body.glass-boost {
   scroll-margin-top: 12px;
 }
 
-body.sheet-open .chrome-title-bar .title-block strong {
-  opacity: 0.55;
+/* In Apps: nur Island oben — kein zweites «Home»-Chrome */
+body.sheet-open,
+body.island-app-mode {
+  --chrome-title-h: 0px;
+  --chrome-title-pad: 0px;
+  --chrome-stack-h: calc(env(safe-area-inset-top) + var(--island-h) + var(--chrome-gap) + 12px);
+}
+
+body.sheet-open .phone-chrome .chrome-glass-wash,
+body.island-app-mode .phone-chrome .chrome-glass-wash {
+  height: calc(env(safe-area-inset-top) + var(--island-h) + var(--chrome-gap) + 18px);
+}
+
+body.sheet-open .phone-chrome .chrome-title-bar.mobile-topbar,
+body.island-app-mode .phone-chrome .chrome-title-bar.mobile-topbar {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  overflow: hidden !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+body.island-app-mode .island-pages {
+  display: none;
+}
+
+body.island-app-mode .island-pip[data-island-pip="1"].is-app-nav-hint {
+  width: 10px;
+  height: 10px;
+  background: linear-gradient(90deg, var(--mint), var(--blue));
+  box-shadow: 0 0 16px var(--indirect-mint), 0 0 22px var(--indirect-blue);
+  animation: islandAppNavPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes islandAppNavPulse {
+  0%, 100% { opacity: 0.75; transform: scale(0.92); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+body.island-open .phone-chrome .island-zone {
+  z-index: 92;
+}
+
+body.island-open .island-menu:not(.hidden) {
+  z-index: 93;
 }
 
 /* Alte absolute Chrome-Regeln aus styles.css aushebeln */
@@ -230,17 +295,58 @@ body.device-handset .phone-chrome .island-zone {
   right: auto !important;
 }
 
+body.device-handset .phone-chrome {
+  padding-top: max(2px, env(safe-area-inset-top));
+}
+
+body.device-handset .phone-chrome .island-zone {
+  padding-top: 2px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
 body.device-handset .phone-chrome .mobile-topbar {
   position: relative !important;
   top: auto !important;
-  padding-top: 6px !important;
+  margin-top: 2px;
+  margin-bottom: 4px;
+  padding: 2px 16px 8px !important;
   background: var(--glass-surface-deep) !important;
-  backdrop-filter: var(--glass-blur) !important;
-  -webkit-backdrop-filter: var(--glass-blur) !important;
+  backdrop-filter: blur(20px) saturate(1.35) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.35) !important;
+}
+
+body.device-handset .chrome-title-bar .title-block .eyebrow {
+  margin: 0 0 1px;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+}
+
+body.device-handset .chrome-title-bar .title-block strong {
+  font-size: clamp(20px, 5.5vw, 26px);
+  line-height: 1.02;
 }
 
 body.device-handset .page-stage > .screen {
-  padding-top: 12px !important;
+  padding-top: calc(var(--chrome-stack-h) + 4px) !important;
+}
+
+body.device-handset .screen.home-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+body.device-handset .screen.home-screen .home-bento {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 body.device-handset .screen-track {
@@ -806,6 +912,10 @@ body.device-handset .app-sheet #sheetContent {
   padding: calc(env(safe-area-inset-top) + 6px) 16px 0;
 }
 
+body.device-handset.noco-ai-sheet .app-sheet #sheetContent {
+  padding: 0 !important;
+}
+
 body.device-handset .sheet-app-head {
   flex-shrink: 0;
   margin: 0 0 8px;
@@ -813,8 +923,22 @@ body.device-handset .sheet-app-head {
 }
 
 body.device-handset .app-sheet .sheet-close {
-  top: max(6px, env(safe-area-inset-top));
-  right: 10px;
+  top: auto;
+  bottom: max(16px, env(safe-area-inset-bottom, 12px));
+  right: 14px;
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  font-size: 22px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+
+body.device-handset .sheet-app-head {
+  padding-right: 12px;
+}
+
+body.device-handset .mobile-app-body {
+  padding-bottom: max(72px, calc(env(safe-area-inset-bottom, 12px) + 56px));
 }
 
 body.device-handset .mobile-app-body {
@@ -826,7 +950,8 @@ body.device-handset .mobile-app-body {
 
 body.noco-ai-sheet .app-sheet .sheet-card {
   overflow: hidden;
-  max-height: min(94vh, 940px);
+  max-height: 100%;
+  height: 100%;
 }
 
 body.noco-ai-sheet .app-sheet:not(.hidden) .sheet-card {
@@ -1024,11 +1149,41 @@ body.island-open .coach-banner {
 body.device-handset .page-stage,
 body.device-handset .page-stage:not(.page-swiping),
 body.device-handset.noco-transitioning .page-stage {
-  transition: transform 0.32s cubic-bezier(0.25, 0.82, 0.25, 1);
+  transition: none;
+}
+
+body.device-handset .page-stage.page-swiping {
+  transition: none;
 }
 
 body.device-handset .page-stage > .screen {
-  contain: layout style;
+  contain: none;
+}
+
+body.device-handset .phone .screen.is-active {
+  animation: none !important;
+}
+
+body.device-handset .home-bento > .widget-card,
+body.device-handset .home-row-duo > .widget-card {
+  animation: none !important;
+}
+
+body.device-handset .screen-track,
+body.device-handset .page-stage {
+  height: 100%;
+  min-height: 0;
+}
+
+body.device-handset .noco-stage,
+body.device-handset .phone-frame,
+body.device-handset .phone {
+  min-height: 100dvh;
+  min-height: 100svh;
+}
+
+body.device-handset .desktop-screen {
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)) !important;
 }
 
 /* —— Focus —— */

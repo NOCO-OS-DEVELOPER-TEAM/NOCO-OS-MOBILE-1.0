@@ -13,6 +13,8 @@ const editBtn = document.getElementById("editBtn");
 const shortcutGrid = document.getElementById("shortcutGrid");
 const shortcutPanel = document.getElementById("shortcutPanel");
 const shortcutEditor = document.getElementById("shortcutEditor");
+const shortcutPanelTitle = document.getElementById("shortcutPanelTitle");
+const shortcutPanelHint = document.getElementById("shortcutPanelHint");
 const appSheet = document.getElementById("appSheet");
 const sheetContent = document.getElementById("sheetContent");
 const closeSheet = document.getElementById("closeSheet");
@@ -29,7 +31,6 @@ const unlockBtn = document.getElementById("unlockBtn");
 const lockEditBtn = document.getElementById("lockEditBtn");
 const lockWaitBtn = document.getElementById("lockWaitBtn");
 const hubPanel = document.getElementById("hubPanel");
-const widgetBtn = document.getElementById("widgetBtn");
 const widgetPanel = document.getElementById("widgetPanel");
 const widgetLibrary = document.getElementById("widgetLibrary");
 const homeEditChrome = document.getElementById("homeEditChrome");
@@ -57,6 +58,10 @@ let editMode = false;
 let pageScrollLock = false;
 let pageDrag = null;
 const appCache = new Map();
+if (localStorage.getItem("noco_mobile_sheet_cache_fix") !== "2") {
+  appCache.clear();
+  localStorage.setItem("noco_mobile_sheet_cache_fix", "2");
+}
 let securityScanRunning = false;
 let runnerGame = {
   running: false,
@@ -78,6 +83,7 @@ let passkeyInFlight = false;
 let settingsActiveSection = "deck";
 let forgeActiveSection = "discover";
 let firstLightStep = 0;
+const MAX_SHORTCUTS = 9;
 let lockTimer = null;
 let isLocked = false;
 let lockEditMode = false;
@@ -240,6 +246,7 @@ if (settings.passkeyEnabled || settings.requireCodeOnLaunch) {
 
 const shortcutChoices = [
   { id: "hub", title: "NOCO Hub", icon: "N", className: "" },
+  { id: "nocoai", title: "NOCO AI 1.1", icon: "✧", className: "core" },
   { id: "toon", title: "Toon", icon: "T", className: "toon" },
   { id: "focus", title: "Focus", icon: "F", className: "focus" },
   { id: "cloud", title: "Cloud", icon: "C", className: "cloud" },
@@ -289,7 +296,7 @@ const widgetDefinitions = {
   notes: { title: "Schnellnotiz", text: "Direkt auf Home schreiben." },
   sync: { title: "NOCO Sync", text: "Keycard Import und Export." },
   feed: { title: "Heute NOCO", text: "Kurzer System-Feed." },
-  nocoai: { title: "NOCO AI", text: "Offline-Assistent auf dem Home-Screen — Apps oeffnen und chatten." },
+  nocoai: { title: "NOCO AI 1.1", text: "Offline-Sprachmodell auf dem Home-Screen — Apps oeffnen und chatten." },
   focusMini: { title: "Focus Mini", text: "Ruhige Schnellsteuerung fuer Fokus." },
   batteryLab: { title: "Akku Labor", text: "Mobile Energie-Uebersicht." },
   forgePick: { title: "Forge Tipp", text: "App-Empfehlung direkt auf Home." },
@@ -306,7 +313,8 @@ const appFolders = {
 };
 
 const LIBRARY_CORE_STANDARD = ["settings", "security", "device", "sync", "nocoai"];
-let expandedLibraryId = null;
+let libraryActiveTab = "core";
+let libraryGridReady = false;
 let openAppInFlight = false;
 let pendingOpenAppId = null;
 
@@ -338,42 +346,47 @@ function getLibraryFolderApps(folderId) {
   return [];
 }
 
-function renderLibraryFolderContent(folderId) {
-  const appsEl = document.querySelector(`[data-library-apps="${folderId}"]`);
-  if (!appsEl) return;
-  const ids = getLibraryFolderApps(folderId);
+function renderLibraryPanel(tabId = libraryActiveTab) {
+  const panel = document.getElementById("libraryAppsPanel");
+  if (!panel) return;
+  libraryActiveTab = tabId;
+  document.querySelectorAll("[data-library-tab]").forEach((btn) => {
+    const active = btn.dataset.libraryTab === tabId;
+    btn.classList.toggle("active", active);
+    btn.setAttribute("aria-selected", active ? "true" : "false");
+  });
+  const ids = getLibraryFolderApps(tabId);
   if (!ids.length) {
-    appsEl.innerHTML = `<p class="library-empty">Noch keine Apps hier. Installiere welche in Forge.</p>`;
+    panel.innerHTML = `<p class="library-empty">Noch keine Apps hier. Installiere welche in Forge.</p>`;
     return;
   }
-  appsEl.innerHTML = ids
+  panel.innerHTML = `<div class="library-apps library-apps--static">${ids
     .map((id) => {
       const meta = getAppMeta(id);
       return `<button type="button" class="library-app" data-app="${id}">${renderIconOrb({ id, className: meta.className })}<span>${meta.title}</span></button>`;
     })
-    .join("");
+    .join("")}</div>`;
 }
 
-function toggleLibraryFolder(folderId) {
-  const card = document.querySelector(`[data-library-root="${folderId}"]`);
-  if (!card || editMode) return;
-  const wasOpen = card.classList.contains("is-expanded");
-  document.querySelectorAll(".library-card.is-expanded").forEach((c) => c.classList.remove("is-expanded"));
-  expandedLibraryId = null;
-  if (wasOpen) return;
-  renderLibraryFolderContent(folderId);
-  card.classList.add("is-expanded");
-  expandedLibraryId = folderId;
+function switchLibraryTab(tabId) {
+  if (editMode) return;
+  renderLibraryPanel(tabId);
   hapticTap();
 }
 
+function toggleLibraryFolder(folderId) {
+  void goToPage(1);
+  switchLibraryTab(folderId);
+}
+
 function refreshLibraryExpand() {
-  if (expandedLibraryId) renderLibraryFolderContent(expandedLibraryId);
+  renderLibraryPanel(libraryActiveTab);
 }
 
 function renderLibraryGrid() {
   renderLibraryQuick();
-  ["core", "forge", "games"].forEach((id) => renderLibraryFolderContent(id));
+  renderLibraryPanel(libraryActiveTab);
+  libraryGridReady = true;
 }
 
 function renderLibraryQuick() {
@@ -387,6 +400,7 @@ function renderLibraryQuick() {
   el.innerHTML = `
     <p class="library-quick-label">Schnellzugriff</p>
     <div class="library-quick-grid">
+      <button type="button" class="library-quick-app" data-action="open-beam">${renderIconOrb({ id: "beam", className: "core" })}<span>Beam</span></button>
       ${ids
         .map((id) => {
           const meta = getAppMeta(id);
@@ -662,9 +676,6 @@ function closeAllOverlays(options = {}) {
 function updateIslandUI() {
   const appOpen = !!(currentApp && appSheet && !appSheet.classList.contains("hidden"));
   document.body.classList.toggle("island-app-mode", appOpen);
-  document.querySelectorAll(".island-ai-btn").forEach((btn) => {
-    btn.classList.toggle("active", currentApp === "nocoai" && appOpen);
-  });
   if (islandStatus) {
     if (timerState.running) {
       const rem = formatTimerDisplay(getTimerRemaining());
@@ -693,8 +704,19 @@ function updateIslandUI() {
   document.querySelectorAll(".island-page-tab, [data-island-pip]").forEach((el) => {
     const page = el.dataset.page ?? el.dataset.islandPip;
     if (page == null) return;
-    el.classList.toggle("active", Number(page) === currentPage);
+    if (appOpen) {
+      el.classList.toggle("active", String(page) === "1");
+      el.classList.toggle("is-app-nav-hint", String(page) === "1");
+    } else {
+      el.classList.remove("is-app-nav-hint");
+      el.classList.toggle("active", Number(page) === currentPage);
+    }
   });
+  if (screenTitle) {
+    screenTitle.textContent = appOpen
+      ? getAppMeta(currentApp).title
+      : (currentPage === 0 ? "Home" : "Apps");
+  }
 }
 
 function refreshHomeStatus() {
@@ -754,11 +776,20 @@ function saveNote() {
 }
 
 function loadShortcuts() {
+  const defaults = ["hub", "nocoai", "focus", "cloud", "themes"];
   try {
     const saved = JSON.parse(localStorage.getItem("noco_mobile_shortcuts") || "[]");
-    if (Array.isArray(saved) && saved.length === 4) return saved;
+    if (Array.isArray(saved) && saved.length) {
+      const valid = saved.filter((id) => shortcutChoices.some((choice) => choice.id === id));
+      if (!valid.length) return defaults;
+      const merged = [...valid];
+      ["hub", "nocoai"].forEach((id) => {
+        if (!merged.includes(id)) merged.unshift(id);
+      });
+      return merged.slice(0, MAX_SHORTCUTS);
+    }
   } catch (_) {}
-  return ["hub", "focus", "cloud", "themes"];
+  return defaults;
 }
 
 function saveShortcuts() {
@@ -771,6 +802,8 @@ function shortcutById(id) {
 
 function renderShortcuts() {
   if (!shortcutGrid) return;
+  const cols = Math.min(3, Math.max(2, Math.ceil(activeShortcuts.length / 2)));
+  shortcutGrid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
   shortcutGrid.innerHTML = activeShortcuts.map((id) => {
     const shortcut = shortcutById(id);
     return `
@@ -783,15 +816,30 @@ function renderShortcuts() {
 }
 
 function renderShortcutEditor() {
-  shortcutEditor.innerHTML = shortcutChoices.map((choice) => {
-    const selected = activeShortcuts.includes(choice.id);
-    return `
-      <button class="shortcut-option" data-shortcut-choice="${choice.id}">
-        <span><strong>${choice.title}</strong><br><small>${selected ? "Aktiv" : "Tippen zum Ersetzen"}</small></span>
-        ${renderIconOrb({ id: choice.id, className: choice.className || "neutral" }, "", "sm")}
+  const selected = activeShortcuts
+    .map((id) => shortcutById(id))
+    .map((choice) => `
+      <button class="shortcut-option quickaccess-option" data-shortcut-remove="${choice.id}">
+        <span><strong>${choice.title}</strong><br><small>Im Schnellzugriff</small></span>
+        <strong>Entfernen</strong>
       </button>
-    `;
-  }).join("");
+    `)
+    .join("");
+  const available = shortcutChoices
+    .filter((choice) => !activeShortcuts.includes(choice.id))
+    .map((choice) => `
+      <button class="shortcut-option quickaccess-option" data-shortcut-add="${choice.id}" ${activeShortcuts.length >= MAX_SHORTCUTS ? "disabled" : ""}>
+        <span><strong>${choice.title}</strong><br><small>Verfuegbar</small></span>
+        <strong>+ Hinzufuegen</strong>
+      </button>
+    `)
+    .join("");
+  shortcutEditor.innerHTML = `
+    <p class="widget-section-label">Schnellzugriff (${activeShortcuts.length}/${MAX_SHORTCUTS})</p>
+    ${selected || `<p class="library-empty">Noch keine Apps im Schnellzugriff.</p>`}
+    <p class="widget-section-label">Verfuegbare Apps</p>
+    ${available || `<p class="library-empty">Alle verfuegbaren Apps sind bereits hinzugefuegt.</p>`}
+  `;
 }
 
 function hasCompletedFirstLight() {
@@ -1038,7 +1086,7 @@ function setPageStageTransform(page, dragPx = 0, animate = true) {
 function scrollTrackToPage(page, smooth = false) {
   pageScrollLock = true;
   setPageStageTransform(page, 0, smooth);
-  const ms = smooth ? (isHandsetLayout() ? 340 : 440) : 0;
+  const ms = smooth ? (isHandsetLayout() ? 220 : 400) : 0;
   window.setTimeout(() => {
     pageScrollLock = false;
   }, ms);
@@ -1059,21 +1107,16 @@ function applyPageState(page, options = {}) {
     screen.setAttribute("aria-hidden", active ? "false" : "true");
     if (active && previousPage !== currentPage) {
       screen.scrollTop = 0;
+      screen.querySelector(".home-bento")?.scrollTo?.(0, 0);
     }
   });
   if (scroll) scrollTrackToPage(currentPage, smooth);
   screenTitle.textContent = currentPage === 0 ? "Home" : "Apps";
   updatePageToggle();
-  if (currentPage === 1 && previousPage !== currentPage) {
-    const paintDesktop = () => {
-      renderLibraryGrid();
-      refreshLibraryExpand();
-    };
-    if (isHandsetLayout()) {
-      window.requestAnimationFrame(() => window.requestAnimationFrame(paintDesktop));
-    } else {
-      paintDesktop();
-    }
+  if (currentPage === 1 && previousPage !== currentPage && !libraryGridReady) {
+    renderLibraryGrid();
+  } else if (currentPage === 1 && previousPage !== currentPage) {
+    refreshLibraryExpand();
   }
   if (editMode) setEditMode(true);
   updateIslandUI();
@@ -1081,7 +1124,6 @@ function applyPageState(page, options = {}) {
     hapticTap();
     if (!isHandsetLayout()) showToast(currentPage === 0 ? "Home" : "Apps", 900);
   }
-  updateIslandUI();
 }
 
 function setPage(page) {
@@ -1106,7 +1148,7 @@ function initPageScrollSync() {
 
 function isTapTarget(target) {
   return !!target?.closest?.(
-    "button, a, input, textarea, select, label, [role='button'], [data-app], [data-folder], [data-library-folder], [data-action], [data-shortcut], [data-open-panel], .app-icon, .folder-tile, .quick-tile, .library-app, .library-head, .shortcut-btn, .mini-action, .beam-strip, .forge-install, .icon-orb, .icon-orb-glyph, [data-app-icon], .widget-add-fab, .edit-fab, .noco-ai-chip, .noco-ai-send"
+    "button, a, input, textarea, select, label, [role='button'], [data-app], [data-folder], [data-library-folder], [data-library-tab], [data-action], [data-shortcut], [data-open-panel], .app-icon, .folder-tile, .quick-tile, .library-app, .library-tab, .library-quick-app, .shortcut-btn, .mini-action, .beam-strip, .forge-install, .icon-orb, .icon-orb-glyph, [data-app-icon], .widget-add-fab, .edit-fab, .noco-ai-chip, .noco-ai-send"
   );
 }
 
@@ -1125,6 +1167,10 @@ function canStartPageSwipe(event) {
   if (target.closest(".mobile-topbar, .page-dots, .island-zone, .island-menu")) return false;
   if (isTapTarget(target)) return false;
   if (target.closest("textarea, input, select, [contenteditable='true']")) return false;
+  const scrollEl = activeScreenScrollEl();
+  if (scrollEl && scrollEl.scrollHeight > scrollEl.clientHeight + 6 && scrollEl.scrollTop > 4) {
+    if (scrollEl.contains(target)) return false;
+  }
   return true;
 }
 
@@ -1155,6 +1201,19 @@ function movePageDrag(event) {
       pageDrag.cancelled = true;
       pageDrag = null;
       return;
+    }
+    const scrollEl = activeScreenScrollEl();
+    if (scrollEl && scrollEl.scrollHeight > scrollEl.clientHeight + 6) {
+      if (intent === "undecided" && Math.abs(dy) >= Math.abs(dx)) {
+        pageDrag.cancelled = true;
+        pageDrag = null;
+        return;
+      }
+      if (scrollEl.scrollTop > 6 && Math.abs(dy) > Math.abs(dx) * 0.85) {
+        pageDrag.cancelled = true;
+        pageDrag = null;
+        return;
+      }
     }
     if (intent !== "horizontal") return;
     pageDrag.active = true;
@@ -1197,6 +1256,7 @@ function endPageDrag() {
     next = rawDx < 0 ? base + 1 : base - 1;
   }
   next = Math.max(0, Math.min(1, next));
+  pageScrollLock = false;
   void goToPage(next);
 }
 
@@ -1395,7 +1455,7 @@ function getAppMeta(appId) {
   if (forge) return { id: forge.id, title: forge.title, icon: forge.icon, className: forge.className };
   const titles = {
     settings: { id: "settings", title: "Core", icon: "C", className: "core" },
-    nocoai: { id: "nocoai", title: "NOCO AI", icon: "✧", className: "core" },
+    nocoai: { id: "nocoai", title: "NOCO AI 1.1", icon: "✧", className: "core" },
     pay: { id: "pay", title: "Pay", icon: "P", className: "pay" },
     notes: { id: "notes", title: "Notizen", icon: "N", className: "notes" },
     device: { id: "device", title: "Geräte", icon: "D", className: "explorer" },
@@ -1557,10 +1617,10 @@ function openWidgetPanelFromHome() {
 function visibleWidgetIds() {
   try {
     const saved = JSON.parse(localStorage.getItem("noco_mobile_visible_widgets") || "null");
-    if (Array.isArray(saved) && saved.length) return saved.filter((id) => widgetDefinitions[id]);
+    if (Array.isArray(saved)) {
+      return saved.filter((id) => widgetDefinitions[id]);
+    }
   } catch (_) {}
-  const fromDom = Array.from(document.querySelectorAll(".home-bento .draggable-widget:not([hidden])")).map((item) => item.dataset.widgetId);
-  if (fromDom.length) return fromDom;
   return ["hero", "clock", "status", "shortcuts", "nocoai", "notes", "sync", "feed"];
 }
 
@@ -1960,20 +2020,23 @@ function applyVisibleWidgets() {
   const home = document.querySelector(".home-bento") || document.querySelector(".home-screen");
   if (!home) return;
   const ids = visibleWidgetIds();
-  Object.keys(widgetDefinitions).forEach((id) => {
+  home.querySelectorAll("[data-widget-id]").forEach((element) => {
+    const id = element.dataset.widgetId;
+    if (!widgetDefinitions[id]) return;
+    const show = ids.includes(id);
+    element.hidden = !show;
+    element.classList.toggle("is-widget-hidden", !show);
+  });
+  ids.forEach((id) => {
     let element = home.querySelector(`[data-widget-id="${id}"]`);
-    if (ids.includes(id)) {
-      if (!element) {
-        element = createWidgetElement(id);
-        if (element) home.appendChild(element);
-      }
-      if (element) {
-        element.hidden = false;
-        if (id === "nocoai") mountNocoAIWidgetElement(element);
-      }
-    } else if (element) {
-      element.hidden = true;
+    if (!element) {
+      element = createWidgetElement(id);
+      if (element) home.appendChild(element);
     }
+    if (!element) return;
+    element.hidden = false;
+    element.classList.remove("is-widget-hidden");
+    if (id === "nocoai") mountNocoAIWidgetElement(element);
   });
   refreshWidgetEditButtons();
 }
@@ -2006,15 +2069,38 @@ function renderWidgetLibrary() {
     .join("");
 }
 
-function toggleWidget(id) {
+function removeWidget(id) {
+  if (!widgetDefinitions[id]) return;
   const visible = visibleWidgetIds();
-  const next = visible.includes(id) ? visible.filter((item) => item !== id) : [...visible, id];
+  if (!visible.includes(id)) return;
+  const next = visible.filter((item) => item !== id);
+  if (!next.length) {
+    showToast("Mindestens ein Widget bleibt");
+    return;
+  }
   saveVisibleWidgets(next);
   applyVisibleWidgets();
   renderWidgetLibrary();
   saveMobileOrder();
   refreshWidgetEditButtons();
-  showToast(visible.includes(id) ? "Widget entfernt" : "Widget hinzugefuegt");
+  showToast("Widget entfernt");
+  hapticTap();
+}
+
+function toggleWidget(id) {
+  const visible = visibleWidgetIds();
+  if (visible.includes(id)) {
+    removeWidget(id);
+    return;
+  }
+  const next = [...visible, id];
+  saveVisibleWidgets(next);
+  applyVisibleWidgets();
+  renderWidgetLibrary();
+  saveMobileOrder();
+  refreshWidgetEditButtons();
+  showToast("Widget hinzugefuegt");
+  hapticTap();
 }
 
 function appHero(_title, _eyebrow, text) {
@@ -2125,11 +2211,21 @@ function subMenu(title, eyebrow, content, open = false) {
   `;
 }
 
+function stripSheetHeaders(html) {
+  return String(html || "").replace(/<header\s+class="sheet-app-head"[\s\S]*?<\/header>\s*/gi, "");
+}
+
+function getSheetBodyHtml() {
+  const body = sheetContent?.querySelector(".mobile-app-body");
+  if (body) return body.outerHTML;
+  return stripSheetHeaders(sheetContent?.innerHTML || "");
+}
+
 function cacheAppState(appId) {
   if (!appId || settings.keepAppsAlive === false) return;
   const scrollEl = getSheetScrollEl();
   appCache.set(appId, {
-    html: sheetContent.innerHTML,
+    html: getSheetBodyHtml(),
     scrollTop: scrollEl?.scrollTop || 0
   });
 }
@@ -2621,8 +2717,9 @@ function renderAppSheet(appId, html, options = {}) {
       <h2 class="sheet-app-title">${meta.title}</h2>
     </header>
   `;
+  const bodyHtml = stripSheetHeaders(html);
   currentApp = appId;
-  sheetContent.innerHTML = header + html;
+  sheetContent.innerHTML = header + bodyHtml;
   document.body.classList.toggle("noco-ai-sheet", appId === "nocoai");
   if (appId === "nocoai" && isHandsetLayout()) {
     window.scrollTo(0, 0);
@@ -2737,8 +2834,7 @@ function settingsTemplateV2() {
       content: `
         <button class="settings-row" data-action="open-security"><span>Code, Face ID und Keycard</span><strong>ShieldGate</strong></button>
         <button class="settings-row" data-app="sync"><span>NOCO Keycard</span><strong>Import/Export</strong></button>
-        <div class="settings-row"><span>Nach Neustart</span><strong>${settings.requireCodeOnLaunch || settings.passkeyEnabled ? "Pflicht" : "Aus"}</strong></div>
-        <div class="settings-row"><span>Schutzstatus</span><strong>${settings.codeLock ? "Aktiv" : "Offen"}</strong></div>
+        ${toggleRow("requireCodeOnLaunch", "Login-Code", "Nach Reload wieder Code verlangen")}
         ${toggleRow("codeLock", "Schutz aktivieren", "Code fuer sensible Aktionen nutzen")}
         ${toggleRow("passkeyEnabled", "Passkey verwenden", "Face ID / Passkey zuerst versuchen")}
         ${toggleRow("requireCodeOnLaunch", "Login-Code", "Nach Reload wieder Code verlangen")}
@@ -2749,12 +2845,12 @@ function settingsTemplateV2() {
       title: "SessionVault",
       text: "Apps, Dev, Exclusive und Keycard-Daten.",
       content: `
-        <div class="settings-row"><span>Apps nach Installation</span><strong>Im Forge bleiben</strong></div>
-        <div class="settings-row"><span>App verlassen</span><strong>Zurueck zum Desktop</strong></div>
+        ${toggleRow("motion", "Animationen", "Sanfte Uebergaenge im System")}
+        <button class="settings-row" data-app="device"><span>Geraete</span><strong>Kamera &amp; Licht</strong></button>
         <button class="settings-row" data-app="forge"><span>NOCO Forge</span><strong>Store</strong></button>
-        <button class="settings-row" data-go-page="1"><span>App Desktop</span><strong>Anzeigen</strong></button>
+        <button class="settings-row" data-go-page="1"><span>App-Bibliothek</span><strong>Oeffnen</strong></button>
         <button class="settings-row" data-app="toon"><span>NOCO Toon</span><strong>Zeitung</strong></button>
-        <div class="settings-row"><span>Cache-Version</span><strong>v36</strong></div>
+        <button class="settings-row" data-action="open-beam"><span>Beam Suche</span><strong>Oeffnen</strong></button>
         <button class="settings-row exclusive-row" data-app="exclusive"><span>Exclusive</span><strong>${isExclusiveActive() ? "Member" : "Upgrade ansehen"}</strong></button>
         <button class="settings-row" data-action="exclusive-trial"><span>1 Tag testen</span><strong>${settings.exclusiveTrialUsed ? "Genutzt" : "Gratis"}</strong></button>
       `
@@ -3909,21 +4005,6 @@ widgetAddFab?.addEventListener("click", (event) => {
   hapticTap();
   openWidgetPanelFromHome();
 });
-
-widgetBtn.addEventListener("click", (event) => {
-  event.stopPropagation();
-  setIslandExpanded(false);
-  if (currentPage === 1) {
-    renderDesktopLibrary();
-    desktopPanel?.classList.remove("hidden");
-    document.body.classList.add("sheet-open");
-    return;
-  }
-  if (!editMode && currentPage === 0) {
-    setEditMode(true);
-  }
-  openWidgetPanelFromHome();
-});
 saveBtn.addEventListener("click", saveNote);
 closeSheet.addEventListener("click", () => closeAppToPage(currentPage));
 
@@ -3957,6 +4038,21 @@ document.querySelectorAll(".island-page-tab[data-page]").forEach((btn) => {
     setIslandExpanded(false);
     void goToPage(Number(btn.dataset.page));
   });
+});
+
+document.querySelector(".island-pips")?.addEventListener("click", (event) => {
+  const pip = event.target.closest("[data-island-pip]");
+  if (!pip) return;
+  event.stopPropagation();
+  setIslandExpanded(false);
+  if (document.body.classList.contains("island-app-mode")) {
+    hapticTap();
+    void closeAppToPage(1);
+    showToast("App-Bibliothek");
+    return;
+  }
+  const page = Number(pip.dataset.islandPip);
+  if (!Number.isNaN(page)) void goToPage(page);
 });
 
 function openNocoAIFromIsland(event) {
@@ -4146,6 +4242,12 @@ document.addEventListener("click", async (event) => {
     if (item) resolveSearchItem(item);
   }
 
+  const libraryTabBtn = event.target.closest("[data-library-tab]");
+  if (libraryTabBtn && !editMode) {
+    switchLibraryTab(libraryTabBtn.dataset.libraryTab || "core");
+    return;
+  }
+
   const libraryFolderBtn = event.target.closest("[data-library-folder]");
   if (libraryFolderBtn && !editMode) {
     toggleLibraryFolder(libraryFolderBtn.dataset.libraryFolder);
@@ -4231,6 +4333,8 @@ document.addEventListener("click", async (event) => {
   if (panelOpen) {
     event.stopPropagation();
     setIslandExpanded(false);
+    shortcutPanelTitle.textContent = "Schnellzugriff";
+    shortcutPanelHint.textContent = "Apps fuer Home hinzufuegen oder entfernen.";
     renderShortcutEditor();
     shortcutPanel?.classList.remove("hidden");
     document.body.classList.add("sheet-open");
@@ -4261,26 +4365,36 @@ document.addEventListener("click", async (event) => {
 
   const widgetRemove = event.target.closest("[data-widget-remove]");
   if (widgetRemove) {
-    toggleWidget(widgetRemove.dataset.widgetRemove);
-    refreshWidgetEditButtons();
-    saveMobileOrder();
-    hapticTap();
+    event.stopPropagation();
+    event.preventDefault();
+    removeWidget(widgetRemove.dataset.widgetRemove);
     return;
   }
 
-  const choice = event.target.closest("[data-shortcut-choice]");
-  if (choice) {
-    const picked = choice.dataset.shortcutChoice;
-    activeShortcuts = [picked].concat(activeShortcuts.filter((id) => id !== picked)).slice(0, 4);
-    while (activeShortcuts.length < 4) {
-      const next = shortcutChoices.find((item) => !activeShortcuts.includes(item.id));
-      if (!next) break;
-      activeShortcuts.push(next.id);
+  const shortcutAdd = event.target.closest("[data-shortcut-add]");
+  if (shortcutAdd) {
+    const picked = shortcutAdd.dataset.shortcutAdd;
+    if (activeShortcuts.includes(picked)) return;
+    if (activeShortcuts.length >= MAX_SHORTCUTS) {
+      showToast(`Maximal ${MAX_SHORTCUTS} Schnellzugriffe`);
+      return;
     }
+    activeShortcuts = [...activeShortcuts, picked];
     saveShortcuts();
     renderShortcuts();
     renderShortcutEditor();
-    showToast("Shortcut aktualisiert");
+    showToast("Schnellzugriff hinzugefuegt");
+  }
+
+  const shortcutRemove = event.target.closest("[data-shortcut-remove]");
+  if (shortcutRemove) {
+    const picked = shortcutRemove.dataset.shortcutRemove;
+    activeShortcuts = activeShortcuts.filter((id) => id !== picked);
+    if (!activeShortcuts.length) activeShortcuts = ["hub"];
+    saveShortcuts();
+    renderShortcuts();
+    renderShortcutEditor();
+    showToast("Schnellzugriff entfernt");
   }
 
   const themeChoice = event.target.closest("[data-theme-choice]");
@@ -4841,7 +4955,6 @@ document.addEventListener("click", async (event) => {
 
   const hubApp = event.target.closest("[data-hub-app]");
   if (hubApp) {
-    closeHub();
     openApp(hubApp.dataset.hubApp);
   }
 
@@ -4991,11 +5104,16 @@ async function goToPage(page) {
   const target = Math.max(0, Math.min(1, page));
   if (target === currentPage && !pageScrollLock) return;
   if (desktopNeedsUnlock(target) && !(await unlockDesktop())) {
-    applyPageState(0, { scroll: true, smooth: true, haptic: false });
+    applyPageState(0, { scroll: true, smooth: false, haptic: false });
+    return;
+  }
+  const handset = isHandsetLayout();
+  if (handset) {
+    applyPageState(target, { scroll: true, smooth: false, haptic: true });
     return;
   }
   document.body.classList.add("noco-transitioning");
-  armGestureSafety(isHandsetLayout() ? 380 : 560);
+  armGestureSafety(560);
   applyPageState(target, { scroll: true, smooth: true, haptic: true });
 }
 
@@ -5018,7 +5136,6 @@ function resetSheetGestureTransform() {
 function openHub() {
   setIslandExpanded(false);
   closeBeam();
-  if (!appSheet?.classList.contains("hidden")) closeAppSheetVisual();
   hapticTap();
   hubPanel?.classList.remove("hidden");
   document.body.classList.add("hub-open");
@@ -5130,7 +5247,18 @@ async function endSheetSwipe(event) {
 
 function cancelSheetSwipe() {
   appSwipe = null;
+  appSheet?.classList.remove("app-navigating");
+  pageStage?.classList.remove("page-swiping");
   resetSheetGestureTransform();
+}
+
+function activeScreenScrollEl() {
+  const screen = document.querySelector(".screen.is-active");
+  if (!screen) return null;
+  if (screen.classList.contains("home-screen")) {
+    return screen.querySelector(".home-bento") || screen;
+  }
+  return screen;
 }
 
 screenTrack?.addEventListener("touchstart", startPageDrag, { passive: true });
@@ -5579,8 +5707,8 @@ function applyKeycardData(data, fileName) {
 
   const importedShortcuts = source.shortcuts || mobileState.shortcuts;
   if (Array.isArray(importedShortcuts) && importedShortcuts.length) {
-    activeShortcuts = importedShortcuts.filter((id) => shortcutChoices.some((choice) => choice.id === id)).slice(0, 4);
-    while (activeShortcuts.length < 4) activeShortcuts.push(shortcutChoices.find((item) => !activeShortcuts.includes(item.id))?.id || "hub");
+    activeShortcuts = importedShortcuts.filter((id) => shortcutChoices.some((choice) => choice.id === id)).slice(0, MAX_SHORTCUTS);
+    if (!activeShortcuts.length) activeShortcuts = ["hub"];
     saveShortcuts();
     renderShortcuts();
     applied.push("Shortcuts");

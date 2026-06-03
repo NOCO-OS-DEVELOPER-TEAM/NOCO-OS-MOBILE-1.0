@@ -928,6 +928,17 @@ body.device-handset .app-sheet .sheet-card > * {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  pointer-events: auto;
+}
+
+.app-sheet .toggle-card,
+.app-sheet .settings-row,
+.app-sheet .menu-picker button,
+.app-sheet .lock-time-grid button,
+.app-sheet .noco-wake-phrase-grid button {
+  pointer-events: auto;
+  touch-action: manipulation;
+  cursor: pointer;
 }
 
 .app-sheet #sheetContent > .sheet-app-head {
@@ -983,7 +994,7 @@ body.device-handset .sheet-app-head {
   padding-right: 12px;
 }
 
-body.device-handset .mobile-app-body:not(.noco-ai-app-body) {
+body.device-handset .mobile-app-body {
   padding-bottom: max(72px, calc(env(safe-area-inset-bottom, 12px) + 56px));
 }
 
@@ -992,11 +1003,6 @@ body.device-handset .mobile-app-body {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-}
-
-body.device-handset.noco-ai-sheet .mobile-app-body.noco-ai-app-body {
-  overflow: hidden !important;
-  padding-bottom: 0 !important;
 }
 
 body.noco-ai-sheet .app-sheet .sheet-card {

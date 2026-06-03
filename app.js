@@ -7,7 +7,7 @@ const largeClock = document.getElementById("largeClock");
 const largeDate = document.getElementById("largeDate");
 const screenTrack = document.getElementById("screenTrack");
 const pageStage = document.getElementById("pageStage");
-const NOCO_BUILD = window.NOCO_BUILD || "161";
+const NOCO_BUILD = window.NOCO_BUILD || "164";
 const screenTitle = document.getElementById("screenTitle");
 
 /** Doppelte/veraltete Topbars entfernen — phone-chrome Titelzeile behalten. */
@@ -2502,10 +2502,7 @@ function mountNocoAIIfNeeded(appId) {
   }
   window.NocoAI.mount(root, getNocoAIHelpers());
   updateClock();
-  requestAnimationFrame(() => {
-    updateClock();
-    window.NocoAI.focusChatInput?.(root);
-  });
+  requestAnimationFrame(() => window.NocoAI.focusChatInput?.(root));
 }
 
 function deviceTemplate() {
@@ -4640,7 +4637,12 @@ screenTrack?.addEventListener("pointercancel", endPageDragPointer);
 
 document.addEventListener("click", async (event) => {
   resetAutoLockTimer();
-  if (Date.now() < suppressClickUntil && !event.target.closest("[data-noco-ai-root]")) {
+  if (
+    Date.now() < suppressClickUntil &&
+    !event.target.closest(
+      "[data-noco-ai-root], .app-sheet, #sheetContent, .sheet-card, .toggle-card, [data-toggle-setting], [data-settings-section], [data-lock-time], [data-noco-wake-phrase], [data-noco-wake-sens], .menu-picker, .menu-content, .settings-row, #closeSheet, .sheet-close"
+    )
+  ) {
     event.preventDefault();
     event.stopPropagation();
     return;
@@ -6727,6 +6729,7 @@ window.setInterval(() => {
 }, 1000);
 window.__nocoMountHelpers = getNocoAIHelpers;
 window.NocoAIVoice?.init?.(getNocoAIHelpers);
+syncNocoAiWakeSettings();
 window.addEventListener("pageshow", () => {
   purgeLegacyChrome();
   if (currentPage === 1) repairDesktopGrid("pageshow");

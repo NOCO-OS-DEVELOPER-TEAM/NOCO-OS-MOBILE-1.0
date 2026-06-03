@@ -2018,9 +2018,16 @@
 
   function ensureNocoApi(root) {
     if (root._nocoApi) return root._nocoApi;
-    if (!nocoBridgeHelpers || !global.NocoAI?.mount) return null;
-    global.NocoAI.mount(root, nocoBridgeHelpers);
+    const helpers =
+      nocoBridgeHelpers ||
+      (typeof global.__nocoMountHelpers === "function" ? global.__nocoMountHelpers() : null);
+    if (!helpers || !global.NocoAI?.mount) return null;
+    global.NocoAI.mount(root, helpers);
     return root._nocoApi || null;
+  }
+
+  function tap(event) {
+    if (event) handleNocoDocumentClick(event);
   }
 
   function handleNocoDocumentClick(event) {
@@ -2053,15 +2060,13 @@
     const api = ensureNocoApi(root);
     if (!api) return;
 
-    if (target.closest("[data-noco-ai-mic], [data-noco-ai-wake-toggle]")) return;
-    if (target.closest("[data-noco-ai-pulse]")) return;
-    if (target.closest("[data-noco-ai-ad-feature]:not(.hidden)")) return;
-
     const helpers = api.helpers;
     const stop = () => {
       event.preventDefault();
       event.stopPropagation();
     };
+
+    if (target.closest("[data-noco-ai-ad-feature]:not(.hidden)")) return;
 
     const cmdBtn = target.closest("[data-noco-ai-cmd], .noco-ai-quick-btn");
     if (cmdBtn && root.contains(cmdBtn)) {
@@ -2113,6 +2118,15 @@
         } else {
           window.setTimeout(() => root.querySelector("[data-noco-ai-mic]")?.click?.(), 120);
         }
+      }],
+      ["[data-noco-ai-wake-toggle]", () => {
+        if (global.NocoAIVoice?.setWakeEnabled) {
+          global.NocoAIVoice.setWakeEnabled(!global.NocoAIVoice.getWakeEnabled?.());
+        }
+      }],
+      ["[data-noco-ai-mic]", () => {
+        wireNocoControls(root);
+        root.querySelector("[data-noco-ai-mic]")?.click?.();
       }]
     ];
 
@@ -2147,7 +2161,6 @@
     if (!global.__nocoDocBridge) {
       global.__nocoDocBridge = true;
       document.addEventListener("click", handleNocoDocumentClick, false);
-      document.addEventListener("touchend", handleNocoDocumentClick, false);
     }
   }
 
@@ -2195,6 +2208,7 @@
 
   function resetNocoUiLocks(root) {
     if (!root) return;
+    if (readAdFeatureIntroSeen()) hideAdFeatureIntro(root);
     document.body.classList.remove("noco-ai-mic-open", "noco-ai-ad-open");
     root.classList.remove("noco-ai-mic-prompt", "noco-ai-ad-prompt");
   }
@@ -2461,6 +2475,15 @@
 
   function mount(root, helpers) {
     if (!root || mountingRoot) return;
+    if (root._nocoApi && root.dataset.nocoAiCoreBound === "1") {
+      nocoBridgeHelpers = helpers;
+      ensureNocoDocumentBridge(helpers);
+      releaseBusyState(root);
+      const sendBtn = root.querySelector("[data-noco-ai-send]");
+      if (sendBtn) sendBtn.disabled = false;
+      mountedRoot = root;
+      return;
+    }
     mountingRoot = true;
     try {
     mountedRoot = root;
@@ -2520,6 +2543,7 @@
     processMessage,
     appendBotMessage,
     dismissAdIntro,
+    tap,
     tapSend,
     getSessionContext: () => sessionContext,
     DEFAULT_SUGGESTIONS,

@@ -511,10 +511,11 @@
   touch-action: manipulation;
 }
 
-.noco-ai-ad-feature.hidden {
+.noco-ai-ad-feature.hidden,
+.noco-ai-mic-consent.hidden {
   display: none !important;
   pointer-events: none !important;
-  visibility: hidden;
+  visibility: hidden !important;
 }
 
 .noco-ai-ad-feature-card {

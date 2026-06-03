@@ -373,7 +373,6 @@
 
         event.preventDefault();
         event.stopPropagation();
-        event.stopImmediatePropagation();
 
         const root = sheet.closest("[data-noco-ai-root]") || consentRoot;
         if (laterBtn) {

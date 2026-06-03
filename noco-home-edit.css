@@ -63,13 +63,13 @@
   transition: transform 0.22s cubic-bezier(0.22, 0.94, 0.22, 1), box-shadow 0.28s ease;
 }
 
-body.edit-mode.home-page .widget-add-fab,
-body.edit-mode.home-page .edit-fab {
+body.edit-mode.home-page .widget-add-fab.edit-fab-home,
+body.edit-mode.home-page .edit-fab.edit-fab-home {
   display: grid;
   animation: fabPop 0.38s cubic-bezier(0.22, 0.94, 0.22, 1) both;
 }
 
-body.edit-mode.home-page .widget-add-fab {
+body.edit-mode.home-page .widget-add-fab.edit-fab-home {
   animation-delay: 0.04s;
   margin: 0 auto;
   position: relative;
@@ -78,14 +78,11 @@ body.edit-mode.home-page .widget-add-fab {
   transform: none;
 }
 
-body.edit-mode.home-page .edit-fab {
+body.edit-mode.home-page .edit-fab.edit-fab-home#homeEditFab {
   position: absolute;
   right: 14px;
   bottom: 0;
   margin: 0;
-}
-
-body.edit-mode.home-page .edit-fab {
   box-shadow:
     0 0 0 2px color-mix(in srgb, var(--mint) 45%, transparent),
     0 12px 32px rgba(0, 0, 0, 0.38),
@@ -103,8 +100,10 @@ body.edit-mode.home-page .edit-fab {
   }
 }
 
-body.edit-mode.home-page .widget-add-fab:active,
-body.edit-mode.home-page .edit-fab:active {
+body.edit-mode.home-page .widget-add-fab.edit-fab-home:active,
+body.edit-mode.home-page .edit-fab.edit-fab-home:active,
+body.edit-mode.desktop-page .widget-add-fab.edit-fab-library:active,
+body.edit-mode.desktop-page .edit-fab-library-pen:active {
   transform: scale(0.92);
 }
 
@@ -133,12 +132,46 @@ body.edit-mode.home-page .edit-fab:active {
 }
 
 body:not(.edit-mode) .home-edit-hint,
-body:not(.home-page) .home-edit-hint {
+body:not(.home-page) .home-edit-hint,
+body:not(.edit-mode) .library-edit-hint,
+body:not(.desktop-page) .library-edit-hint {
   display: none;
+}
+
+body.edit-mode.home-page .edit-fab-home {
+  display: grid;
+}
+
+body.edit-mode.home-page .edit-fab-library,
+body.edit-mode.home-page .edit-fab-library-pen {
+  display: none !important;
+}
+
+body.edit-mode.desktop-page .edit-fab-home {
+  display: none !important;
+}
+
+body.edit-mode.desktop-page .widget-add-fab.edit-fab-library {
+  display: grid;
+  margin: 0 auto;
+  position: relative;
+}
+
+body.edit-mode.desktop-page .edit-fab-library-pen {
+  display: grid;
+  position: absolute;
+  right: 14px;
+  bottom: 0;
+  margin: 0;
+}
+
+body.edit-mode.desktop-page .home-edit-chrome {
+  align-items: flex-end;
 }
 
 body.sheet-open .home-edit-chrome,
 body.sheet-open .home-edit-hint,
+body.sheet-open .library-edit-hint,
 body.hub-open .home-edit-chrome,
 body.island-open .home-edit-chrome {
   opacity: 0;

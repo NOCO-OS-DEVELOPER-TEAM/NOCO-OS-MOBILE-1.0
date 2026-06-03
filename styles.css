@@ -9,9 +9,9 @@
   --line: rgba(200, 230, 255, 0.22);
   --text: #f6fbff;
   --muted: rgba(210, 225, 245, 0.62);
-  --blue: #6ecfff;
-  --mint: #5dffd8;
-  --violet: #c4a0ff;
+  --blue: #5eb8ff;
+  --mint: #48c6b7;
+  --violet: #b89cff;
   --pink: #ff7eb8;
   --shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
   --wallpaper-speed: 38s;
@@ -2922,6 +2922,81 @@ body.noco-native .spotlight-panel:not(.hidden) .spotlight-card {
   letter-spacing: -0.05em;
 }
 
+.react-tap-btn--wait {
+  filter: saturate(0.5);
+  background: linear-gradient(135deg, #64748b, #334155);
+}
+.react-tap-btn--go {
+  background: linear-gradient(135deg, #4ade80, #22d3ee);
+  animation: reactTapPulse 0.45s ease-in-out infinite alternate;
+}
+.react-tap-btn--early {
+  background: linear-gradient(135deg, #fb7185, #f97316);
+}
+@keyframes reactTapPulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.04); }
+}
+
+.blitz-math-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.lane-swap-stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  min-height: min(44dvh, 320px);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(180deg, rgba(117, 216, 255, 0.1), rgba(255, 255, 255, 0.04));
+  overflow: hidden;
+  touch-action: manipulation;
+}
+.lane-swap-col {
+  position: relative;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  min-height: 100%;
+}
+.lane-swap-col.is-active {
+  border-color: rgba(94, 234, 212, 0.45);
+  box-shadow: inset 0 0 24px rgba(94, 234, 212, 0.12);
+}
+.lane-swap-orb {
+  position: absolute;
+  left: 50%;
+  bottom: 14%;
+  transform: translateX(-50%);
+  font-size: 28px;
+  filter: drop-shadow(0 0 12px rgba(94, 234, 212, 0.5));
+}
+.lane-swap-prize,
+.lane-swap-hazard {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 22px;
+  opacity: 0;
+  pointer-events: none;
+}
+.lane-swap-prize.is-visible,
+.lane-swap-hazard.is-visible {
+  opacity: 1;
+}
+.lane-swap-hud {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
 .drag-ghost {
   position: fixed;
   z-index: 80;
@@ -3999,13 +4074,14 @@ body.desktop-preview .phone {
   display: none !important;
 }
 
-/* NOCO Flow — Island + Gesten */
-.island-zone {
-  position: absolute;
-  top: max(8px, env(safe-area-inset-top));
-  left: 0;
-  right: 0;
-  z-index: 25;
+/* NOCO Flow — Island (Layout in phone-chrome / noco-island-ai.css) */
+.phone-chrome .island-zone,
+#islandZone {
+  position: relative;
+  top: auto;
+  left: auto;
+  right: auto;
+  z-index: auto;
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
@@ -4245,11 +4321,19 @@ body.device-handset .screen {
   min-height: 118px;
 }
 
-.bento-clock #largeClock {
+.bento-clock #largeClock,
+.bento-clock [data-noco-home-clock] {
+  display: block;
   width: 100%;
+  min-height: 1em;
   text-align: center;
   font-size: clamp(32px, 9vw, 44px);
   line-height: 1;
+  color: var(--text, #f4fbff);
+  font-variant-numeric: tabular-nums;
+  visibility: visible !important;
+  opacity: 1 !important;
+  letter-spacing: -0.04em;
 }
 
 .bento-clock small {

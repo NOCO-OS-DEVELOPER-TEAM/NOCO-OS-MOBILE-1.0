@@ -1,7 +1,10 @@
 <!doctype html>
-<html lang="de">
+<html lang="de" data-noco-build="144">
 <head>
   <meta charset="utf-8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no, interactive-widget=overlays-content" />
   <meta name="theme-color" content="#040a14" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -13,19 +16,45 @@
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="apple-touch-icon" href="./icon.svg" />
   <link rel="icon" href="./icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="./styles.css" />
-  <link rel="stylesheet" href="./ux-v2.css" />
-  <link rel="stylesheet" href="./noco-icons.css" />
-  <link rel="stylesheet" href="./noco-library.css" />
-  <link rel="stylesheet" href="./noco-ai.css" />
-  <link rel="stylesheet" href="./noco-exclusive.css" />
-  <link rel="stylesheet" href="./noco-reminders.css" />
-  <link rel="stylesheet" href="./noco-home-edit.css" />
-  <link rel="stylesheet" href="./noco-device.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css?v=151" />
+  <link rel="stylesheet" href="./ux-v2.css?v=151" />
+  <link rel="stylesheet" href="./noco-icons.css?v=151" />
+  <link rel="stylesheet" href="./noco-library.css?v=151" />
+  <link rel="stylesheet" href="./noco-forge.css?v=151" />
+  <link rel="stylesheet" href="./noco-ai.css?v=151" />
+  <link rel="stylesheet" href="./noco-ai-app.css?v=151" />
+  <link rel="stylesheet" href="./noco-exclusive.css?v=151" />
+  <link rel="stylesheet" href="./noco-reminders.css?v=151" />
+  <link rel="stylesheet" href="./noco-home-edit.css?v=151" />
+  <link rel="stylesheet" href="./noco-device.css?v=151" />
+  <link rel="stylesheet" href="./noco-chrome-fix.css?v=151" />
+  <link rel="stylesheet" href="./noco-pc-frame.css?v=151" />
+  <link rel="stylesheet" href="./noco-handset.css?v=151" />
+  <link rel="stylesheet" href="./noco-ui-polish.css?v=151" />
+  <link rel="stylesheet" href="./noco-liquid-exit.css?v=151" />
+  <link rel="stylesheet" href="./noco-island-ai.css?v=151" />
+  <style id="noco-critical-layout">
+    .phone-chrome .chrome-page-nav,
+    .phone-chrome .chrome-title-bar { display: none !important; }
+    body.desktop-preview { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    body.desktop-preview .phone-frame {
+      width: min(390px, calc(100vw - 32px));
+      aspect-ratio: 390 / 844;
+      max-height: min(844px, calc(100dvh - 88px));
+    }
+    body.desktop-preview .phone { width: 100%; height: 100%; border-radius: 44px; overflow: hidden; }
+    body.desktop-preview .phone .page-stage > .screen {
+      padding-top: 88px !important;
+      box-sizing: border-box;
+    }
+  </style>
 </head>
 <body>
   <div class="noco-stage">
-    <p class="stage-caption" aria-hidden="true">NOCO OS Mobile 1.2 · Liquid Glass</p>
+    <p class="stage-caption">NOCO OS Mobile 1.2 · Build 144 · <a href="?fresh=1">Cache leeren</a></p>
 
     <div class="phone-frame">
       <main class="phone" id="phoneRoot" aria-label="NOCO OS Mobile">
@@ -33,40 +62,51 @@
           <div class="chrome-glass-wash" aria-hidden="true"></div>
           <div class="island-zone" id="islandZone">
             <button type="button" id="dynamicIsland" class="dynamic-island" aria-expanded="false" aria-label="NOCO Systemleiste">
+              <span class="island-shell" aria-hidden="true"></span>
               <span class="island-compact" id="islandCompact">
-                <span id="islandClock" class="island-clock">--:--</span>
-                <span class="island-pips" aria-hidden="true">
-                  <span class="island-pip active" data-island-pip="0"></span>
-                  <span class="island-pip" data-island-pip="1"></span>
+                <span class="island-mark" aria-hidden="true">
+                  <svg class="island-mark-svg" viewBox="0 0 20 12" width="20" height="12" focusable="false" aria-hidden="true">
+                    <ellipse cx="10" cy="6" rx="8" ry="4.5" fill="currentColor" opacity="0.22"/>
+                    <ellipse cx="10" cy="6" rx="8" ry="4.5" fill="none" stroke="currentColor" stroke-width="1.35"/>
+                    <circle cx="10" cy="6" r="1.5" fill="currentColor"/>
+                  </svg>
                 </span>
+                <span id="islandClock" class="island-clock">--:--</span>
+                <span id="islandModeIcon" class="island-mode-icon" data-island-cycle-page role="button" tabindex="0" aria-label="Home">⌂</span>
                 <span id="islandStatus" class="island-status" hidden aria-hidden="true"></span>
               </span>
             </button>
-            <button type="button" class="island-ai-btn" data-open-nocoai aria-label="NOCO AI 1.1 oeffnen" title="NOCO AI 1.1">✧</button>
-            <div id="islandMenu" class="island-menu hidden" role="menu" aria-label="Schnellaktionen">
-              <div class="island-pages" role="tablist">
-                <button type="button" class="island-page-tab active" data-page="0" role="tab">Home</button>
-                <button type="button" class="island-page-tab" data-page="1" role="tab">Apps</button>
+            <span id="exclusiveTopBadge" class="exclusive-top-badge island-exclusive-badge hidden">Exclusive</span>
+            <div id="islandMenu" class="island-menu hidden" role="menu" aria-label="Island Schnellmenu">
+              <p class="island-menu-label">Schnellzugriff</p>
+              <div class="island-menu-grid island-menu-grid--primary">
+                <button type="button" class="island-action" data-action="open-beam" role="menuitem"><span class="island-action-icon" aria-hidden="true">⌕</span><span>Beam</span></button>
+                <button type="button" class="island-action" data-open-hub role="menuitem"><span class="island-action-icon" aria-hidden="true">◎</span><span>Hub</span></button>
+                <button type="button" class="island-action" data-island-page="0" role="menuitem"><span class="island-action-icon" aria-hidden="true">⌂</span><span>Home</span></button>
+                <button type="button" class="island-action" data-island-page="1" role="menuitem"><span class="island-action-icon" aria-hidden="true">▦</span><span>Apps</span></button>
               </div>
-              <div class="island-actions">
-                <button type="button" class="island-action" data-action="open-beam" role="menuitem">Beam</button>
-                <button type="button" class="island-action" data-open-hub role="menuitem">Hub</button>
-                <button type="button" class="island-action" id="editBtn" role="menuitem">Edit</button>
+              <div class="island-menu-grid island-menu-grid--secondary">
+                <button type="button" class="island-action" data-open-nocoai role="menuitem"><span class="island-action-icon" aria-hidden="true">✧</span><span>AI</span></button>
+                <button type="button" class="island-action" id="editBtn" role="menuitem"><span class="island-action-icon" aria-hidden="true">✎</span><span>Edit</span></button>
+                <button type="button" class="island-action" data-island-app="timer" role="menuitem"><span class="island-action-icon" aria-hidden="true">◴</span><span>Timer</span></button>
+                <button type="button" class="island-action" data-island-app="settings" role="menuitem"><span class="island-action-icon" aria-hidden="true">⚙</span><span>Core</span></button>
               </div>
             </div>
           </div>
-
-          <div class="chrome-title-bar mobile-topbar liquid-glass-bar">
+          <div class="chrome-title-bar mobile-topbar liquid-glass-bar visually-hidden" aria-hidden="true">
             <div class="title-block">
               <p class="eyebrow">NOCO OS</p>
-              <strong id="screenTitle">Home</strong>
+              <strong id="screenTitle" aria-live="polite">Home</strong>
             </div>
-            <span id="exclusiveTopBadge" class="exclusive-top-badge hidden">Exclusive</span>
           </div>
         </header>
 
-        <div class="page-swipe-hint page-swipe-hint--left" aria-hidden="true">‹</div>
-        <div class="page-swipe-hint page-swipe-hint--right" aria-hidden="true">›</div>
+        <button type="button" class="noco-ai-orb" data-open-nocoai aria-label="NOCO AI oeffnen" title="NOCO AI">
+          <span class="noco-ai-orb-ring" aria-hidden="true"></span>
+          <span class="noco-ai-orb-core" aria-hidden="true">✧</span>
+        </button>
+
+        <div class="noco-top-fade" aria-hidden="true"></div>
 
         <section class="screen-track" id="screenTrack">
           <div class="page-stage" id="pageStage">
@@ -89,7 +129,7 @@
 
                 <div class="home-row-duo">
                   <div class="clock-widget widget-card draggable-widget bento-clock" data-widget-id="clock">
-                    <span id="largeClock">--:--</span>
+                    <span id="largeClock" data-noco-home-clock>--:--</span>
                     <small id="largeDate">NOCO Zeit</small>
                   </div>
 
@@ -132,7 +172,7 @@
                   <small id="saveState">Noch nichts gespeichert.</small>
                 </div>
 
-                <div class="sync-widget widget-card draggable-widget bento-sync" data-widget-id="sync">
+                <div class="sync-widget widget-card draggable-widget bento-sync is-widget-hidden" hidden data-widget-id="sync">
                   <div class="section-title">
                     <div>
                       <p class="eyebrow">Sync</p>
@@ -143,7 +183,7 @@
                   <p>Keycard importieren — Mobile und Desktop bleiben auf einem Stand.</p>
                 </div>
 
-                <div class="feed-widget widget-card draggable-widget bento-feed" data-widget-id="feed">
+                <div class="feed-widget widget-card draggable-widget bento-feed is-widget-hidden" hidden data-widget-id="feed">
                   <div class="section-title">
                     <div>
                       <p class="eyebrow">Feed</p>
@@ -179,24 +219,30 @@
         </section>
 
         <div id="coachBanner" class="coach-banner hidden" role="status">
-          <p>Wische nach links für Apps · Island: Home &amp; Apps · NOCO AI auf dem Home-Screen.</p>
+          <p>Wische für Apps · Island-Punkte: Home/Apps · ✧ am Rand = NOCO AI · × unten rechts schliesst.</p>
           <button type="button" id="coachDismiss">OK</button>
         </div>
 
         <p class="home-edit-hint" id="homeEditHint">Bearbeiten aktiv — Widgets verschieben, × entfernen, + hinzufuegen</p>
+        <p class="home-edit-hint library-edit-hint" id="libraryEditHint" hidden>Bearbeiten — Stift: Schnellzugriff oben · + Apps hinzufuegen</p>
         <div class="home-edit-chrome" id="homeEditChrome" hidden>
-          <button type="button" id="widgetAddFab" class="widget-add-fab" aria-label="Widget hinzufuegen">+</button>
-          <button type="button" id="homeEditFab" class="edit-fab" aria-label="Bearbeiten beenden">
+          <button type="button" id="widgetAddFab" class="widget-add-fab edit-fab-home" aria-label="Widget hinzufuegen">+</button>
+          <button type="button" id="libraryQuickAddFab" class="widget-add-fab edit-fab-library" aria-label="Schnellzugriff App hinzufuegen" hidden>+</button>
+          <button type="button" id="libraryQuickEditFab" class="edit-fab edit-fab-library-pen" aria-label="Schnellzugriff anpassen" hidden>
+            <svg class="pencil-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </button>
+          <button type="button" id="homeEditFab" class="edit-fab edit-fab-home" aria-label="Bearbeiten beenden">
             <svg class="pencil-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
           </button>
         </div>
 
         <section id="appSheet" class="app-sheet hidden" aria-live="polite">
           <div class="sheet-card noco-glass-scroll">
-            <div class="sheet-drag-handle" aria-hidden="true"></div>
+            <div class="sheet-drag-handle" id="sheetDragHandle" role="button" tabindex="0" aria-label="App schliessen — nach unten ziehen oder tippen"></div>
             <button type="button" id="closeSheet" class="sheet-close" aria-label="Schliessen">×</button>
             <div id="sheetContent"></div>
           </div>
+          <button type="button" class="sheet-exit-close sheet-exit-corner" id="sheetExitCorner" data-sheet-exit-close aria-label="App schliessen">×</button>
         </section>
 
         <section id="firstLightPanel" class="firstlight-panel hidden" aria-live="polite">
@@ -239,21 +285,27 @@
           </div>
         </section>
 
-        <section id="shortcutPanel" class="app-sheet hidden" aria-live="polite">
+        <section id="shortcutPanel" class="app-sheet shortcut-panel-sheet hidden" aria-live="polite">
           <div class="sheet-card noco-glass-scroll">
-            <button type="button" class="sheet-close" data-close-panel aria-label="Schliessen">×</button>
             <h2 id="shortcutPanelTitle">Schnellzugriff</h2>
             <p class="muted" id="shortcutPanelHint">Apps auf Home hinzufuegen oder entfernen.</p>
             <div class="shortcut-editor" id="shortcutEditor"></div>
           </div>
+          <button type="button" class="sheet-exit-close sheet-exit-corner" data-close-panel aria-label="Schliessen">×</button>
+          <div class="sheet-panel-footer">
+            <button type="button" class="sheet-footer-done" data-close-panel>Fertig</button>
+          </div>
         </section>
 
-        <section id="widgetPanel" class="app-sheet hidden" aria-live="polite">
-          <div class="sheet-card compact-sheet">
-            <button type="button" class="sheet-close" data-close-widget-panel aria-label="Schliessen">×</button>
+        <section id="widgetPanel" class="app-sheet widget-panel-sheet hidden" aria-live="polite">
+          <div class="sheet-card compact-sheet noco-glass-scroll">
             <h2>Widgets</h2>
             <p class="muted">Tippe + am Home (im Bearbeiten-Modus) oder waehle hier ein Widget.</p>
             <div class="widget-library" id="widgetLibrary"></div>
+          </div>
+          <button type="button" class="sheet-exit-close sheet-exit-corner" data-close-widget-panel aria-label="Schliessen">×</button>
+          <div class="sheet-panel-footer">
+            <button type="button" class="sheet-footer-done" data-close-widget-panel>Fertig</button>
           </div>
         </section>
 
@@ -315,7 +367,42 @@
     </div>
   </div>
 
-  <script src="./noco-ai-chats.js"></script>
+  <script>
+    window.NOCO_BUILD = "151";
+    (function () {
+      if (location.protocol === "file:" && "serviceWorker" in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+          regs.forEach(function (r) { r.unregister(); });
+        });
+      }
+      document.querySelectorAll("script[src]").forEach(function (s) {
+        var u = s.getAttribute("src");
+        if (!u || u.indexOf("?v=") >= 0) return;
+        s.src = u.split("?")[0] + "?v=" + window.NOCO_BUILD;
+      });
+      document.querySelectorAll("link[rel=stylesheet]").forEach(function (l) {
+        var u = l.getAttribute("href");
+        if (!u || u.indexOf("?v=") >= 0) return;
+        l.href = u.split("?")[0] + "?v=" + window.NOCO_BUILD;
+      });
+      if (new URLSearchParams(location.search).has("fresh") && "caches" in window) {
+        caches.keys().then(function (keys) {
+          return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+        }).then(function () {
+          if ("serviceWorker" in navigator) {
+            return navigator.serviceWorker.getRegistrations().then(function (regs) {
+              regs.forEach(function (r) { r.unregister(); });
+            });
+          }
+        }).finally(function () {
+          var u = new URL(location.href);
+          u.searchParams.delete("fresh");
+          if (u.href !== location.href) location.replace(u.pathname + u.search + u.hash);
+        });
+      }
+    })();
+  </script>
+  <script src="./noco-ai-chats.js?v=151"></script>
   <script src="./noco-notes.js"></script>
   <script src="./noco-reminders.js"></script>
   <script src="./noco-ai-math.js"></script>
@@ -329,9 +416,44 @@
   <script src="./noco-ai-lexicon.js"></script>
   <script src="./noco-ai-limits.js"></script>
   <script src="./noco-ai-brain.js"></script>
-  <script src="./noco-ai-system.js"></script>
-  <script src="./noco-ai.js"></script>
+  <script src="./noco-ai-router.js?v=151"></script>
+  <script src="./noco-ai-understand.js?v=151"></script>
+  <script src="./noco-ai-profile.js?v=151"></script>
+  <script src="./noco-ai-live.js?v=151"></script>
+  <script src="./noco-ai-system.js?v=151"></script>
+  <script src="./noco-ai-systemmap.js"></script>
+  <script src="./noco-ai-diagnostics.js"></script>
+  <script src="./noco-ai-chatcmd.js"></script>
+  <script src="./noco-ai-answers.js?v=151"></script>
+  <script src="./noco-ai-faq-bank.js?v=151"></script>
+  <script src="./noco-ai-knowledge.js?v=151"></script>
+  <script src="./noco-ai-actions.js?v=151"></script>
+  <script src="./noco-ai-smart.js?v=151"></script>
+  <script src="./noco-ai-personality.js?v=151"></script>
+  <script src="./noco-ai-12.js?v=151"></script>
+  <script src="./noco-ai-voice.js?v=151"></script>
+  <script src="./noco-ai-games.js?v=151"></script>
+  <script src="./noco-ai-pulse.js?v=151"></script>
+  <script src="./noco-ai-meta.js?v=151"></script>
+  <script src="./noco-ai-everyday.js?v=151"></script>
+  <script src="./noco-ai.js?v=151"></script>
   <script src="./noco-device.js"></script>
-  <script src="./app.js"></script>
+  <script src="./app.js?v=151"></script>
+  <script>
+    window.addEventListener("load", function () {
+      var cap = document.querySelector(".stage-caption");
+      if (location.protocol === "file:") {
+        if (cap) cap.innerHTML += ' · <strong style="color:#fbbf24">file:// — bitte lokalen Server nutzen</strong>';
+        return;
+      }
+      if (!window.NocoAIEveryday) {
+        if (cap) {
+          cap.innerHTML =
+            'NOCO OS Mobile 1.2 · <strong style="color:#f87171">Alte Version im Cache</strong> · <a href="?fresh=1">Cache leeren</a>';
+        }
+        console.warn("[NOCO] NocoAIEveryday fehlt — ?fresh=1 oder Service Worker loeschen.");
+      }
+    });
+  </script>
 </body>
 </html>

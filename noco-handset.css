@@ -1,0 +1,111 @@
+/* Handy: App-Modus, Widgets, Wischen, Beam */
+
+/* —— In App: nur Island + AI, kein grauer Streifen / keine Titelzeile —— */
+body.island-app-mode .noco-top-fade,
+body.sheet-open:not(.home-page):not(.desktop-page) .noco-top-fade {
+  display: none !important;
+}
+
+body.island-app-mode .phone-chrome .chrome-title-bar,
+body.island-app-mode .phone-chrome .chrome-page-nav,
+body.island-app-mode .phone-chrome .chrome-glass-wash {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}
+
+body.island-app-mode .phone-chrome {
+  background: transparent !important;
+  pointer-events: none;
+}
+
+body.island-app-mode .phone-chrome .island-zone,
+body.island-app-mode .phone-chrome .island-zone .dynamic-island,
+body.island-app-mode .phone-chrome .island-inline-nav {
+  pointer-events: auto;
+}
+
+.island-inline-nav {
+  display: none !important;
+}
+
+body.island-app-mode .app-sheet .sheet-card {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 56px) !important;
+}
+
+body.island-app-mode .app-sheet .sheet-card > .sheet-close,
+body.island-app-mode #closeSheet {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* —— Home: Widgets nicht überlappen (z. B. Akku Labor / NOCO AI) —— */
+.home-bento {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: stretch;
+}
+
+.home-bento > .timer-live-banner,
+.home-bento > .widget-card,
+.home-bento > .home-row-duo,
+.home-bento > .generated-widget {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 0 0 auto;
+  margin: 0 !important;
+  z-index: 1;
+  isolation: isolate;
+}
+
+.home-bento > .widget-card.is-widget-hidden,
+.home-bento > .widget-card[hidden] {
+  display: none !important;
+}
+
+.home-bento > .home-row-duo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+}
+
+.home-bento > .home-row-duo > .widget-card {
+  margin: 0 !important;
+  min-width: 0;
+}
+
+.bento-nocoai.noco-ai-widget,
+.noco-ai-widget.widget-card {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.bento-nocoai .noco-ai-widget-log {
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+/* —— Seiten-Wischen flüssiger —— */
+body.device-handset .page-stage.page-swiping {
+  touch-action: none;
+}
+
+body.device-handset .page-stage > .screen {
+  will-change: auto;
+}
+
+body.device-handset .page-stage.page-swiping > .screen {
+  overflow: hidden !important;
+}

@@ -58,7 +58,21 @@
     {
       id: "create",
       label: "Neu anlegen",
-      terms: ["erstell", "erstelle", "leg an", "neu", "anlegen", "mach mir", "schreib mir"]
+      terms: [
+        "erstell",
+        "erstelle",
+        "leg an",
+        "neu anlegen",
+        "neues erstellen",
+        "etwas neues",
+        "neue notiz",
+        "neuer chat",
+        "neue aufgabe",
+        "neue erinnerung",
+        "anlegen",
+        "mach mir",
+        "schreib mir"
+      ]
     },
     {
       id: "pay",
@@ -78,7 +92,24 @@
     {
       id: "help",
       label: "Hilfe",
-      terms: ["hilfe", "help", "was kannst", "wie funktioniert", "erklaer", "erklar"]
+      terms: ["hilfe", "help", "was kannst", "wie funktioniert", "erklaer", "erklar", "was ist", "brauche ich", "einfache frage"]
+    },
+    {
+      id: "system",
+      label: "System & Navigation",
+      terms: [
+        "wo ist",
+        "wo finde",
+        "wo liegt",
+        "wie komme ich",
+        "system karte",
+        "wo bin ich",
+        "navigation",
+        "bibliothek tab",
+        "bearbeiten",
+        "widget hinzufuegen",
+        "schnellzugriff"
+      ]
     }
   ];
 
@@ -118,15 +149,26 @@
     return /\b(oeffne|offne|open|starte|zeig mir|geh zu|gehe zu|launch)\b/.test(q);
   }
 
+  function isVersionOrUpdateQuestion(q) {
+    return global.NocoAI12?.isVersionOrUpdateQuestion?.(q, q) || false;
+  }
+
   function scoreTopics(q, raw) {
+    if (global.NocoAIAnswers?.shouldSkipIntent?.(q)) {
+      return [];
+    }
+    if (isVersionOrUpdateQuestion(q)) {
+      return [{ id: "help", label: "Hilfe & Infos", score: 10 }];
+    }
     const scores = TOPICS.map((topic) => {
       let score = 0;
       topic.terms.forEach((term) => {
         const n = norm(term);
         if (!n) return;
+        if (topic.id === "create" && n === "neu") return;
         if (q === n || q.startsWith(n + " ") || q.endsWith(" " + n) || q.includes(" " + n + " ")) {
           score += n.length >= 6 ? 3 : 2;
-        } else if (q.includes(n)) {
+        } else if (q.includes(n) && n.length >= 5) {
           score += 1;
         }
       });
@@ -194,6 +236,12 @@
       help: [
         { label: "Hilfe", cmd: "Hilfe" },
         { label: "Was kannst du?", cmd: "Was kannst du alles?" }
+      ],
+      system: [
+        { label: "Wo ist Forge?", cmd: "Wo ist Forge?" },
+        { label: "Wo bin ich?", cmd: "Wo bin ich?" },
+        { label: "System Status", cmd: "System Status" },
+        { label: "Apps", run: () => helpers.goToPage?.(1) }
       ]
     };
     return map[topicId] || map.status;
@@ -294,6 +342,11 @@
         return global.NocoAISystem?.processCommand?.(raw, helpers);
       case "help":
         return null;
+      case "system":
+        return (
+          global.NocoAISystemMap?.process?.(raw, helpers, ctx) ||
+          buildOfferFromSuggestions(suggestionsForTopic("system", helpers), "System & Navigation", helpers)
+        );
       default:
         return null;
     }
@@ -306,7 +359,7 @@
     const top = topics[0];
     const second = topics[1];
 
-    if (top.score >= 4 && (!second || top.score >= second.score + 2)) {
+    if (top.score >= 3 && (!second || top.score >= second.score + 2)) {
       const hit = delegateTopic(top.id, q, raw, helpers, ctx);
       if (hit) return hit;
     }
@@ -343,11 +396,30 @@
     };
   }
 
+  function isPlainQuestion(q, raw) {
+    if (global.NocoAIAnswers?.shouldSkipIntent?.(q)) return true;
+    const t = String(raw || "").trim();
+    if (t.endsWith("?")) return true;
+    return /\b(was ist|was sind|wie komme|wo ist|warum|wieso|brauche ich|was gibt|was kann|was kannst|was machst|wer bist|was bist|wie funktioniert)\b/.test(
+      q
+    );
+  }
+
   function trySoftUnderstand(q, raw, helpers) {
+    if (isVersionOrUpdateQuestion(q)) return null;
+    if (global.NocoAIDiagnostics?.isPerformanceQuery?.(q, raw)) return null;
+    if (global.NocoAISystemMap?.isSystemQuery?.(q, raw)) return null;
+    if (isPlainQuestion(q, raw) && !hasOpenVerb(q)) return null;
+    if (global.NocoAI12?.tryVersionAnswer?.(q, raw)) {
+      return global.NocoAI12.tryVersionAnswer(q, raw);
+    }
     const topics = scoreTopics(q, raw);
     if (!topics.length) return null;
     const top = topics[0];
     if (top.score < 1) return null;
+    if (top.id === "create" && /\b(was ist|was gibt|wie geht|warum)\b/.test(q)) return null;
+    if (top.id === "help" && /\b(was kannst|was machst|wer bist|was bist)\b/.test(q)) return null;
+    if (top.id === "timer" && /\b(fokus modus|fokusmodus|focus mode)\b/.test(q)) return null;
     return buildOfferFromSuggestions(suggestionsForTopic(top.id, helpers), top.label, helpers);
   }
 
@@ -373,6 +445,15 @@
   function process(raw, helpers, ctx = {}) {
     const q = norm(raw);
     if (!q || q.length < 2) return null;
+
+    const version = global.NocoAI12?.tryVersionAnswer?.(q, raw);
+    if (version) return version;
+
+    if (global.NocoAIDiagnostics?.isPerformanceQuery?.(q, raw)) {
+      return global.NocoAIDiagnostics.process(raw, helpers);
+    }
+
+    if (isPlainQuestion(q, raw) && !hasOpenVerb(q)) return null;
 
     const noun = tryNounOpen(q, raw, helpers);
     if (noun) return noun;

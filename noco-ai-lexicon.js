@@ -152,6 +152,51 @@
       internal: "NOCO AI",
       aliases: ["assistent", "ki", "chat", "hilfe chat", "copilot"],
       describe: () => "<p>Du bist schon hier — <strong>NOCO AI</strong>. Frag mich oder tippe «Chats» oben.</p>"
+    },
+    {
+      id: "timer",
+      appId: "timer",
+      label: "Timer",
+      internal: "Timer",
+      aliases: ["timer", "countdown", "stoppuhr", "fokus"],
+      describe: (h) => {
+        const t = h.getTimerStatus?.();
+        const run = t?.running ? `laeuft noch <strong>${t.label || "Timer"}</strong>` : "steht still";
+        return `<p><strong>Timer</strong> — ${run}. «Starte Timer 5 Minuten» oder «Wann ist mein Timer rum?».</p>`;
+      }
+    },
+    {
+      id: "memories",
+      appId: "memories",
+      label: "Memory",
+      internal: "Memory",
+      aliases: ["memory", "memories", "erinnerungen", "erinnerung"],
+      describe: () => "<p><strong>Memory</strong> — Erinnerungen mit Uhrzeit. «Erinnere mich in 20 Minuten …».</p>"
+    },
+    {
+      id: "hub",
+      appId: "hub",
+      label: "Hub",
+      internal: "NOCO Hub",
+      aliases: ["hub", "noco hub"],
+      run: (h) => h.openHub?.(),
+      describe: () => "<p><strong>NOCO Hub</strong> — Schnellaktionen. Island → Hub.</p>"
+    },
+    {
+      id: "arcade",
+      appId: "arcade",
+      label: "Spiele",
+      internal: "Arcade",
+      aliases: ["arcade", "spiele", "mini games", "minispiele"],
+      describe: () => "<p><strong>Spiele</strong> in Bibliothek → Tab <strong>Spiele</strong>.</p>"
+    },
+    {
+      id: "device",
+      appId: "device",
+      label: "Device",
+      internal: "NOCO Device",
+      aliases: ["device", "geraet", "handy info", "system info"],
+      describe: () => "<p><strong>Device</strong> — Geraete-Infos & Demo-Funktionen aus Forge.</p>"
     }
   ];
 

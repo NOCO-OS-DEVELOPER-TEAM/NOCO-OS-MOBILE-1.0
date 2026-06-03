@@ -45,6 +45,9 @@
     if (global.NocoAITime?.isTimeQuery?.(q, raw)) return true;
     if (global.NocoAIUltra?.isBriefingQuery?.(q)) return true;
     if (global.NocoAIUltra?.isFollowUp?.(q, raw)) return true;
+    if (global.NocoAI12?.isUnderstandingQuery?.(q, raw)) return true;
+    if (global.NocoAISystemMap?.isSystemQuery?.(q, raw)) return true;
+    if (global.NocoAIDiagnostics?.isPerformanceQuery?.(q, raw)) return true;
     if (!q || q.length > 320) return false;
     if (global.NocoAICreate?.isCreateIntent?.(raw, q)) return false;
     if (/\b(oeffne|offne|open|starte|install|deinstall)\b/.test(q) && !/\b(was ist|warum|empfehl|inbox|notizen|aufgaben)\b/.test(q)) {
@@ -466,7 +469,6 @@
       keycard: "Datei-Backup deiner Einstellungen, Apps und Daten zwischen Geraeten.",
       forge: "App-Store: Timer, Spiele, Rechner, Memory usw. installieren.",
       beam: "Spotlight-Suche: Apps und Aktionen — «Oeffne Beam».",
-      island: "Leiste oben: Uhr, Seiten-Wechsel, Schnellmenu, NOCO AI ✧.",
       exclusive: "Premium-Paket: unbegrenzte NOCO AI, Pro-Glas, Deep Scan, Member-Apps.",
       "noco pay": "Demo-Wallet — Guthaben fuer Exclusive-Abo.",
       wallet: "Alltagssprache fuer NOCO Pay — «Wie viel Guthaben?» zeigt den Betrag.",
@@ -493,7 +495,13 @@
       themes: "Farb-Themes: Aurora, Midnight, Sunset, Forest.",
       memories: "Erinnerungen mit Countdown — auch per Sprachbefehl.",
       sketch: "Skizzen-App aus Forge.",
-      breath: "Atem-Uebung / Ruhe aus Forge."
+      breath: "Atem-Uebung / Ruhe aus Forge.",
+      bibliothek: "App-Uebersicht — wische links oder Island → Apps. Tabs: Core, Forge, Spiele.",
+      schnellzugriff: "App-Kacheln oben in der Bibliothek — per Edit-Modus anpassbar.",
+      island: "Oben: Uhr, Seiten, AI ✧ — Tippen fuer Schnellmenu.",
+      edit: "Bearbeitungsmodus — Island → Edit, dann + oder Stift.",
+      inbox: "Kurzstatus aus Tasks, Memory, Timer — Befehl «Inbox».",
+      device: "Geraete-Infos — Forge-App Device."
     };
     for (const [key, val] of Object.entries(defs)) {
       if (term.includes(key) || key.includes(term)) {

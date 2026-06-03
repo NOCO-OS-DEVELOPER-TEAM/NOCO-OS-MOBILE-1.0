@@ -7,7 +7,22 @@ const largeClock = document.getElementById("largeClock");
 const largeDate = document.getElementById("largeDate");
 const screenTrack = document.getElementById("screenTrack");
 const pageStage = document.getElementById("pageStage");
+const NOCO_BUILD = window.NOCO_BUILD || "151";
 const screenTitle = document.getElementById("screenTitle");
+
+/** Doppelte/veraltete Topbars entfernen — phone-chrome Titelzeile behalten. */
+function purgeLegacyChrome() {
+  document.querySelectorAll(".phone > header.mobile-topbar, .phone > .mobile-topbar").forEach((node) => {
+    if (!node.closest(".phone-chrome")) node.remove();
+  });
+  const chrome = document.querySelector(".phone-chrome");
+  if (!chrome) return;
+  const titleBars = chrome.querySelectorAll(".chrome-title-bar");
+  titleBars.forEach((node, index) => {
+    if (index > 0) node.remove();
+  });
+  chrome.querySelectorAll(".status-cluster, .top-clock").forEach((node) => node.remove());
+}
 const exclusiveTopBadge = document.getElementById("exclusiveTopBadge");
 const editBtn = document.getElementById("editBtn");
 const shortcutGrid = document.getElementById("shortcutGrid");
@@ -35,6 +50,9 @@ const widgetPanel = document.getElementById("widgetPanel");
 const widgetLibrary = document.getElementById("widgetLibrary");
 const homeEditChrome = document.getElementById("homeEditChrome");
 const widgetAddFab = document.getElementById("widgetAddFab");
+const libraryQuickAddFab = document.getElementById("libraryQuickAddFab");
+const libraryQuickEditFab = document.getElementById("libraryQuickEditFab");
+const libraryEditHint = document.getElementById("libraryEditHint");
 const homeEditFab = document.getElementById("homeEditFab");
 const dynamicIsland = document.getElementById("dynamicIsland");
 const islandMenu = document.getElementById("islandMenu");
@@ -75,6 +93,8 @@ let runnerGame = {
 let appSwipe = null;
 let reorderDrag = null;
 let currentApp = null;
+/** Letzte per openApp geoeffnete App (fuer NOCO AI «letzte App»). */
+let lastOpenedAppId = null;
 let suppressClickUntil = 0;
 let forgeSearch = "";
 let codeRequest = null;
@@ -107,6 +127,7 @@ let timerState = {
   mode: "custom",
   customMinutes: 5,
   timerId: null,
+  tickId: null,
   endAt: null,
   alarmActive: false
 };
@@ -121,17 +142,46 @@ let dodgeGame = {
   obstacleX: 50,
   obstacleY: -14
 };
+let reactTap = {
+  phase: "idle",
+  lastMs: 0,
+  best: Number(localStorage.getItem("noco_mobile_reacttap_best") || 0),
+  waitTimer: null,
+  goAt: 0
+};
+let blitzMath = {
+  score: 0,
+  best: Number(localStorage.getItem("noco_mobile_blitzmath_best") || 0),
+  a: 2,
+  b: 3,
+  op: "+",
+  answer: 5,
+  options: []
+};
+let laneSwap = {
+  lane: 1,
+  score: 0,
+  best: Number(localStorage.getItem("noco_mobile_laneswap_best") || 0),
+  running: false,
+  timer: null,
+  prizeY: -12,
+  hazardY: -20,
+  prizeLane: 1,
+  hazardLane: 2
+};
 
 const UNLOCK_HOLD_MS = 2000;
 let unlockHoldRaf = 0;
 let unlockHoldStarted = 0;
 let lockSwipeStart = null;
 
+const NOCO_AI_LABEL = "NOCO AI";
+
 const GESTURE = {
-  pageStart: 18,
-  pageRatio: 1.28,
-  pageSnap: 0.18,
-  pageVelocity: 0.52,
+  pageStart: 12,
+  pageRatio: 1.12,
+  pageSnap: 0.16,
+  pageVelocity: 0.42,
   sheetStart: 22,
   sheetRatio: 1.35,
   sheetSnap: 84,
@@ -162,6 +212,9 @@ const APP_GLYPHS = {
   colorcatch: "◉",
   memorygrid: "▦",
   dodgerun: "➤",
+  reacttap: "◎",
+  blitzmath: "∑",
+  laneswap: "⇆",
   runner: "▸",
   transit: "⌁",
   mood: "◑",
@@ -246,7 +299,7 @@ if (settings.passkeyEnabled || settings.requireCodeOnLaunch) {
 
 const shortcutChoices = [
   { id: "hub", title: "NOCO Hub", icon: "N", className: "" },
-  { id: "nocoai", title: "NOCO AI 1.1", icon: "✧", className: "core" },
+  { id: "nocoai", title: NOCO_AI_LABEL, icon: "✧", className: "core" },
   { id: "toon", title: "Toon", icon: "T", className: "toon" },
   { id: "focus", title: "Focus", icon: "F", className: "focus" },
   { id: "cloud", title: "Cloud", icon: "C", className: "cloud" },
@@ -268,6 +321,9 @@ const forgeApps = [
   { id: "colorcatch", title: "Color Catch", icon: "C", className: "themes", text: "Triff die richtige Farbe, bevor NOCO den Vibe wechselt." },
   { id: "memorygrid", title: "Memory Grid", icon: "M", className: "focus", text: "Merke dir die leuchtende Reihenfolge und spiele sie nach." },
   { id: "dodgerun", title: "Dodge Run", icon: "R", className: "forge", text: "Ein echtes kleines Ausweich-Spiel: bewege den Orb und weich den Blöcken aus." },
+  { id: "reacttap", title: "React Tap", icon: "!", className: "forge", text: "Warte auf Gruen — dann so schnell wie moeglich tippen. Zu frueh kostet Punkte." },
+  { id: "blitzmath", title: "Blitz Math", icon: "M", className: "focus", text: "Loese Mini-Aufgaben unter Zeitdruck und halte deine Combo." },
+  { id: "laneswap", title: "Lane Swap", icon: "L", className: "forge", text: "Wechsle die Spur, sammle Sterne und weiche den Glas-Bloecken aus." },
   { id: "transit", title: "Transit", icon: "T", className: "cloud", text: "Fake-Reiseplaner im NOCO Look." },
   { id: "mood", title: "Mood Board", icon: "M", className: "themes", text: "Sammelt Farben, Vibes und Wallpaper-Ideen fuer dein Setup." },
   { id: "wallet", title: "Wallet Watch", icon: "W", className: "pay", text: "Kleiner NOCO Pay Verlauf mit Budget-Gefuehl." },
@@ -296,7 +352,7 @@ const widgetDefinitions = {
   notes: { title: "Schnellnotiz", text: "Direkt auf Home schreiben." },
   sync: { title: "NOCO Sync", text: "Keycard Import und Export." },
   feed: { title: "Heute NOCO", text: "Kurzer System-Feed." },
-  nocoai: { title: "NOCO AI 1.1", text: "Offline-Sprachmodell auf dem Home-Screen — Apps oeffnen und chatten." },
+  nocoai: { title: NOCO_AI_LABEL, text: "Kennt dein System — Wo ist was, Apps oeffnen, Fragen, Aufgaben & mehr." },
   focusMini: { title: "Focus Mini", text: "Ruhige Schnellsteuerung fuer Fokus." },
   batteryLab: { title: "Akku Labor", text: "Mobile Energie-Uebersicht." },
   forgePick: { title: "Forge Tipp", text: "App-Empfehlung direkt auf Home." },
@@ -307,7 +363,7 @@ const widgetDefinitions = {
 let activeShortcuts = loadShortcuts();
 
 const appFolders = {
-  games: ["tapdash", "colorcatch", "memorygrid", "dodgerun", "runner", "arcade"],
+  games: ["tapdash", "colorcatch", "memorygrid", "dodgerun", "reacttap", "blitzmath", "laneswap", "runner", "arcade"],
   design: ["themes", "sketch", "mood", "pro-themes", "glowcam", "quotes"],
   workspace: ["settings", "security", "device", "sync", "nocoai", "notes", "tasks", "memories", "calculator", "timer", "weather", "cloud", "toon", "forge", "pay"]
 };
@@ -318,7 +374,18 @@ let libraryGridReady = false;
 let openAppInFlight = false;
 let pendingOpenAppId = null;
 
-const LIBRARY_QUICK_IDS = ["nocoai", "notes", "tasks", "calculator", "weather", "themes"];
+const LIBRARY_QUICK_DEFAULT = ["nocoai", "notes", "tasks", "calculator", "weather", "themes"];
+const MAX_LIBRARY_QUICK = 8;
+function dedupeQuickIds(ids) {
+  const seen = new Set();
+  return ids.filter((id) => {
+    if (!id || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+}
+
+let libraryQuickIds = dedupeQuickIds(loadLibraryQuickIds());
 
 function getLibraryFolderApps(folderId) {
   const installed = new Set(getInstalledApps());
@@ -389,13 +456,51 @@ function renderLibraryGrid() {
   libraryGridReady = true;
 }
 
+function loadLibraryQuickIds() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("noco_mobile_library_quick") || "[]");
+    if (Array.isArray(saved) && saved.length) {
+      const valid = saved.filter((id) => shortcutChoices.some((choice) => choice.id === id) || id === "beam");
+      if (valid.length) return dedupeQuickIds(valid.filter((id) => id !== "beam")).slice(0, MAX_LIBRARY_QUICK);
+    }
+  } catch (_) {}
+  return [...LIBRARY_QUICK_DEFAULT];
+}
+
+function saveLibraryQuickIds() {
+  libraryQuickIds = dedupeQuickIds(libraryQuickIds);
+  localStorage.setItem("noco_mobile_library_quick", JSON.stringify(libraryQuickIds));
+}
+
+(function migrateLibraryQuickDedupe() {
+  try {
+    const raw = JSON.parse(localStorage.getItem("noco_mobile_library_quick") || "[]");
+    const rawArr = Array.isArray(raw) ? raw : [];
+    const clean = dedupeQuickIds(rawArr.filter((id) => id && id !== "beam"));
+    if (clean.length !== rawArr.length) {
+      libraryQuickIds = clean.length ? clean.slice(0, MAX_LIBRARY_QUICK) : [...LIBRARY_QUICK_DEFAULT];
+      saveLibraryQuickIds();
+    }
+  } catch (_) {}
+})();
+
+function libraryQuickChoices() {
+  const installed = new Set(getInstalledApps());
+  return shortcutChoices.filter((choice) => {
+    if (choice.id === "hub") return true;
+    if (choice.id === "nocoai" || choice.id === "notes") return true;
+    return installed.has(choice.id) || forgeApps.some((app) => app.id === choice.id);
+  });
+}
+
 function renderLibraryQuick() {
   const el = document.getElementById("libraryQuick");
   if (!el) return;
+  libraryQuickIds = dedupeQuickIds(libraryQuickIds);
   const installed = new Set(getInstalledApps());
-  const ids = LIBRARY_QUICK_IDS.filter((id) => {
+  const ids = libraryQuickIds.filter((id) => {
     if (id === "nocoai" || id === "notes") return true;
-    return installed.has(id);
+    return installed.has(id) || shortcutChoices.some((c) => c.id === id);
   });
   el.innerHTML = `
     <p class="library-quick-label">Schnellzugriff</p>
@@ -535,6 +640,7 @@ function loadSettings() {
       exclusiveTrialUsed: false,
       exclusivePlan: "",
       nocoAiPlus: false,
+      aiNickname: "",
       payBalance: 24,
       paymentMethod: false,
       ...JSON.parse(localStorage.getItem("noco_mobile_settings") || "{}")
@@ -566,6 +672,7 @@ function applySettings() {
   }
   if (settings.nativeFeel === undefined) settings.nativeFeel = true;
   if (settings.glassBoost === undefined) settings.glassBoost = true;
+  if (settings.handsetPerf === undefined) settings.handsetPerf = true;
   if (settings.uiBrightness == null || Number.isNaN(Number(settings.uiBrightness))) settings.uiBrightness = 1;
   if (window.NocoDevice?.setWakeLock) {
     void window.NocoDevice.setWakeLock(!!settings.keepScreenAwake);
@@ -577,9 +684,23 @@ function applySettings() {
   document.body.classList.toggle("no-live-wallpaper", !settings.liveWallpaper);
   document.body.classList.toggle("glass-boost", settings.glassBoost !== false);
   document.body.classList.toggle("reduce-noco-motion", !settings.motion);
+  const handsetStable = isHandsetLayout() && settings.handsetPerf !== false;
+  document.body.classList.toggle(
+    "ui-perf-lite",
+    !settings.glassBoost || !settings.motion || handsetStable
+  );
+  document.body.classList.toggle("ui-handset-stable", handsetStable);
   document.body.classList.toggle("native-feel", settings.nativeFeel !== false);
   document.body.classList.toggle("compact-tiles", !!settings.compactTiles);
   applyDeviceLayoutClass();
+  if (settings.aiNickname && global.NocoAIProfile?.getNickname && !global.NocoAIProfile.getNickname()) {
+    global.NocoAIProfile.setNickname(settings.aiNickname, null);
+  }
+  if (global.NocoAIProfile?.getInputPlaceholder) {
+    document.querySelectorAll("[data-noco-ai-input]").forEach((el) => {
+      el.placeholder = global.NocoAIProfile.getInputPlaceholder();
+    });
+  }
   const showExclusiveBadge = isExclusiveActive() && settings.exclusivePlan !== "trial";
   exclusiveTopBadge?.classList.toggle("hidden", !showExclusiveBadge);
   if (exclusiveTopBadge) exclusiveTopBadge.textContent = "Exclusive";
@@ -632,21 +753,36 @@ function changeBalance(amount, title, type = "system") {
   addTransaction(title, amount, type);
 }
 
+function formatClockTime(date = new Date()) {
+  const h = String(date.getHours()).padStart(2, "0");
+  const m = String(date.getMinutes()).padStart(2, "0");
+  return `${h}:${m}`;
+}
+
 function updateClock() {
   const now = new Date();
-  const timeText = now.toLocaleTimeString("de-DE", {
-    hour: "2-digit",
-    minute: "2-digit"
+  const timeText = formatClockTime(now);
+  document.querySelectorAll("#largeClock, [data-noco-home-clock], .bento-clock [data-noco-home-clock]").forEach((el) => {
+    el.textContent = timeText;
+    el.removeAttribute("hidden");
+    el.style.visibility = "visible";
   });
-  if (largeClock) largeClock.textContent = timeText;
-  if (islandClock) islandClock.textContent = timeText;
-  if (largeDate) {
-    largeDate.textContent = now.toLocaleDateString("de-DE", {
+  const island = document.getElementById("islandClock");
+  if (island) {
+    island.textContent = timeText;
+    island.hidden = false;
+    island.removeAttribute("aria-hidden");
+    island.style.visibility = "visible";
+  }
+  const dateEl = largeDate || document.getElementById("largeDate");
+  if (dateEl) {
+    dateEl.textContent = now.toLocaleDateString("de-DE", {
       weekday: "long",
       day: "2-digit",
       month: "long"
     });
   }
+  if (lockClock) lockClock.textContent = timeText;
 }
 
 function setIslandExpanded(open) {
@@ -677,23 +813,35 @@ function updateIslandUI() {
   const appOpen = !!(currentApp && appSheet && !appSheet.classList.contains("hidden"));
   document.body.classList.toggle("island-app-mode", appOpen);
   if (islandStatus) {
+    islandStatus.classList.remove("is-timer", "is-memory", "is-app");
     if (timerState.running) {
       const rem = formatTimerDisplay(getTimerRemaining());
       islandStatus.textContent = `◴ ${rem}`;
       islandStatus.hidden = false;
       islandStatus.setAttribute("aria-hidden", "false");
       islandStatus.classList.add("is-timer");
+      islandStatus.title = "Timer — tippen zum Oeffnen";
     } else if (appOpen) {
       const meta = getAppMeta(currentApp);
       islandStatus.textContent = meta.title;
       islandStatus.hidden = false;
       islandStatus.setAttribute("aria-hidden", "false");
-      islandStatus.classList.remove("is-timer");
+      islandStatus.classList.add("is-app");
+      islandStatus.title = "Aktuelle App";
     } else {
-      islandStatus.textContent = "";
-      islandStatus.hidden = true;
-      islandStatus.setAttribute("aria-hidden", "true");
-      islandStatus.classList.remove("is-timer");
+      const nextRem = getNextReminderForAI();
+      if (nextRem?.eta) {
+        islandStatus.textContent = `◆ ${nextRem.eta}`;
+        islandStatus.hidden = false;
+        islandStatus.setAttribute("aria-hidden", "false");
+        islandStatus.classList.add("is-memory");
+        islandStatus.title = nextRem.text ? `Memory: ${nextRem.text}` : "Memory — tippen";
+      } else {
+        islandStatus.textContent = "";
+        islandStatus.hidden = true;
+        islandStatus.setAttribute("aria-hidden", "true");
+        islandStatus.title = "";
+      }
     }
   }
   if (islandClock && timerState.running) {
@@ -701,22 +849,27 @@ function updateIslandUI() {
   } else if (islandClock) {
     delete islandClock.dataset.timerActive;
   }
-  document.querySelectorAll(".island-page-tab, [data-island-pip]").forEach((el) => {
+  document.querySelectorAll(".island-page-tab, .chrome-page-tab, [data-island-pip]").forEach((el) => {
     const page = el.dataset.page ?? el.dataset.islandPip;
     if (page == null) return;
-    if (appOpen) {
-      el.classList.toggle("active", String(page) === "1");
-      el.classList.toggle("is-app-nav-hint", String(page) === "1");
-    } else {
-      el.classList.remove("is-app-nav-hint");
-      el.classList.toggle("active", Number(page) === currentPage);
-    }
+    el.classList.remove("is-app-nav-hint");
+    el.classList.toggle("active", Number(page) === currentPage);
   });
   if (screenTitle) {
-    screenTitle.textContent = appOpen
-      ? getAppMeta(currentApp).title
-      : (currentPage === 0 ? "Home" : "Apps");
+    screenTitle.textContent = currentPage === 0 ? "Home" : "Apps";
   }
+  const modeIcon = document.getElementById("islandModeIcon");
+  if (modeIcon) {
+    const statusVisible = islandStatus && !islandStatus.hidden;
+    modeIcon.hidden = statusVisible;
+    modeIcon.setAttribute("aria-hidden", statusVisible ? "true" : "false");
+    if (!statusVisible) {
+      modeIcon.textContent = currentPage === 0 ? "⌂" : "▦";
+      modeIcon.setAttribute("aria-label", currentPage === 0 ? "Zu Apps wechseln" : "Zu Home wechseln");
+      modeIcon.classList.toggle("is-apps", currentPage === 1);
+    }
+  }
+  updateClock();
 }
 
 function refreshHomeStatus() {
@@ -1114,7 +1267,9 @@ function applyPageState(page, options = {}) {
   screenTitle.textContent = currentPage === 0 ? "Home" : "Apps";
   updatePageToggle();
   if (currentPage === 1 && previousPage !== currentPage && !libraryGridReady) {
-    renderLibraryGrid();
+    const run = () => renderLibraryGrid();
+    if (typeof requestIdleCallback === "function") requestIdleCallback(run, { timeout: 450 });
+    else window.setTimeout(run, 40);
   } else if (currentPage === 1 && previousPage !== currentPage) {
     refreshLibraryExpand();
   }
@@ -1148,7 +1303,7 @@ function initPageScrollSync() {
 
 function isTapTarget(target) {
   return !!target?.closest?.(
-    "button, a, input, textarea, select, label, [role='button'], [data-app], [data-folder], [data-library-folder], [data-library-tab], [data-action], [data-shortcut], [data-open-panel], .app-icon, .folder-tile, .quick-tile, .library-app, .library-tab, .library-quick-app, .shortcut-btn, .mini-action, .beam-strip, .forge-install, .icon-orb, .icon-orb-glyph, [data-app-icon], .widget-add-fab, .edit-fab, .noco-ai-chip, .noco-ai-send"
+    "button, a, input, textarea, select, label, [role='button'], [data-app], [data-folder], [data-library-folder], [data-library-tab], [data-action], [data-shortcut], [data-open-panel], .app-icon, .folder-tile, .quick-tile, .library-app, .library-tab, .library-quick-app, .shortcut-btn, .mini-action, .beam-strip, .forge-install, .icon-orb, .icon-orb-glyph, [data-app-icon], .widget-add-fab, .edit-fab, .noco-ai-chip, .noco-ai-quick-btn, .noco-ai-game-btn, .noco-ai-rail-mini, .noco-ai-rail-btn, .noco-ai-send, [data-noco-ai-mic-allow], [data-noco-ai-mic-later], .noco-ai-mic-consent-card, [data-noco-ai-cmd], [data-noco-ai-game], [data-noco-ai-pulse], [data-noco-ai-scroll-bottom], [data-noco-ai-help-cmd], [data-noco-ai-tools-toggle], [data-noco-ai-tools-close], [data-noco-tools-tab], [data-noco-ai-chats-toggle], [data-noco-ai-new-chat], [data-noco-ai-chat-item], [data-noco-ai-plus-toggle], [data-noco-ai-mic], [data-noco-ai-wake-toggle], [data-noco-ai-voice-mini]"
   );
 }
 
@@ -1164,9 +1319,11 @@ function canStartPageSwipe(event) {
   if (!firstLightPanel?.classList.contains("hidden")) return false;
   const target = event.target;
   if (!target?.closest?.(".screen-track")) return false;
-  if (target.closest(".mobile-topbar, .page-dots, .island-zone, .island-menu")) return false;
+  if (target.closest(".mobile-topbar, .page-dots, .island-zone, .island-menu, .phone-chrome, .chrome-page-nav, .chrome-title-bar")) return false;
   if (isTapTarget(target)) return false;
   if (target.closest("textarea, input, select, [contenteditable='true']")) return false;
+  const aiLog = target.closest(".noco-ai-log-scroll");
+  if (aiLog && aiLog.scrollTop > 12) return false;
   const scrollEl = activeScreenScrollEl();
   if (scrollEl && scrollEl.scrollHeight > scrollEl.clientHeight + 6 && scrollEl.scrollTop > 4) {
     if (scrollEl.contains(target)) return false;
@@ -1252,12 +1409,12 @@ function endPageDrag() {
   let next = base;
   if (Math.abs(rawDx) > width * GESTURE.pageSnap || velocity > GESTURE.pageVelocity) {
     next = rawDx < 0 ? base + 1 : base - 1;
-  } else if (Math.abs(rawDx) > width * 0.14) {
+  } else if (Math.abs(rawDx) > width * 0.12) {
     next = rawDx < 0 ? base + 1 : base - 1;
   }
   next = Math.max(0, Math.min(1, next));
   pageScrollLock = false;
-  void goToPage(next);
+  applyPageState(next, { scroll: true, smooth: false, haptic: next !== base });
 }
 
 function normalizeSearch(value) {
@@ -1432,12 +1589,32 @@ function renderSpotlightResults(query = "") {
   `).join("");
 }
 
-function openBeam() {
+function dismissMobileKeyboard() {
+  const active = document.activeElement;
+  if (active && typeof active.blur === "function") {
+    const tag = active.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || active.isContentEditable) {
+      active.blur();
+    }
+  }
+}
+
+function openBeam(prefillQuery) {
+  dismissMobileKeyboard();
   setIslandExpanded(false);
   closeHub();
   spotlightPanel?.classList.remove("hidden");
-  renderSpotlightResults("");
-  window.setTimeout(() => spotlightInput?.focus(), 80);
+  const q = String(prefillQuery || "").trim();
+  if (q && spotlightInput) {
+    spotlightInput.value = q;
+    renderSpotlightResults(q);
+  } else {
+    renderSpotlightResults("");
+  }
+  window.setTimeout(() => {
+    dismissMobileKeyboard();
+    spotlightInput?.focus({ preventScroll: true });
+  }, 120);
 }
 
 function closeBeam() {
@@ -1455,7 +1632,7 @@ function getAppMeta(appId) {
   if (forge) return { id: forge.id, title: forge.title, icon: forge.icon, className: forge.className };
   const titles = {
     settings: { id: "settings", title: "Core", icon: "C", className: "core" },
-    nocoai: { id: "nocoai", title: "NOCO AI 1.1", icon: "✧", className: "core" },
+    nocoai: { id: "nocoai", title: NOCO_AI_LABEL, icon: "✧", className: "core" },
     pay: { id: "pay", title: "Pay", icon: "P", className: "pay" },
     notes: { id: "notes", title: "Notizen", icon: "N", className: "notes" },
     device: { id: "device", title: "Geräte", icon: "D", className: "explorer" },
@@ -1585,10 +1762,51 @@ function refreshWidgetEditButtons() {
   });
 }
 
+function openLibraryQuickEditor() {
+  setIslandExpanded(false);
+  shortcutPanelTitle.textContent = "Bibliothek Schnellzugriff";
+  shortcutPanelHint.textContent = "Welche Apps oben in der App-Bibliothek erscheinen.";
+  renderLibraryQuickEditor();
+  shortcutPanel?.classList.remove("hidden");
+  document.body.classList.add("sheet-open");
+}
+
+function renderLibraryQuickEditor() {
+  if (!shortcutEditor) return;
+  libraryQuickIds = dedupeQuickIds(libraryQuickIds);
+  const selected = libraryQuickIds
+    .map((id) => shortcutById(id))
+    .map((choice) => `
+      <button class="shortcut-option quickaccess-option" data-library-quick-remove="${choice.id}">
+        <span><strong>${choice.title}</strong><br><small>In Bibliothek oben</small></span>
+        <strong>Entfernen</strong>
+      </button>
+    `)
+    .join("");
+  const available = libraryQuickChoices()
+    .filter((choice) => !libraryQuickIds.includes(choice.id))
+    .map((choice) => `
+      <button class="shortcut-option quickaccess-option" data-library-quick-add="${choice.id}" ${libraryQuickIds.length >= MAX_LIBRARY_QUICK ? "disabled" : ""}>
+        <span><strong>${choice.title}</strong><br><small>Verfuegbar</small></span>
+        <strong>+ Hinzufuegen</strong>
+      </button>
+    `)
+    .join("");
+  shortcutEditor.innerHTML = `
+    <p class="widget-section-label">Schnellzugriff (${libraryQuickIds.length}/${MAX_LIBRARY_QUICK})</p>
+    ${selected || `<p class="library-empty">Noch keine Apps im Schnellzugriff.</p>`}
+    <p class="widget-section-label">Verfuegbare Apps</p>
+    ${available || `<p class="library-empty">Alle Apps sind bereits im Schnellzugriff.</p>`}
+  `;
+}
+
 function updateHomeEditChrome() {
   const onHome = currentPage === 0;
-  const showChrome = onHome && editMode;
+  const onApps = currentPage === 1;
+  const showChrome = editMode && (onHome || onApps);
   if (homeEditChrome) homeEditChrome.hidden = !showChrome;
+  if (homeEditHint) homeEditHint.hidden = !showChrome || !onHome;
+  if (libraryEditHint) libraryEditHint.hidden = !showChrome || !onApps;
   if (homeEditFab) {
     homeEditFab.setAttribute("aria-label", "Bearbeiten beenden");
   }
@@ -1605,7 +1823,7 @@ function setEditMode(value) {
   refreshWidgetEditButtons();
   updateHomeEditChrome();
   if (editMode && onDesktop) renderDesktopLibrary();
-  showToast(editMode ? (onDesktop ? "Desktop anpassen aktiv" : "Home: verschieben, + fuer Widgets") : "Anpassen beendet");
+  showToast(editMode ? (onDesktop ? "Bibliothek: Stift = Schnellzugriff, + hinzufuegen" : "Home: verschieben, + fuer Widgets") : "Anpassen beendet");
 }
 
 function openWidgetPanelFromHome() {
@@ -1618,10 +1836,12 @@ function visibleWidgetIds() {
   try {
     const saved = JSON.parse(localStorage.getItem("noco_mobile_visible_widgets") || "null");
     if (Array.isArray(saved)) {
-      return saved.filter((id) => widgetDefinitions[id]);
+      const ids = saved.filter((id) => widgetDefinitions[id]);
+      if (!ids.includes("clock")) ids.unshift("clock");
+      return ids;
     }
   } catch (_) {}
-  return ["hero", "clock", "status", "shortcuts", "nocoai", "notes", "sync", "feed"];
+  return ["hero", "clock", "status", "shortcuts", "notes"];
 }
 
 function saveVisibleWidgets(ids) {
@@ -1777,7 +1997,7 @@ function setSettingToggleFromAI(key, value) {
 
 const HOME_WIDGET_PACKS = {
   minimal: ["hero", "clock"],
-  standard: ["hero", "clock", "status", "shortcuts", "nocoai", "notes"],
+  standard: ["hero", "clock", "status", "shortcuts", "notes"],
   full: ["hero", "clock", "status", "shortcuts", "nocoai", "notes", "sync", "feed"],
   focus: ["hero", "clock", "focusMini", "notes"],
   ai: ["hero", "nocoai", "clock", "notes", "shortcuts"],
@@ -1792,12 +2012,57 @@ function enableGlassModeFromAI() {
   applySettings();
 }
 
+function focusDeskFromAI() {
+  dismissMobileKeyboard();
+  dismissCoach();
+  closeBeam();
+  closeHub();
+  if (editMode) setEditMode(false);
+  if (currentApp && appSheet && !appSheet.classList.contains("hidden")) {
+    closeAppSheetVisual();
+  }
+  void goToPage(0);
+}
+
+function writeStatusSnapshotNoteFromAI() {
+  if (!window.NocoNotes) return null;
+  const s = getSystemSnapshotForAI();
+  const lines = [
+    "NOCO Status " + new Date().toLocaleString("de-DE"),
+    "Seite: " + (s.currentPage === 1 ? "Apps" : "Home"),
+    "App: " + (s.currentAppTitle || "—"),
+    "Theme: " + (s.theme || "—"),
+    "Build: " + (s.build || NOCO_BUILD),
+    "Tasks offen: " + (s.openTaskCount || 0),
+    "Timer: " + (s.timerRunning ? s.timerDisplay || "läuft" : "aus"),
+    "Exclusive: " + (s.exclusiveActive ? "an" : "aus")
+  ];
+  const note = window.NocoNotes.createNote(
+    "Status " + new Date().toLocaleDateString("de-DE"),
+    lines.join("\n")
+  );
+  syncHomeNoteFromStore();
+  invalidateAppCache("notes");
+  return note;
+}
+
+function findAppInBeamFromAI(query) {
+  const q = String(query || "").trim();
+  openBeam(q);
+}
+
 function getSystemSnapshotForAI() {
   const widgets = visibleWidgetIds().map((id) => widgetDefinitions[id]?.title || id);
   window.NocoAIChats?.reload?.();
   window.NocoNotes?.reload?.();
   const chatCount = window.NocoAIChats?.listChats?.()?.length ?? 0;
   const noteCount = window.NocoNotes?.listNotes?.()?.length ?? 0;
+  const tasks = loadTasks();
+  const openTasks = tasks.filter((t) => !t.done);
+  const timer = getTimerStatusForAI();
+  const nextRem = getNextReminderForAI();
+  const reminders = listRemindersDetailedForAI();
+  const appOpen = !!(currentApp && appSheet && !appSheet.classList.contains("hidden"));
   return {
     theme: settings.theme,
     autoLock: settings.autoLock,
@@ -1813,7 +2078,21 @@ function getSystemSnapshotForAI() {
     widgets,
     installed: getInstalledApps().length,
     chatCount,
-    noteCount
+    noteCount,
+    build: NOCO_BUILD,
+    currentPage: currentPage === 1 ? "Apps" : "Home",
+    currentApp: appOpen ? currentApp : null,
+    currentAppTitle: appOpen ? getAppMeta(currentApp).title : null,
+    editMode: !!editMode,
+    timerRunning: !!timer.running,
+    timerDisplay: timer.display,
+    timerEndTime: timer.endTimeLocale,
+    reminderCount: reminders.length,
+    nextReminderText: nextRem?.text || null,
+    nextReminderEta: nextRem?.eta || null,
+    openTaskCount: openTasks.length,
+    openTasksPreview: openTasks.slice(0, 5).map((t) => t.text),
+    aiNickname: global.NocoAIProfile?.getNickname?.() || settings.aiNickname || ""
   };
 }
 
@@ -1825,7 +2104,7 @@ function getNocoAIHelpers() {
     openDevice: () => {
       void openApp("device");
     },
-    openBeam: () => openBeam(),
+    openBeam: (query) => openBeam(query),
     openHub: () => openHub(),
     goToPage: (page) => {
       void goToPage(page);
@@ -1916,7 +2195,30 @@ function getNocoAIHelpers() {
     navigateCore: (opts) => {
       void navigateCoreFromAI(opts || {});
     },
-    showLockScreenPreview: () => showLockScreen("Lock Screen Preview"),
+    showLockScreenPreview: (reason) => showLockScreen(reason || "Lock Screen Preview"),
+    getNickname: () => global.NocoAIProfile?.getNickname?.() || settings.aiNickname || "",
+    persistNickname: (name) => {
+      settings.aiNickname = String(name || "").trim().slice(0, 24);
+      saveSettings();
+    },
+    setNickname: (name) => {
+      const stub = { persistNickname: (n) => { settings.aiNickname = n || ""; saveSettings(); } };
+      return global.NocoAIProfile?.setNickname?.(name, stub);
+    },
+    clearNickname: () => {
+      const stub = { persistNickname: (n) => { settings.aiNickname = n || ""; saveSettings(); } };
+      return global.NocoAIProfile?.clearNickname?.(stub);
+    },
+    refreshAiPlaceholder: () => {
+      document.querySelectorAll("[data-noco-ai-input]").forEach((el) => {
+        el.placeholder = global.NocoAIProfile?.getInputPlaceholder?.() || el.placeholder;
+      });
+    },
+    getLastOpenedApp: () => lastOpenedAppId,
+    focusDesk: () => focusDeskFromAI(),
+    saveStatusNote: () => writeStatusSnapshotNoteFromAI(),
+    findInBeam: (query) => findAppInBeamFromAI(query),
+    dismissCoach: () => dismissCoach(),
     setHomeWidgets: (ids) => setHomeWidgetsFromAI(ids),
     addHomeWidget: (id) => addHomeWidgetFromAI(id),
     removeHomeWidget: (id) => removeHomeWidgetFromAI(id),
@@ -1929,8 +2231,23 @@ function getNocoAIHelpers() {
     },
     setTheme: (themeId, options) => setThemeFromAI(themeId, options),
     adjustUiBrightness: (direction) => adjustUiBrightnessFromAI(direction),
+    setUiBrightnessPercent: (pct) => {
+      const n = Math.max(86, Math.min(118, Number(pct) || 100));
+      settings.uiBrightness = Math.round(n) / 100;
+      saveSettings();
+      applySettings();
+    },
     setSettingToggle: (key, value) => setSettingToggleFromAI(key, value),
     getSystemSnapshot: () => getSystemSnapshotForAI(),
+    getInboxSummary: () => global.NocoAISystem?.buildInboxHtml?.(getNocoAIHelpers()) || "",
+    getCurrentPage: () => currentPage,
+    getCurrentApp: () =>
+      appSheet && !appSheet.classList.contains("hidden") && currentApp ? currentApp : null,
+    isEditMode: () => editMode,
+    openLibraryTab: (tabId) => {
+      void goToPage(1);
+      switchLibraryTab(tabId);
+    },
     listHomeWidgets: () => visibleWidgetIds(),
     resetHomeWidgets: () => setHomeWidgetsFromAI(HOME_WIDGET_PACKS.standard),
     setHomeWidgetPack: (pack) => {
@@ -2004,7 +2321,68 @@ function getNocoAIHelpers() {
         const nameEl = root?.querySelector("[data-noco-ai-active-name]");
         if (nameEl) nameEl.textContent = window.NocoAIChats.getActiveChat()?.name || "Chat";
         window.NocoAI?.uiRefreshChats?.();
+      } else {
+        void openApp("nocoai");
       }
+    },
+    deleteActiveChat: () => {
+      window.NocoAIChats?.reload?.();
+      const active = window.NocoAIChats?.getActiveChat?.();
+      if (!active) {
+        showToast("Kein aktiver Chat");
+        return false;
+      }
+      const ok = window.NocoAIChats.deleteChat(active.id);
+      if (!ok) {
+        showToast("Mindestens ein Chat muss bleiben");
+        return false;
+      }
+      if (currentApp === "nocoai") {
+        const root = sheetContent?.querySelector("[data-noco-ai-root]");
+        const log = root?.querySelector("[data-noco-ai-log]");
+        window.NocoAI?.renderLogFromStore?.(log, false);
+        const nameEl = root?.querySelector("[data-noco-ai-active-name]");
+        if (nameEl) nameEl.textContent = window.NocoAIChats.getActiveChat()?.name || "Chat";
+        window.NocoAI?.uiRefreshChats?.();
+      }
+      showToast("Chat geloescht");
+      return true;
+    },
+    openChatDrawer: () => {
+      if (currentApp !== "nocoai") void openApp("nocoai");
+      window.setTimeout(() => window.NocoAI?.openChatDrawer?.(), 280);
+    },
+    closeCurrentApp: () => {
+      if (currentApp && appSheet && !appSheet.classList.contains("hidden")) {
+        void closeAppToPage(currentPage);
+      }
+    },
+    disableEditMode: () => setEditMode(false),
+    dismissKeyboard: () => dismissMobileKeyboard(),
+    showToast: (msg) => showToast(msg),
+    triggerHaptic: () => hapticTap(),
+    getBuild: () => NOCO_BUILD,
+    isLocked: () => isLocked,
+    openNocoAIVoiceWake: () => {
+      if (isLocked && lockScreen) {
+        lockScreen.classList.add("lock-behind-sheet");
+      }
+      void openApp("nocoai", { force: true });
+      const focusReady = () => {
+        const root = sheetContent?.querySelector("[data-noco-ai-root]");
+        if (!root) return;
+        window.NocoAI?.focusChatInput?.(root);
+        const input = root.querySelector("[data-noco-ai-input]");
+        if (!input) return;
+        try {
+          input.focus({ preventScroll: true });
+          const len = input.value.length;
+          if (typeof input.setSelectionRange === "function") input.setSelectionRange(len, len);
+        } catch (_) {}
+      };
+      window.setTimeout(focusReady, 420);
+      window.setTimeout(focusReady, 920);
+      window.setTimeout(focusReady, 1500);
     }
   };
 }
@@ -2020,6 +2398,7 @@ function applyVisibleWidgets() {
   const home = document.querySelector(".home-bento") || document.querySelector(".home-screen");
   if (!home) return;
   const ids = visibleWidgetIds();
+  const banners = [...home.querySelectorAll(".timer-live-banner--home")];
   home.querySelectorAll("[data-widget-id]").forEach((element) => {
     const id = element.dataset.widgetId;
     if (!widgetDefinitions[id]) return;
@@ -2031,14 +2410,20 @@ function applyVisibleWidgets() {
     let element = home.querySelector(`[data-widget-id="${id}"]`);
     if (!element) {
       element = createWidgetElement(id);
-      if (element) home.appendChild(element);
     }
     if (!element) return;
     element.hidden = false;
     element.classList.remove("is-widget-hidden");
-    if (id === "nocoai") mountNocoAIWidgetElement(element);
+    home.appendChild(element);
+    if (id === "nocoai") {
+      const mount = () => mountNocoAIWidgetElement(element);
+      if (typeof requestIdleCallback === "function") requestIdleCallback(mount, { timeout: 900 });
+      else window.setTimeout(mount, 150);
+    }
   });
+  banners.forEach((banner) => home.prepend(banner));
   refreshWidgetEditButtons();
+  updateClock();
 }
 
 function renderWidgetLibrary() {
@@ -2109,6 +2494,13 @@ function appHero(_title, _eyebrow, text) {
 }
 
 function getSheetScrollEl() {
+  if (currentApp === "nocoai") {
+    return (
+      sheetContent?.querySelector(".noco-ai-log-scroll") ||
+      sheetContent?.querySelector("[data-noco-ai-root]") ||
+      null
+    );
+  }
   return sheetContent?.querySelector("[data-app-scroll-area]") || appSheet?.querySelector(".sheet-card") || null;
 }
 
@@ -2118,7 +2510,7 @@ function appShell(content, extraClass = "") {
 
 function nocoAITemplate() {
   const body = window.NocoAI?.buildTemplate?.() || "<p>NOCO AI wird geladen …</p>";
-  return appShell(body);
+  return `<div class="mobile-app-body noco-ai-app-body">${body}</div>`;
 }
 
 function mountNocoAIIfNeeded(appId) {
@@ -2126,7 +2518,11 @@ function mountNocoAIIfNeeded(appId) {
   const root = sheetContent?.querySelector("[data-noco-ai-root]");
   if (!root) return;
   window.NocoAI.mount(root, getNocoAIHelpers());
-  window.NocoAI.focusChatInput?.(root);
+  updateClock();
+  requestAnimationFrame(() => {
+    updateClock();
+    window.NocoAI.focusChatInput?.(root);
+  });
 }
 
 function deviceTemplate() {
@@ -2231,7 +2627,7 @@ function cacheAppState(appId) {
 }
 
 const VOLATILE_APP_IDS = new Set([
-  "tapdash", "colorcatch", "memorygrid", "dodgerun", "runner",
+  "tapdash", "colorcatch", "memorygrid", "dodgerun", "reacttap", "blitzmath", "laneswap", "runner",
   "calculator", "timer", "memories", "tasks", "weather", "flashlight", "quotes", "sketch", "breath", "nocoai", "notes"
 ]);
 
@@ -2510,13 +2906,18 @@ function getTimerRemaining() {
   return Math.max(0, timerState.seconds);
 }
 
+function getTimerDomScope() {
+  return document.getElementById("sheetContent") || sheetContent || appSheet;
+}
+
 function refreshTimerDom() {
   const remaining = timerState.alarmActive ? 0 : getTimerRemaining();
   if (!timerState.alarmActive) timerState.seconds = remaining;
-  const label = sheetContent?.querySelector("[data-timer-display]");
-  const ring = sheetContent?.querySelector("[data-timer-ring]");
-  const status = sheetContent?.querySelector("[data-timer-status]");
-  const toggleLabel = sheetContent?.querySelector("[data-timer-toggle-label]");
+  const scope = getTimerDomScope();
+  const label = scope?.querySelector("[data-timer-display]");
+  const ring = scope?.querySelector("[data-timer-ring]");
+  const status = scope?.querySelector("[data-timer-status]");
+  const toggleLabel = scope?.querySelector("[data-timer-toggle-label]");
   if (label) label.textContent = formatTimerDisplay(remaining);
   if (status) {
     status.textContent = timerState.alarmActive
@@ -2542,10 +2943,30 @@ function refreshTimerApp() {
   }
 }
 
+function stopTimerTicker() {
+  if (timerState.tickId) {
+    window.clearInterval(timerState.tickId);
+    timerState.tickId = null;
+  }
+}
+
+function startTimerTicker() {
+  stopTimerTicker();
+  timerState.tickId = window.setInterval(() => {
+    if (!timerState.running) {
+      stopTimerTicker();
+      return;
+    }
+    tickFocusTimer();
+  }, 1000);
+}
+
 function stopFocusTimer() {
   timerState.running = false;
   timerState.endAt = null;
   timerState.seconds = getTimerRemaining();
+  stopTimerTicker();
+  refreshTimerDom();
   updateTimerLiveSurfaces();
 }
 
@@ -2570,6 +2991,7 @@ function startFocusTimer() {
   timerState.endAt = Date.now() + timerState.seconds * 1000;
   timerState.running = true;
   showToast("Timer laeuft");
+  startTimerTicker();
   refreshTimerDom();
   updateTimerLiveSurfaces();
 }
@@ -2755,6 +3177,7 @@ function renderAppSheet(appId, html, options = {}) {
 function closeAppSheetVisual() {
   if (currentApp === "device") window.NocoDevice?.unmount?.();
   if (currentApp) cacheAppState(currentApp);
+  lockScreen?.classList.remove("lock-behind-sheet");
   appSheet.classList.add("hidden");
   appSheet.classList.remove("app-navigating");
   document.body.classList.remove("sheet-open", "noco-ai-sheet");
@@ -3251,13 +3674,16 @@ function simpleAppTemplate(title, eyebrow, text, rows) {
 
 function arcadeHubTemplate() {
   return appShell(`
-    ${appHero("Arcade", "NOCO Games 1.2", "Drei Mini-Spiele und ein kleiner Runner im Liquid-Glass-Look.")}
+    ${appHero("Arcade", "NOCO Games 1.2", "Neue Reaktions- und Mathe-Spiele plus Klassiker im Liquid-Glass-Look.")}
     <div class="settings-list">
+      <button class="settings-row" data-app="reacttap"><span>React Tap</span><strong>Neu</strong></button>
+      <button class="settings-row" data-app="blitzmath"><span>Blitz Math</span><strong>Neu</strong></button>
+      <button class="settings-row" data-app="laneswap"><span>Lane Swap</span><strong>Neu</strong></button>
       <button class="settings-row" data-app="dodgerun"><span>Dodge Run</span><strong>Ausweichen</strong></button>
       <button class="settings-row" data-app="tapdash"><span>Tap Dash</span><strong>Speed Tap</strong></button>
       <button class="settings-row" data-app="colorcatch"><span>Color Catch</span><strong>Farben</strong></button>
       <button class="settings-row" data-app="memorygrid"><span>Memory Grid</span><strong>Merken</strong></button>
-      <button class="settings-row" data-app="runner"><span>NOCO Runner</span><strong>Neu in 1.2</strong></button>
+      <button class="settings-row" data-app="runner"><span>NOCO Runner</span><strong>Runner</strong></button>
     </div>
   `);
 }
@@ -3723,6 +4149,167 @@ function focusTemplateV2() {
   `);
 }
 
+function reactTapLabel() {
+  if (reactTap.phase === "wait") return "Warte …";
+  if (reactTap.phase === "go") return "TAP!";
+  if (reactTap.phase === "early") return "Zu frueh!";
+  if (reactTap.phase === "done") return "Nice!";
+  return "Bereit";
+}
+
+function reactTapTemplate() {
+  return appShell(`
+    ${appHero("React Tap", "NOCO Games", "Warte auf Gruen — dann sofort tippen. Zu frueh = Minus.")}
+    <section class="game-panel react-tap-panel">
+      <small>${reactTap.lastMs ? reactTap.lastMs + " ms" : "—"} · Best ${reactTap.best || "—"} ms</small>
+      <strong data-reacttap-label>${reactTapLabel()}</strong>
+      <button type="button" class="game-big-button react-tap-btn react-tap-btn--${reactTap.phase}" data-action="reacttap-tap">${reactTapLabel()}</button>
+    </section>
+    <div class="game-grid">
+      <button class="settings-row" data-action="reacttap-start"><span>Start</span><strong>Neue Runde</strong></button>
+      <button class="settings-row" data-action="reacttap-reset"><span>Reset</span><strong>0</strong></button>
+    </div>
+  `);
+}
+
+function nextBlitzRound() {
+  const ops = ["+", "-", "×"];
+  blitzMath.op = ops[Math.floor(Math.random() * ops.length)];
+  blitzMath.a = 2 + Math.floor(Math.random() * 11);
+  blitzMath.b = 2 + Math.floor(Math.random() * 9);
+  if (blitzMath.op === "-" && blitzMath.b > blitzMath.a) {
+    const t = blitzMath.a;
+    blitzMath.a = blitzMath.b;
+    blitzMath.b = t;
+  }
+  blitzMath.answer =
+    blitzMath.op === "+"
+      ? blitzMath.a + blitzMath.b
+      : blitzMath.op === "-"
+        ? blitzMath.a - blitzMath.b
+        : blitzMath.a * blitzMath.b;
+  const wrong = new Set();
+  while (wrong.size < 3) {
+    const w = blitzMath.answer + Math.floor(Math.random() * 9) - 4;
+    if (w !== blitzMath.answer && w > -5) wrong.add(w);
+  }
+  blitzMath.options = [blitzMath.answer, ...wrong].sort(() => Math.random() - 0.5);
+}
+
+function blitzMathTemplate() {
+  if (!blitzMath.options.length) nextBlitzRound();
+  return appShell(`
+    ${appHero("Blitz Math", "NOCO Games", "Tippe die richtige Antwort — Combo gibt Bonus.")}
+    <section class="game-panel">
+      <small>Score ${blitzMath.score} · Best ${blitzMath.best}</small>
+      <strong>${blitzMath.a} ${blitzMath.op} ${blitzMath.b}</strong>
+    </section>
+    <div class="blitz-math-grid">
+      ${blitzMath.options.map((n) => `<button type="button" class="settings-row" data-blitz-answer="${n}"><span>Antwort</span><strong>${n}</strong></button>`).join("")}
+    </div>
+    <button class="settings-row" data-action="blitzmath-reset"><span>Reset</span><strong>0</strong></button>
+  `);
+}
+
+function laneSwapTemplate() {
+  const lanes = [0, 1, 2];
+  return appShell(`
+    ${appHero("Lane Swap", "NOCO Games", "Tippe links/rechts oder die Spur — sammle ★ und weiche ■ aus.")}
+    <section class="lane-swap-stage" data-lane-stage>
+      ${lanes
+        .map(
+          (lane) => `
+        <div class="lane-swap-col ${laneSwap.lane === lane ? "is-active" : ""}" data-lane-col="${lane}">
+          <span class="lane-swap-prize ${laneSwap.prizeLane === lane ? "is-visible" : ""}" data-lane-prize="${lane}" style="top:${laneSwap.prizeY}%">★</span>
+          <span class="lane-swap-hazard ${laneSwap.hazardLane === lane ? "is-visible" : ""}" data-lane-hazard="${lane}" style="top:${laneSwap.hazardY}%">■</span>
+          <span class="lane-swap-orb" data-lane-orb="${lane}">◉</span>
+        </div>`
+        )
+        .join("")}
+      <div class="lane-swap-hud">
+        <strong data-lane-score>${laneSwap.score}</strong>
+        <small>Best ${laneSwap.best}</small>
+      </div>
+    </section>
+    <div class="game-grid">
+      <button class="settings-row" data-action="lane-left"><span>←</span><strong>Links</strong></button>
+      <button class="settings-row" data-action="lane-right"><span>→</span><strong>Rechts</strong></button>
+      <button class="settings-row" data-action="lane-start"><span>${laneSwap.running ? "Läuft" : "Start"}</span><strong>Runde</strong></button>
+    </div>
+  `);
+}
+
+function clearReactTapTimers() {
+  if (reactTap.waitTimer) window.clearTimeout(reactTap.waitTimer);
+  reactTap.waitTimer = null;
+}
+
+function scheduleReactTapRound() {
+  clearReactTapTimers();
+  reactTap.phase = "wait";
+  const delay = 900 + Math.floor(Math.random() * 2200);
+  reactTap.waitTimer = window.setTimeout(() => {
+    reactTap.phase = "go";
+    reactTap.goAt = Date.now();
+    invalidateAppCache("reacttap");
+    if (currentApp === "reacttap") openApp("reacttap");
+  }, delay);
+}
+
+function stopLaneSwap(showToastMsg) {
+  if (laneSwap.timer) window.clearInterval(laneSwap.timer);
+  laneSwap.timer = null;
+  laneSwap.running = false;
+  if (showToastMsg) showToast(showToastMsg);
+}
+
+function startLaneSwap() {
+  stopLaneSwap(false);
+  laneSwap.running = true;
+  laneSwap.score = 0;
+  laneSwap.lane = 1;
+  laneSwap.prizeY = -12;
+  laneSwap.hazardY = -22;
+  laneSwap.prizeLane = Math.floor(Math.random() * 3);
+  laneSwap.hazardLane = Math.floor(Math.random() * 3);
+  openApp("laneswap");
+  laneSwap.timer = window.setInterval(() => {
+    if (!laneSwap.running || currentApp !== "laneswap") {
+      stopLaneSwap(false);
+      return;
+    }
+    laneSwap.prizeY += 5.2;
+    laneSwap.hazardY += 6.1;
+    if (laneSwap.prizeY > 88 && Math.abs(laneSwap.lane - laneSwap.prizeLane) < 0.1) {
+      laneSwap.score += 1;
+      laneSwap.prizeY = -12;
+      laneSwap.prizeLane = Math.floor(Math.random() * 3);
+      if (laneSwap.score > laneSwap.best) {
+        laneSwap.best = laneSwap.score;
+        localStorage.setItem("noco_mobile_laneswap_best", String(laneSwap.best));
+      }
+      showToast("Stern +1");
+    }
+    if (laneSwap.hazardY > 82 && laneSwap.hazardLane === laneSwap.lane) {
+      stopLaneSwap("Crash! Score " + laneSwap.score);
+      invalidateAppCache("laneswap");
+      openApp("laneswap");
+      return;
+    }
+    if (laneSwap.prizeY > 110) {
+      laneSwap.prizeY = -12;
+      laneSwap.prizeLane = Math.floor(Math.random() * 3);
+    }
+    if (laneSwap.hazardY > 110) {
+      laneSwap.hazardY = -22;
+      laneSwap.hazardLane = Math.floor(Math.random() * 3);
+    }
+    invalidateAppCache("laneswap");
+    if (currentApp === "laneswap") openApp("laneswap");
+  }, 80);
+  showToast("Lane Swap — weiche aus!");
+}
+
 function dodgeRunTemplate() {
   return appShell(`
     ${appHero("Dodge Run", "NOCO Games", "Zieh den leuchtenden Orb nach links und rechts und weich den fallenden Glas-Blöcken aus.")}
@@ -3805,7 +4392,10 @@ function extraTemplateForApp(appId) {
     tapdash: tapDashTemplate,
     colorcatch: colorCatchTemplate,
     memorygrid: memoryGridTemplate,
-    dodgerun: dodgeRunTemplate
+    dodgerun: dodgeRunTemplate,
+    reacttap: reactTapTemplate,
+    blitzmath: blitzMathTemplate,
+    laneswap: laneSwapTemplate
   };
   return templates[appId] || null;
 }
@@ -3828,6 +4418,7 @@ async function openApp(appId, options = {}) {
     hapticTap();
     return;
   }
+  dismissMobileKeyboard();
   closeBeam();
   closeHub();
   setIslandExpanded(false);
@@ -3835,6 +4426,8 @@ async function openApp(appId, options = {}) {
   shortcutPanel?.classList.add("hidden");
   desktopPanel?.classList.add("hidden");
   if (currentApp === "dodgerun" && targetId !== "dodgerun") stopDodgeGame(false);
+  if (currentApp === "laneswap" && targetId !== "laneswap") stopLaneSwap(false);
+  if (currentApp === "reacttap" && targetId !== "reacttap") clearReactTapTimers();
   if (currentApp === "runner" && targetId !== "runner") stopRunnerGame(false);
   if (settings.keepAppsAlive !== false && appCache.has(targetId) && !VOLATILE_APP_IDS.has(targetId)) {
     const cached = appCache.get(targetId);
@@ -3868,6 +4461,7 @@ async function openApp(appId, options = {}) {
     return;
   }
   currentApp = targetId;
+  lastOpenedAppId = targetId;
   hapticTap();
   const templates = {
     settings: settingsTemplateV2,
@@ -3980,6 +4574,60 @@ if (demoList) {
   });
 }
 
+islandMenu?.addEventListener("click", (event) => {
+  if (event.target.closest("#editBtn")) return;
+  const beamBtn = event.target.closest("[data-action='open-beam']");
+  if (beamBtn) {
+    event.stopPropagation();
+    setIslandExpanded(false);
+    hapticTap();
+    openBeam();
+    return;
+  }
+  const hubBtn = event.target.closest("[data-open-hub]");
+  if (hubBtn) {
+    event.stopPropagation();
+    setIslandExpanded(false);
+    hapticTap();
+    openHub();
+    return;
+  }
+  const pageBtn = event.target.closest("[data-island-page]");
+  if (pageBtn) {
+    event.stopPropagation();
+    setIslandExpanded(false);
+    hapticTap();
+    const page = Number(pageBtn.dataset.islandPage);
+    const sheetOpen = !!(currentApp && appSheet && !appSheet.classList.contains("hidden"));
+    if (!Number.isNaN(page)) {
+      if (sheetOpen) void closeAppToPage(page);
+      else void goToPage(page);
+    }
+    return;
+  }
+  const appBtn = event.target.closest("[data-island-app]");
+  if (appBtn?.dataset.islandApp) {
+    event.stopPropagation();
+    setIslandExpanded(false);
+    hapticTap();
+    void openApp(appBtn.dataset.islandApp);
+  }
+});
+
+islandStatus?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  if (timerState.running) {
+    setIslandExpanded(false);
+    void openApp("timer");
+    return;
+  }
+  const nextRem = getNextReminderForAI();
+  if (nextRem) {
+    setIslandExpanded(false);
+    void openApp("memories");
+  }
+});
+
 editBtn.addEventListener("click", (event) => {
   event.stopPropagation();
   setIslandExpanded(false);
@@ -4005,8 +4653,38 @@ widgetAddFab?.addEventListener("click", (event) => {
   hapticTap();
   openWidgetPanelFromHome();
 });
+
+libraryQuickAddFab?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  hapticTap();
+  openLibraryQuickEditor();
+});
+
+libraryQuickEditFab?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  hapticTap();
+  openLibraryQuickEditor();
+});
 saveBtn.addEventListener("click", saveNote);
-closeSheet.addEventListener("click", () => closeAppToPage(currentPage));
+closeSheet?.addEventListener("click", () => closeAppToPage(currentPage));
+
+document.getElementById("sheetDragHandle")?.addEventListener("click", () => {
+  if (appSheet && !appSheet.classList.contains("hidden")) void closeAppToPage(currentPage);
+});
+
+function closeShortcutPanelAndEdit() {
+  shortcutPanel?.classList.add("hidden");
+  if (appSheet?.classList.contains("hidden") && widgetPanel?.classList.contains("hidden")) {
+    document.body.classList.remove("sheet-open");
+  }
+  if (editMode) setEditMode(false);
+}
+
+document.querySelectorAll("[data-sheet-exit-close]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    if (appSheet && !appSheet.classList.contains("hidden")) void closeAppToPage(currentPage);
+  });
+});
 
 document.getElementById("coachDismiss")?.addEventListener("click", dismissCoach);
 
@@ -4032,27 +4710,29 @@ codeInput.addEventListener("keydown", (event) => {
   if (event.key === "Escape") finishCodeRequest(null);
 });
 
-document.querySelectorAll(".island-page-tab[data-page]").forEach((btn) => {
+document.querySelectorAll(".island-page-tab[data-page], .chrome-page-tab[data-page], .island-inline-nav [data-page]").forEach((btn) => {
   btn.addEventListener("click", (event) => {
     event.stopPropagation();
     setIslandExpanded(false);
-    void goToPage(Number(btn.dataset.page));
+    const page = Number(btn.dataset.page);
+    if (appSheet && !appSheet.classList.contains("hidden")) {
+      void closeAppToPage(page);
+      return;
+    }
+    void goToPage(page);
   });
 });
 
-document.querySelector(".island-pips")?.addEventListener("click", (event) => {
-  const pip = event.target.closest("[data-island-pip]");
-  if (!pip) return;
+document.getElementById("islandModeIcon")?.addEventListener("click", (event) => {
   event.stopPropagation();
   setIslandExpanded(false);
+  hapticTap();
+  const next = currentPage === 0 ? 1 : 0;
   if (document.body.classList.contains("island-app-mode")) {
-    hapticTap();
-    void closeAppToPage(1);
-    showToast("App-Bibliothek");
+    void closeAppToPage(next);
     return;
   }
-  const page = Number(pip.dataset.islandPip);
-  if (!Number.isNaN(page)) void goToPage(page);
+  void goToPage(next);
 });
 
 function openNocoAIFromIsland(event) {
@@ -4156,7 +4836,12 @@ screenTrack?.addEventListener("pointercancel", endPageDragPointer);
 
 document.addEventListener("click", async (event) => {
   resetAutoLockTimer();
-  if (Date.now() < suppressClickUntil) {
+  if (
+    Date.now() < suppressClickUntil &&
+    !event.target.closest(
+      "[data-noco-ai-mic-consent], [data-noco-ai-chip], [data-noco-ai-cmd], .noco-ai-quick-btn, [data-noco-ai-game], [data-noco-ai-tools-sheet], .noco-ai-tools-scroll, [data-noco-ai-send], [data-noco-ai-pulse], .noco-ai-rail-mini, .noco-ai-rail-btn, [data-noco-ai-scroll-bottom], [data-noco-ai-help-cmd], [data-noco-ai-tools-toggle], [data-noco-ai-tools-close], [data-noco-ai-chats-toggle], [data-noco-ai-new-chat], [data-noco-ai-chat-item], [data-noco-ai-plus-toggle], [data-noco-ai-voice-mini], [data-noco-ai-mic], [data-noco-ai-wake-toggle], [data-noco-tools-tab], [data-noco-ai-tips-toggle], [data-noco-ai-quick-strip], [data-noco-ai-root] button, [data-noco-ai-root] .noco-ai-rail-btn, [data-noco-ai-root] .noco-ai-rail-mini"
+    )
+  ) {
     event.preventDefault();
     event.stopPropagation();
     return;
@@ -4334,17 +5019,14 @@ document.addEventListener("click", async (event) => {
     event.stopPropagation();
     setIslandExpanded(false);
     shortcutPanelTitle.textContent = "Schnellzugriff";
-    shortcutPanelHint.textContent = "Apps fuer Home hinzufuegen oder entfernen.";
+    shortcutPanelHint.textContent = "Apps fuer das Home-Widget hinzufuegen oder entfernen.";
     renderShortcutEditor();
     shortcutPanel?.classList.remove("hidden");
     document.body.classList.add("sheet-open");
   }
 
   if (event.target.closest("[data-close-panel]")) {
-    shortcutPanel?.classList.add("hidden");
-    if (appSheet?.classList.contains("hidden") && widgetPanel?.classList.contains("hidden")) {
-      document.body.classList.remove("sheet-open");
-    }
+    closeShortcutPanelAndEdit();
   }
 
   if (event.target.closest("[data-close-widget-panel]")) {
@@ -4395,6 +5077,32 @@ document.addEventListener("click", async (event) => {
     renderShortcuts();
     renderShortcutEditor();
     showToast("Schnellzugriff entfernt");
+  }
+
+  const libraryQuickAdd = event.target.closest("[data-library-quick-add]");
+  if (libraryQuickAdd) {
+    const picked = libraryQuickAdd.dataset.libraryQuickAdd;
+    if (libraryQuickIds.includes(picked)) return;
+    if (libraryQuickIds.length >= MAX_LIBRARY_QUICK) {
+      showToast(`Maximal ${MAX_LIBRARY_QUICK} Apps im Schnellzugriff`);
+      return;
+    }
+    libraryQuickIds = dedupeQuickIds([...libraryQuickIds, picked]);
+    saveLibraryQuickIds();
+    renderLibraryQuick();
+    renderLibraryQuickEditor();
+    showToast("Zum Schnellzugriff hinzugefuegt");
+  }
+
+  const libraryQuickRemove = event.target.closest("[data-library-quick-remove]");
+  if (libraryQuickRemove) {
+    const picked = libraryQuickRemove.dataset.libraryQuickRemove;
+    libraryQuickIds = dedupeQuickIds(libraryQuickIds.filter((id) => id !== picked));
+    if (!libraryQuickIds.length) libraryQuickIds = ["nocoai"];
+    saveLibraryQuickIds();
+    renderLibraryQuick();
+    renderLibraryQuickEditor();
+    showToast("Aus Schnellzugriff entfernt");
   }
 
   const themeChoice = event.target.closest("[data-theme-choice]");
@@ -4469,8 +5177,17 @@ document.addEventListener("click", async (event) => {
 
   const forgeSection = event.target.closest("[data-forge-section]");
   if (forgeSection) {
+    event.preventDefault();
+    event.stopPropagation();
     forgeActiveSection = forgeSection.dataset.forgeSection || "discover";
-    openApp("forge");
+    invalidateAppCache("forge");
+    if (currentApp === "forge" && appSheet && !appSheet.classList.contains("hidden")) {
+      renderAppSheet("forge", forgeTemplateV2());
+      hapticTap();
+    } else {
+      void openApp("forge", { force: true });
+    }
+    return;
   }
 
   if (event.target.closest("[data-action='set-mobile-code']")) {
@@ -4932,6 +5649,109 @@ document.addEventListener("click", async (event) => {
     showToast("Pulse aktualisiert");
   }
 
+  if (event.target.closest("[data-action='reacttap-start']")) {
+    clearReactTapTimers();
+    reactTap.phase = "idle";
+    scheduleReactTapRound();
+    invalidateAppCache("reacttap");
+    openApp("reacttap");
+    showToast("Warte auf Gruen …");
+  }
+
+  if (event.target.closest("[data-action='reacttap-reset']")) {
+    clearReactTapTimers();
+    reactTap.lastMs = 0;
+    reactTap.best = 0;
+    reactTap.phase = "idle";
+    localStorage.setItem("noco_mobile_reacttap_best", "0");
+    invalidateAppCache("reacttap");
+    openApp("reacttap");
+  }
+
+  if (event.target.closest("[data-action='reacttap-tap']")) {
+    if (reactTap.phase === "wait") {
+      reactTap.phase = "early";
+      clearReactTapTimers();
+      showToast("Zu frueh!");
+      invalidateAppCache("reacttap");
+      openApp("reacttap");
+      window.setTimeout(() => scheduleReactTapRound(), 700);
+    } else if (reactTap.phase === "go") {
+      const ms = Date.now() - reactTap.goAt;
+      reactTap.lastMs = ms;
+      if (ms < reactTap.best || reactTap.best === 0) {
+        reactTap.best = ms;
+        localStorage.setItem("noco_mobile_reacttap_best", String(reactTap.best));
+      }
+      reactTap.phase = "done";
+      showToast(ms + " ms — nice!");
+      invalidateAppCache("reacttap");
+      openApp("reacttap");
+      window.setTimeout(() => scheduleReactTapRound(), 900);
+    } else if (reactTap.phase === "idle") {
+      scheduleReactTapRound();
+      invalidateAppCache("reacttap");
+      openApp("reacttap");
+    }
+    hapticTap();
+  }
+
+  const blitzPick = event.target.closest("[data-blitz-answer]");
+  if (blitzPick) {
+    const n = Number(blitzPick.dataset.blitzAnswer);
+    if (n === blitzMath.answer) {
+      blitzMath.score += 1;
+      if (blitzMath.score > blitzMath.best) {
+        blitzMath.best = blitzMath.score;
+        localStorage.setItem("noco_mobile_blitzmath_best", String(blitzMath.best));
+      }
+      showToast("Richtig!");
+    } else {
+      blitzMath.score = 0;
+      showToast("Falsch — Combo weg");
+    }
+    nextBlitzRound();
+    invalidateAppCache("blitzmath");
+    openApp("blitzmath");
+    hapticTap();
+  }
+
+  if (event.target.closest("[data-action='blitzmath-reset']")) {
+    blitzMath.score = 0;
+    blitzMath.best = 0;
+    localStorage.setItem("noco_mobile_blitzmath_best", "0");
+    nextBlitzRound();
+    invalidateAppCache("blitzmath");
+    openApp("blitzmath");
+  }
+
+  if (event.target.closest("[data-action='lane-start']")) {
+    startLaneSwap();
+    hapticTap();
+  }
+
+  if (event.target.closest("[data-action='lane-left']")) {
+    laneSwap.lane = Math.max(0, laneSwap.lane - 1);
+    invalidateAppCache("laneswap");
+    openApp("laneswap");
+    hapticTap();
+  }
+
+  if (event.target.closest("[data-action='lane-right']")) {
+    laneSwap.lane = Math.min(2, laneSwap.lane + 1);
+    invalidateAppCache("laneswap");
+    openApp("laneswap");
+    hapticTap();
+  }
+
+  const laneCol = event.target.closest("[data-lane-col]");
+  if (laneCol && laneSwap.running) {
+    laneSwap.lane = Number(laneCol.dataset.laneCol);
+    invalidateAppCache("laneswap");
+    openApp("laneswap");
+    hapticTap();
+  }
+
   if (event.target.closest("[data-action='dodge-start']")) {
     startDodgeGame();
   }
@@ -4972,7 +5792,8 @@ document.addEventListener("input", (event) => {
   resetAutoLockTimer();
   if (event.target.matches("[data-forge-search]")) {
     forgeSearch = event.target.value;
-    openApp("forge");
+    invalidateAppCache("forge");
+    void openApp("forge", { force: true });
     const input = sheetContent.querySelector("[data-forge-search]");
     if (input) {
       input.focus();
@@ -5168,7 +5989,16 @@ function runHubAction(action) {
 
 function startSheetSwipe(event) {
   if (editMode || appSheet.classList.contains("hidden")) return;
-  if (event.target.closest("textarea, input, select, .code-keypad, .code-key, .runner-stage, .dodge-stage, .memory-grid, .color-game-grid")) return;
+  if (currentApp === "nocoai") return;
+  if (event.target.closest("[data-noco-ai-root]")) return;
+  if (event.target.closest("[data-noco-ai-mic-consent], .noco-ai-mic-consent-card, [data-noco-ai-plus-sheet], [data-noco-ai-rename-sheet], [data-noco-ai-tools-sheet], .noco-ai-tools-scroll")) return;
+  if (
+    event.target.closest(
+      ".noco-ai-log-scroll, [data-noco-ai-log], .noco-ai-chats-overlay, [data-noco-ai-chats-list], [data-noco-ai-chats-drawer], .noco-ai-quick-strip, .noco-ai-top, .noco-ai-dock, .noco-ai-footer, .noco-ai-compose-rail, .noco-ai-rail-btn, .noco-ai-rail-mini"
+    )
+  )
+    return;
+  if (event.target.closest("textarea, input, select, .code-keypad, .code-key, .runner-stage, .dodge-stage, .memory-grid, .color-game-grid, .react-tap-stage, .blitz-math-grid, .lane-swap-stage")) return;
   const touch = event.touches[0];
   appSwipe = {
     x: touch.clientX,
@@ -5210,12 +6040,6 @@ function moveSheetSwipe(event) {
   const followDx = atEdge ? dx * 0.22 : dx;
   const clampedDx = Math.max(-width, Math.min(width, followDx));
   setPageStageTransform(appSwipe.basePage, clampedDx, false);
-  const progress = Math.min(1, Math.abs(clampedDx) / Math.max(1, width * 0.92));
-  const card = appSwipe.card;
-  if (card) {
-    card.style.transform = `translate3d(${clampedDx * 0.28}px, 0, 0)`;
-    card.style.opacity = String(Math.max(0.55, 1 - progress * 0.5));
-  }
 }
 
 async function endSheetSwipe(event) {
@@ -5231,13 +6055,23 @@ async function endSheetSwipe(event) {
   appSheet.classList.remove("app-navigating");
   pageStage?.classList.remove("page-swiping");
   resetSheetGestureTransform();
-  if (!wasActive) return;
+  if (!wasActive) {
+    scrollTrackToPage(base, false);
+    return;
+  }
   let targetPage = base;
   if (Math.abs(dx) > width * GESTURE.pageSnap || velocity > GESTURE.pageVelocity || Math.abs(dx) > width * 0.14) {
     if (dx > 0) targetPage = 0;
     else if (dx < 0) targetPage = 1;
   }
-  if (Math.abs(dx) <= Math.abs(dy) * GESTURE.pageRatio) return;
+  if (targetPage === base) {
+    scrollTrackToPage(base, false);
+    return;
+  }
+  if (Math.abs(dx) <= Math.abs(dy) * GESTURE.pageRatio) {
+    scrollTrackToPage(base, false);
+    return;
+  }
   stopDodgeGame(false);
   stopRunnerGame(false);
   closeAppSheetVisual();
@@ -5246,10 +6080,12 @@ async function endSheetSwipe(event) {
 }
 
 function cancelSheetSwipe() {
+  const base = appSwipe?.basePage ?? currentPage;
   appSwipe = null;
   appSheet?.classList.remove("app-navigating");
   pageStage?.classList.remove("page-swiping");
   resetSheetGestureTransform();
+  scrollTrackToPage(base, false);
 }
 
 function activeScreenScrollEl() {
@@ -6063,10 +6899,15 @@ noteInput.addEventListener("keydown", (event) => {
   }
 });
 
-if ("serviceWorker" in navigator) {
+if ("serviceWorker" in navigator && location.protocol !== "file:") {
   window.addEventListener("load", async () => {
     try {
-      await navigator.serviceWorker.register("./sw.js");
+      const reg = await navigator.serviceWorker.register(`./sw.js?v=${NOCO_BUILD}`);
+      reg.update().catch(() => {});
+      if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        purgeLegacyChrome();
+      });
     } catch (_) {
       showToast("Offline-Modus noch nicht aktiv");
     }
@@ -6083,6 +6924,12 @@ function applyDeviceLayoutClass() {
   document.body.classList.toggle("desktop-preview", !handset);
 }
 
+purgeLegacyChrome();
+if (!document.getElementById("chromePageNav")) {
+  console.warn("[NOCO] Alte index.html im Cache — bitte ?fresh=1 oder Cache leeren.");
+} else {
+  document.documentElement.dataset.nocoBuild = NOCO_BUILD;
+}
 initSearchIndex();
 initPageScrollSync();
 setPage(0);
@@ -6128,6 +6975,7 @@ window.setInterval(() => {
   else updateTimerLiveSurfaces();
   if (currentApp === "memories") updateMemoryEtas();
 }, 1000);
+if (timerState.running && !timerState.tickId) startTimerTicker();
 updateLockClock();
 renderLockWidgets();
 updateTimerLiveSurfaces();
@@ -6139,11 +6987,17 @@ if (hasCompletedFirstLight()) {
 window.setInterval(updateClock, 1000);
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") cleanupGestureState();
+  if (document.visibilityState === "visible" && timerState.running) {
+    tickFocusTimer();
+    refreshTimerDom();
+  }
 });
 window.setInterval(() => {
   updateLockClock();
   if (isLocked) renderLockWidgets();
 }, 1000);
+window.NocoAIVoice?.init?.(getNocoAIHelpers);
 window.addEventListener("pageshow", () => {
+  purgeLegacyChrome();
   if (currentPage === 1) repairDesktopGrid("pageshow");
 });

@@ -7,7 +7,7 @@
   const MAX_MESSAGES_PER_CHAT = 80;
 
   const WELCOME_HTML =
-    "<p>Hallo! Ich bin <strong>NOCO AI</strong> — offline, schnell und lokal. Frag mich etwas, oder sag <strong>Hilfe</strong> fuer Befehle.</p>";
+    "<p><strong>NOCO AI</strong> — ich kenne dein System.</p><p>Frag <strong>«Wo ist Forge?»</strong>, <strong>«Wo bin ich?»</strong> oder <strong>«Was steht an?»</strong>. Ein Wort reicht: Timer · Notizen · Apps.</p>";
 
   function createId() {
     return "c_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 7);

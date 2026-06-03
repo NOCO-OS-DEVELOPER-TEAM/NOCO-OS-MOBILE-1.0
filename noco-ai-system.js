@@ -1,136 +1,7 @@
 /**
- * NOCO AI — Systembefehle (Core, Widgets, Forge, Notizen, Pay, Themes)
+ * NOCO AI System 3.0 — Inbox, Status, Erinnerungen, Guides, Suche
  */
 (function initNocoAISystem(global) {
-  const THEMES = ["aurora", "midnight", "sunset", "forest"];
-
-  const TOGGLE_META = {
-    autoLock: {
-      label: "Auto-Lock",
-      section: "lock",
-      aliases: ["auto lock", "autolock", "autolog", "auto log", "auto sperre", "autosperre", "automatisch sperren", "sperre automatisch"]
-    },
-    liveWallpaper: {
-      label: "Live Wallpaper",
-      section: "deck",
-      aliases: [
-        "live wallpaper",
-        "live hintergrund",
-        "animierter hintergrund",
-        "bewegter hintergrund",
-        "hintergrund animation",
-        "hintergrundbild",
-        "hintergrund bild",
-        "wallpaper",
-        "background",
-        "bildschirm hintergrund"
-      ]
-    },
-    glassBoost: {
-      label: "Liquid Glass Boost",
-      section: "deck",
-      aliases: [
-        "glass boost",
-        "liquid glass boost",
-        "glas boost",
-        "glas effekt",
-        "glass effekt",
-        "helligkeit",
-        "brightness",
-        "heller",
-        "dunkler",
-        "display helligkeit",
-        "bildschirm helligkeit",
-        "mehr helligkeit",
-        "weniger helligkeit"
-      ]
-    },
-    motion: {
-      label: "Animationen",
-      section: "deck",
-      aliases: ["animationen", "motion", "bewegung", "uebergaenge", "animation"]
-    },
-    nativeFeel: {
-      label: "App Handling",
-      section: "deck",
-      aliases: ["app handling", "native feel", "app gefuehl", "iphone feeling", "app feeling"]
-    },
-    keepAppsAlive: {
-      label: "Apps behalten",
-      section: "deck",
-      aliases: ["apps behalten", "keep apps", "apps im hintergrund", "app state", "apps offen lassen"]
-    },
-    compactTiles: {
-      label: "Kompakte Kacheln",
-      section: "deck",
-      aliases: ["kompakte kacheln", "compact tiles", "kleine kacheln", "kleine icons"]
-    },
-    codeLock: { label: "Schutz (Code)", section: "shield", aliases: ["code lock", "code schutz", "schutz code", "app schutz"] },
-    strictSecurity: {
-      label: "Strenger Modus",
-      section: "shield",
-      aliases: ["strenger modus", "strict security", "strenge sicherheit", "streng"]
-    },
-    requireCodeOnLaunch: {
-      label: "Login-Code",
-      section: "shield",
-      aliases: ["login code", "code beim start", "code nach neustart", "start code"]
-    }
-  };
-
-  const WIDGET_ALIASES = {
-    clock: ["uhr", "clock", "zeit", "time", "grosse uhr", "riesenuhr", "uhrzeit"],
-    nocoai: ["noco ai", "ki widget", "ai widget", "assistent widget"],
-    notes: ["notiz", "notes", "schnellnotiz", "notizblock"],
-    shortcuts: ["shortcuts", "schnellzugriff", "schnellaktionen"],
-    status: ["status", "system status", "mobile status"],
-    sync: ["sync", "keycard", "noco sync"],
-    feed: ["feed", "heute", "news feed"],
-    hero: ["hero", "willkommen", "start"],
-    focusMini: ["focus", "fokus", "focus mini"],
-    forgePick: ["forge tipp", "forge pick", "app tipp"],
-    payMini: ["pay mini", "wallet widget", "pay widget"],
-    securityMini: ["shield mini", "security mini", "sicherheit widget"]
-  };
-
-  const FORGE_ALIASES = {
-    breeze: "breath",
-    briese: "breath",
-    forge: "forge",
-    "mini arcade": "arcade",
-    "tap dash": "tapdash",
-    "dodge run": "dodgerun",
-    "color catch": "colorcatch",
-    "memory grid": "memorygrid",
-    taschenlampe: "flashlight",
-    rechner: "calculator",
-    wetter: "weather"
-  };
-
-  const APP_OPEN_ALIASES = {
-    core: "settings",
-    einstellungen: "settings",
-    settings: "settings",
-    security: "security",
-    sicherheit: "security",
-    shield: "security",
-    shieldgate: "security",
-    themes: "themes",
-    theme: "themes",
-    look: "themes",
-    forge: "forge",
-    store: "forge",
-    pay: "pay",
-    wallet: "pay",
-    sync: "sync",
-    keycard: "sync",
-    notizen: "notes",
-    notes: "notes",
-    beam: "beam",
-    hub: "hub",
-    exclusive: "exclusive"
-  };
-
   function norm(text) {
     return String(text || "")
       .toLowerCase()
@@ -142,643 +13,652 @@
       .trim();
   }
 
-  function parseOnOff(q) {
-    if (/\b(aus|off|deaktiv|deaktiviere|ausschalten|disable|stop|entfern)\b/.test(q)) return false;
-    if (/\b(an|ein|on|aktiv|aktiviere|einschalten|enable|start|mehr)\b/.test(q)) return true;
+  function esc(s) {
+    return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function snap(h) {
+    return h.getSystemSnapshot?.() || {};
+  }
+
+  function parseMinutes(q) {
+    if (/\bin\s+halbe\s+stunde\b/.test(q) || /\bhalbe\s+stunde\b/.test(q)) return 30;
+    if (/\bin\s+(einer\s+)?stunde\b/.test(q) || /\beine\s+stunde\b/.test(q)) return 60;
+    if (/\bin\s+zwei\s+stunden\b/.test(q)) return 120;
+    let m = q.match(/\bin\s+(\d+)\s*(min|minute|minuten|m)\b/);
+    if (m) return Math.max(1, Math.min(24 * 60, Number(m[1])));
+    m = q.match(/\bin\s+(\d+)\s*(h|std|stunde|stunden)\b/);
+    if (m) return Math.max(1, Math.min(24 * 60, Number(m[1]) * 60));
+    m = q.match(/\b(\d+)\s*(min|minute|minuten|m)\b/);
+    if (m && /\b(erinner|remind|memory|timer)\b/.test(q)) return Math.max(1, Math.min(24 * 60, Number(m[1])));
+    m = q.match(/\b(\d+)\s*(h|std|stunde|stunden)\b/);
+    if (m && /\b(erinner|remind|memory)\b/.test(q)) return Math.max(1, Math.min(24 * 60, Number(m[1]) * 60));
     return null;
   }
 
-  function parseLockSeconds(q, raw) {
-    if (global.NocoAITime?.isAutoLockTimeQuery?.(raw, q) === false) return null;
-    if (global.NocoAITime?.isTimerStartCommand?.(raw, q)) return null;
-    if (/\b(timer|countdown|stoppuhr|erinnere|remind|memory)\b/.test(q)) return null;
-    if (/\b(start|starte|stell|setz)\b/.test(q) && /\b(timer|countdown)\b/.test(q)) return null;
-    if (!global.NocoAITime?.isAutoLockTimeQuery?.(raw, q)) {
-      if (!/\b(auto\s*lock|autolock|autolog|auto\s+log)\b/.test(q)) return null;
+  function parseReminderText(raw, q) {
+    const t = String(raw || "").trim();
+    let m = t.match(/erinnere?\s+mich\s+an\s+(.+?)\s+in\s+\d+/i);
+    if (m) return m[1].trim().slice(0, 120);
+    m = t.match(/erinnere?\s+mich\s+in\s+\d+\s*(?:min(?:ute)?n?|stunde?n?|h|m)\s+(?:an\s+)?(.+)/i);
+    if (m) return m[1].trim().slice(0, 120);
+    m = t.match(/erinnere?\s+mich\s*,?\s*(.+)/i);
+    if (m) {
+      let tail = m[1].trim();
+      tail = tail.replace(/\s+in\s+\d+\s*(?:min(?:ute)?n?|stunde?n?|h|m).*$/i, "").trim();
+      if (tail.length >= 2) return tail.slice(0, 120);
     }
-    const mMin = raw.match(/(\d+)\s*(?:min|minute|minuten)/i);
-    if (mMin) return Math.min(600, Number(mMin[1]) * 60);
-    const mSec = raw.match(/(\d+)\s*(?:sek|sekunden|sec|seconds|s)\b/i);
-    if (mSec) return Math.min(600, Number(mSec[1]));
-    if (/\beine\s+minute\b|\b1\s+minute\b|\b1\s+min\b/.test(q)) return 60;
-    if (/\bzwei\s+minute\b|\b2\s+min\b/.test(q)) return 120;
-    if (/\bdrei\s+minute\b|\b3\s+min\b/.test(q)) return 180;
-    if (/\bfunf\s+minute\b|\b5\s+min\b/.test(q)) return 300;
-    if (/\b30\s+sek|\b30\s+s\b|\bdreissig\s+sek/.test(q)) return 30;
-    if (/\b60\s+sek/.test(q)) return 60;
-    return null;
+    m = t.match(/remind(?:er)?\s+me\s+(?:to\s+)?(.+)/i);
+    if (m) return m[1].trim().slice(0, 120);
+    return "Erinnerung";
   }
 
-  function matchToggle(q) {
-    let best = null;
-    let score = 0;
-    Object.entries(TOGGLE_META).forEach(([key, meta]) => {
-      meta.aliases.forEach((alias) => {
-        const n = norm(alias);
-        if (q.includes(n) && n.length > score) {
-          score = n.length;
-          best = key;
-        }
-      });
-    });
-    if (/\bauto\s*lock\b|\bautolock\b|\bautolog\b/.test(q)) best = "autoLock";
-    return best;
-  }
-
-  function matchWidget(q) {
-    for (const [id, words] of Object.entries(WIDGET_ALIASES)) {
-      if (words.some((w) => q.includes(norm(w)))) return id;
+  function buildInboxHtml(h) {
+    const s = snap(h);
+    const parts = [];
+    if (s.timerRunning) {
+      parts.push(`<li><strong>Timer</strong> laeuft — noch <strong>${esc(s.timerDisplay)}</strong>${s.timerEndTime ? ` (bis ${esc(s.timerEndTime)})` : ""}</li>`);
     }
-    if (/\buhr\b|\bzeit\b/.test(q) && !/\bautolock\b/.test(q)) return "clock";
-    return null;
-  }
-
-  function resolveForgeApp(q) {
-    for (const [alias, id] of Object.entries(FORGE_ALIASES)) {
-      if (q.includes(norm(alias))) return id;
+    if (s.nextReminderText) {
+      parts.push(`<li><strong>Memory</strong> «${esc(s.nextReminderText)}» — in <strong>${esc(s.nextReminderEta)}</strong></li>`);
+    } else if (s.reminderCount > 0) {
+      parts.push(`<li><strong>${s.reminderCount}</strong> Erinnerung(en) aktiv</li>`);
     }
-    return null;
+    if (s.openTaskCount > 0) {
+      const preview = (s.openTasksPreview || []).map((t) => esc(t)).join(" · ");
+      parts.push(`<li><strong>${s.openTaskCount}</strong> offene Aufgabe(n): ${preview || "—"}</li>`);
+    } else {
+      parts.push("<li>Keine offenen <strong>Tasks</strong></li>");
+    }
+    parts.push(`<li><strong>${s.noteCount ?? 0}</strong> Notizen · <strong>${s.chatCount ?? 0}</strong> AI-Chats</li>`);
+    const where = s.currentAppTitle
+      ? `App <strong>${esc(s.currentAppTitle)}</strong>`
+      : `Seite <strong>${esc(s.currentPage || "Home")}</strong>`;
+    parts.push(`<li>Du bist auf: ${where}${s.editMode ? " · <strong>Edit</strong>" : ""}</li>`);
+    if (!s.timerRunning && !s.nextReminderText && !s.openTaskCount) {
+      parts.push("<li>Alles ruhig — guter Moment fuer <strong>Fokus Modus</strong> oder eine <strong>Notiz</strong>.</li>");
+    }
+    return `<p><strong>Dein Ueberblick</strong></p><ul>${parts.join("")}</ul>`;
   }
 
-  function resolveTheme(q) {
-    return THEMES.find((t) => q.includes(t)) || null;
+  function buildStatusHtml(h) {
+    const s = snap(h);
+    const perf =
+      s.glassBoost && s.motion && s.liveWallpaper
+        ? "Volles Glas (evtl. mehr Last)"
+        : s.glassBoost || s.motion
+          ? "Ausgewogen"
+          : "Performance-Modus";
+    const lock = s.codeLock ? "Code-Sperre an" : "Kein Code";
+    return `<p><strong>System Status</strong> · Build <strong>${esc(s.build || "?")}</strong></p>
+      <ul>
+        <li>Theme: <strong>${esc(s.theme)}</strong> · ${perf}</li>
+        <li>${lock} · Auto-Lock: <strong>${s.autoLock ? esc(s.autoLockSeconds + "s") : "aus"}</strong></li>
+        <li>Apps installiert: <strong>${s.installed}</strong> · Exclusive: <strong>${s.exclusiveActive ? "ja" : "nein"}</strong></li>
+        <li>Pay: <strong>${esc(s.payBalance)}</strong> · Helligkeit UI: <strong>${Math.round((s.uiBrightness || 1) * 100)}%</strong></li>
+        <li>Widgets: ${(s.widgets || []).map((w) => esc(w)).join(", ") || "—"}</li>
+        ${s.timerRunning ? `<li>Timer: <strong>${esc(s.timerDisplay)}</strong></li>` : ""}
+        ${s.reminderCount ? `<li>Memories: <strong>${s.reminderCount}</strong> aktiv</li>` : ""}
+      </ul>`;
   }
 
-  function parseNoteCreate(raw) {
-    if (global.NocoAICreate?.parseCreateSpec) {
-      const spec = global.NocoAICreate.parseCreateSpec(raw);
-      if (spec?.kind === "note") {
-        return { title: spec.title, body: spec.body, example: spec.example };
+  const GUIDES = [
+    {
+      test: (q) => /\b(wie|wo).*(auto.?lock|bildschirm sperre|sperre einstellen)\b/.test(q),
+      text: "<p><strong>Auto-Lock</strong> findest du in <strong>Core</strong> unter Sicherheit & Display.</p><p>Soll ich Core oeffnen und die Sektion anzeigen?</p>",
+      offerLabel: "Core Auto-Lock",
+      offerRun: (h) => () => h.navigateCore?.({ section: "security" })
+    },
+    {
+      test: (q) => /\b(wie|wo).*(widget|widgets).*(hinzu|add|neu|einfueg)\b/.test(q),
+      text: "<p><strong>Widgets:</strong> Island → <strong>Edit</strong> auf Home → <strong>+</strong> unten rechts.</p><p>Soll ich Edit-Modus und die Auswahl starten?</p>",
+      offerLabel: "Widget hinzufuegen",
+      offerRun: (h) => () => {
+        h.goToPage?.(0);
+        window.setTimeout(() => {
+          h.enableEditMode?.();
+          window.setTimeout(() => h.openWidgetPanel?.(), 280);
+        }, 240);
       }
-      if (spec && spec.kind !== "note") return null;
+    },
+    {
+      test: (q) => /\b(wie|wo).*(code|pin|passwort|sperre).*(setzen|aktivieren|einrichten)\b/.test(q),
+      text: "<p><strong>Code-Sperre:</strong> App <strong>ShieldGate</strong> oder Core → Sicherheit.</p><p>ShieldGate oeffnen?</p>",
+      offerLabel: "ShieldGate",
+      offerRun: (h) => () => h.openSecurity?.() || h.openApp?.("security")
+    },
+    {
+      test: (q) => /\b(wie|wo).*(backup|keycard|export|import)\b/.test(q),
+      text: "<p><strong>Backup:</strong> <strong>Sync</strong> erstellt/importiert eine Keycard (offline, lokal).</p><p>Sync oeffnen?</p>",
+      offerLabel: "Sync",
+      offerRun: (h) => () => h.openSync?.() || h.openApp?.("sync")
+    },
+    {
+      test: (q) => /\b(wie|wo).*(theme|design|farbe).*(wechseln|aendern|andern)\b/.test(q),
+      text: "<p><strong>Theme:</strong> App <strong>Themes</strong> oder sag <strong>Theme Midnight</strong>.</p><p>Themes-App oeffnen?</p>",
+      offerLabel: "Themes",
+      offerRun: (h) => () => h.openThemes?.() || h.openApp?.("themes")
+    },
+    {
+      test: (q) => /\b(wie|wo).*(erinnerung|memory|reminder).*(setzen|anlegen)\b/.test(q),
+      text: "<p>Sag z. B. <strong>Erinnere mich in 20 Minuten, Muell raus</strong> — oder oeffne die <strong>Memory</strong>-App.</p>",
+      offerLabel: "Memory App",
+      offerRun: (h) => () => h.openMemories?.() || h.openApp?.("memories")
+    },
+    {
+      test: (q) => /\b(wie|wo).*(island|notch|insel).*(menu|menue|funktion)\b/.test(q),
+      text: "<p><strong>Island:</strong> Tippen = Schnellmenu (Beam, Hub, Home, Apps, AI, Edit, Timer, Core). <strong>✧</strong> = NOCO AI. Status zeigt Timer/Memory.</p>",
+      offerLabel: null,
+      offerRun: null
     }
-    const mBody =
-      raw.match(
-        /(?:erstell|leg|mach|schreib|neue?).{0,30}notiz.{0,40}(?:mit|inhalt|text)\s+(.+)/i
-      ) ||
-      raw.match(/(?:schreib|trag).{0,20}(?:in|zur)\s+notiz[:\s]+(.+)/i) ||
-      raw.match(/notiz.{0,25}(?:inhalt|text)\s+(.+)/i);
-    const mTitle =
-      raw.match(
-        /(?:erstell|leg|mach|neue?).{0,30}(?:eine\s+)?notiz.{0,35}(?:mit|mit dem|titel|ueberschrift|überschrift|headline|betreff)\s+([^.,!?\n]+)/i
-      ) ||
-      raw.match(/notiz.{0,25}(?:titel|ueberschrift|überschrift|headline)\s+([^.,!?\n]+)/i) ||
-      raw.match(/(?:erstell|leg).{0,20}notiz\s+["«]?([^"»,!?\n]+)["»]?/i);
-    if (!mTitle && !mBody) return null;
-    let title = (mTitle?.[1] || "Neue Notiz").trim().slice(0, 60);
-    let body = (mBody?.[1] || "").trim();
-    const titleBody = title.match(/^(.+?)\s+(?:mit|inhalt|text)\s+(.+)$/i);
-    if (titleBody) {
-      title = titleBody[1].trim().slice(0, 60);
-      body = body || titleBody[2].trim();
-    }
-    return { title, body };
-  }
-
-  const OFFER_HINT =
-    "<p><small>Soll ich das fuer dich machen? Sag <strong>Ja</strong>, <strong>Ja gerne</strong> oder <strong>Mach das</strong>.</small></p>";
-
-  function isDirectCommand(q) {
-    return /\b(oeffne|offne|open|starte|aktivier|deaktivier|stell|setz|mach|erstell|leg|install|deinstall|entfern|zeig lock|autolock|auto lock)\b/.test(q);
-  }
-
-  function isWhereFindQuery(q) {
-    if (isDirectCommand(q)) return false;
-    return (
-      /\bwo\s+(finde|ist|sind|bekomm|gibts|liegt|steht)\b/.test(q) ||
-      /\bwhere\s+(do i|can i|is|are)\s+(find|the)\b/.test(q) ||
-      /\b(where is|where are|where can i find)\b/.test(q)
-    );
-  }
-
-  function isHowToQuery(q, raw) {
-    if (isDirectCommand(q)) return false;
-    if (/\b(wie geht|wie gehts|who are you|what are you|hallo|hi)\b/.test(q)) return false;
-    if (/\b(erstell|leg)\s+(eine|neue)\s+notiz\b/.test(q) && !/\bwie\b/.test(q)) return false;
-    return (
-      /\b(wie|how)\s+(kann ich|do i|to|mache ich|funktioniert|geht das)\b/.test(q) ||
-      (/\b(wie|how)\b/.test(q) && /\b(erstell|anleg|aktivier|deaktivier|ander|find|install|nutz|benutz|schreib)\b/.test(q))
-    );
-  }
-
-  function guideForTopic(q, helpers) {
-    if (/\banimation|motion|uebergang|bewegung\b/.test(q)) {
-      return {
-        offerLabel: "Animationen an",
-        text: `<p><strong>Animationen</strong> findest du so:</p><ol><li><strong>Apps</strong> (zweite Seite) → Ordner <strong>Core</strong></li><li>Tab <strong>NocoDeck</strong></li><li>Schalter <strong>Animationen</strong></li></ol>${OFFER_HINT}`,
-        offerRun: () => helpers.navigateCore?.({ section: "deck", toggle: "motion", value: true })
-      };
-    }
-    if (/\b(liquid\s*glass|glas\s*boost|glass)\b/.test(q)) {
-      return {
-        offerLabel: "Liquid Glass Boost",
-        text: `<p><strong>Liquid Glass</strong> in <strong>NOCO Core → NocoDeck</strong>:</p><ol><li>Core oeffnen</li><li><strong>Mehr Liquid Glass</strong> (Glass Boost)</li><li>Optional: <strong>Live Wallpaper</strong></li></ol>${OFFER_HINT}`,
-        offerRun: () => helpers.enableGlassMode?.()
-      };
-    }
-    if (/\b(auto\s*lock|autolock|autolog|sperre automatisch)\b/.test(q)) {
-      return {
-        offerLabel: "Auto-Lock oeffnen",
-        text: `<p><strong>Auto-Lock</strong>:</p><ol><li><strong>Core</strong> → Tab <strong>Lock Screen</strong></li><li><strong>Auto-Lock aktivieren</strong></li><li>Zeit waehlen (30s, 1min, …)</li></ol>${OFFER_HINT}`,
-        offerRun: () => helpers.navigateCore?.({ section: "lock", highlight: "lock-time" })
-      };
-    }
-    if (/\b(widget|widgets|home)\b/.test(q)) {
-      return {
-        offerLabel: "Widget-Panel",
-        text: `<p><strong>Widgets</strong> auf dem Home:</p><ol><li>Island aufklappen → <strong>Edit</strong></li><li>Unten rechts <strong>+</strong></li><li>Widget antippen zum Hinzufuegen</li></ol>${OFFER_HINT}`,
-        offerRun: () => {
-          helpers.goToPage?.(0);
-          window.setTimeout(() => {
-            helpers.enableEditMode?.();
-            window.setTimeout(() => helpers.openWidgetPanel?.(), 300);
-          }, 280);
-        }
-      };
-    }
-    if (/\b(notiz|notizen|notes)\b/.test(q)) {
-      return {
-        offerLabel: "Notiz erstellen",
-        text: `<p><strong>Notiz erstellen</strong>:</p><ol><li>App <strong>Notizen</strong> in der Bibliothek</li><li><strong>+ Neue Notiz</strong> oben</li><li>Oder Schnellnotiz-Widget auf dem Home</li></ol>${OFFER_HINT}`,
-        offerRun: () => helpers.createNote?.({ title: "Beispiel", body: "", example: true, openApp: true })
-      };
-    }
-    if (/\b(theme|design|look|aurora|midnight|sunset|forest)\b/.test(q)) {
-      return {
-        offerLabel: "Themes oeffnen",
-        text: `<p><strong>Themes</strong>:</p><ol><li>App <strong>Themes</strong> (Bibliothek / Core-Verweis)</li><li>Farbe antippen (Aurora, Midnight, …)</li></ol><p>In <strong>Core → NocoDeck</strong> findest du auch Glas- und Animations-Schalter.</p>${OFFER_HINT}`,
-        offerRun: () => helpers.openThemes?.()
-      };
-    }
-    if (/\b(code aendern|pin aendern|code wechseln|neuer code|ander.*code|change code|code einrichten|code setzen|code aendern)\b/.test(q)) {
-      return {
-        offerLabel: "Security oeffnen",
-        text: `<p><strong>Code aendern</strong> (4 Ziffern):</p><ol><li><strong>ShieldGate</strong> oeffnen</li><li>Schutz oder Login-Code aktivieren</li><li>Neuen Code eingeben — nicht 1234 oder 0000</li></ol><p>Du musst in die App springen — ich kann den Code nicht aus dem Chat setzen.</p>${OFFER_HINT}`,
-        offerRun: () => helpers.openSecurity?.()
-      };
-    }
-    if (/\b(code|schutz|shield|sicherheit|passkey|face id)\b/.test(q)) {
-      return {
-        offerLabel: "ShieldGate",
-        text: `<p><strong>Sicherheit</strong>:</p><ol><li>App <strong>ShieldGate</strong> (Security)</li><li>Oder <strong>Core → ShieldGate</strong></li><li>Code, Passkey, Login-Code dort</li></ol>${OFFER_HINT}`,
-        offerRun: () => helpers.openSecurity?.()
-      };
-    }
-    if (/\b(forge|app store|installier)\b/.test(q)) {
-      return {
-        offerLabel: "Forge oeffnen",
-        text: `<p><strong>Apps installieren</strong>:</p><ol><li><strong>NOCO Forge</strong> oeffnen</li><li>App waehlen → <strong>Installieren</strong></li><li>Danach unter <strong>Apps</strong> im Ordner Forge/Spiele</li></ol>${OFFER_HINT}`,
-        offerRun: () => helpers.openForge?.()
-      };
-    }
-    if (/\b(einstellung|settings|core|noco core)\b/.test(q)) {
-      return {
-        offerLabel: "Core oeffnen",
-        text: `<p><strong>NOCO Core</strong> (Einstellungen):</p><ol><li><strong>Apps</strong> → Ordner <strong>Core</strong></li><li>Tabs: <strong>NocoDeck</strong>, <strong>Lock</strong>, <strong>Shield</strong>, <strong>Vault</strong></li></ol>${OFFER_HINT}`,
-        offerRun: () => helpers.navigateCore?.({ section: "deck" })
-      };
-    }
-    if (/\b(pay|wallet|guthaben)\b/.test(q)) {
-      return {
-        offerLabel: "Pay oeffnen",
-        text: `<p><strong>NOCO Pay</strong>: App <strong>Pay</strong> in der Bibliothek — Guthaben, Aufladen, Verlauf.</p>${OFFER_HINT}`,
-        offerRun: () => helpers.openPay?.()
-      };
-    }
-    if (/\b(sync|keycard)\b/.test(q)) {
-      return {
-        offerLabel: "Sync oeffnen",
-        text: `<p><strong>Keycard / Sync</strong>: App <strong>Sync</strong> — Import und Export deiner Mobile-Keycard.</p>${OFFER_HINT}`,
-        offerRun: () => helpers.openSync?.()
-      };
-    }
-    return null;
-  }
+  ];
 
   function processGuide(raw, helpers) {
-    const text = String(raw || "").trim();
-    const q = norm(text);
-    if (!text || !helpers) return null;
-
-    const topic = guideForTopic(q, helpers);
-    if (!topic) {
-      if (isWhereFindQuery(q)) {
-        return {
-          text: `<p>Ich erklaere dir gern den Weg — nenne ein Stichwort, z. B. <strong>Animationen</strong>, <strong>Auto-Lock</strong>, <strong>Widgets</strong> oder <strong>Notizen</strong>.</p><p>Beispiel: «Wo finde ich Animationen?»</p>`
-        };
-      }
-      if (isHowToQuery(q, text)) {
-        return {
-          text: `<p>Frag konkret, z. B. <strong>Wie erstelle ich eine Notiz?</strong> oder <strong>Wie aktiviere ich Auto-Lock?</strong></p><p>Dann erklaere ich Schritt fuer Schritt — und kann es auf Wunsch ausfuehren.</p>`
-        };
-      }
-      return null;
-    }
-
-    if (isWhereFindQuery(q) || isHowToQuery(q, text)) {
-      return topic;
+    const q = norm(raw);
+    if (!q || q.length < 8) return null;
+    if (!/\b(wie|wo|was muss ich|anleitung|schritt|einrichten|einstellen)\b/.test(q)) return null;
+    for (const g of GUIDES) {
+      if (!g.test(q)) continue;
+      return {
+        text: g.text,
+        offerRun: g.offerRun ? () => g.offerRun(helpers) : null,
+        offerLabel: g.offerLabel || null
+      };
     }
     return null;
   }
 
-  function snapshotHtml(snap) {
-    if (!snap) return "<p>Keine Systemdaten.</p>";
-    return `<p><strong>Dein System</strong></p><ul>
-      <li>Theme: <strong>${snap.theme}</strong></li>
-      <li>Auto-Lock: <strong>${snap.autoLock ? snap.autoLockSeconds + "s" : "aus"}</strong></li>
-      <li>Liquid Glass: <strong>${snap.glassBoost ? "an" : "aus"}</strong></li>
-      <li>Schutz: <strong>${snap.codeLock ? "an" : "aus"}</strong></li>
-      <li>Pay: <strong>${snap.payBalance}</strong></li>
-      <li>Widgets: ${snap.widgets?.join(", ") || "—"}</li>
-      <li>Forge-Apps: <strong>${snap.installed}</strong> installiert</li>
-    </ul>`;
+  function extractSearchNeedle(raw, q) {
+    let m = String(raw || "").match(/\b(?:such|suche|finde|search)\s+(?:mir\s+)?(?:ueberall|in\s+notizen?|in\s+chats?|nach)\s+(.+)/i);
+    if (m) return m[1].trim();
+    m = String(raw || "").match(/\b(?:such|suche|finde)\s+(.+)/i);
+    if (m && m[1].length >= 2 && !/\b(ueberall|notiz|chat|app|beam)\b/.test(norm(m[1]))) return m[1].trim();
+    if (/\bnach\s+(.+)/.test(q)) {
+      const tail = q.replace(/^.*\bnach\s+/, "").trim();
+      if (tail.length >= 2) return tail;
+    }
+    return null;
   }
 
   function processCommand(raw, helpers) {
+    const q = norm(raw);
     const text = String(raw || "").trim();
-    const q = norm(text);
-    if (!text || !helpers) return null;
+    if (!q) return null;
 
-    if (isWhereFindQuery(q) || isHowToQuery(q, text)) return null;
-
-    if (/\b(hilfe|help|befehle|was kann|faehigkeiten)\b/.test(q) && q.length < 55) {
-      return null;
-    }
-
-    if (
-      /\b(status|uebersicht|zusammenfassung|system info|systeminfo)\b/.test(q) &&
-      /\b(zeig|wie|was|gib|system|einstellung|mobile)\b/.test(q)
-    ) {
-      const snap = helpers.getSystemSnapshot?.();
-      return { type: "text", text: snapshotHtml(snap) };
-    }
-
-    if (
-      /\b(wie viel|guthaben|kontostand|wallet|pay balance)\b/.test(q) ||
-      (/\b(pay|wallet)\b/.test(q) && /\b(zeig|wie viel|status)\b/.test(q))
-    ) {
-      const lex = global.NocoAILexicon?.process?.(text, helpers);
-      if (lex) return lex;
-      const snap = helpers.getSystemSnapshot?.();
+    if (/\b(was steht an|was hab ich zu tun|tagesplan|mein tag|inbox|ueberblick|was ist offen)\b/.test(q)) {
+      const html = buildInboxHtml(helpers);
+      const s = snap(helpers);
+      const offer =
+        s.openTaskCount > 0
+          ? () => helpers.openApp?.("tasks")
+          : s.nextReminderText
+            ? () => helpers.openMemories?.() || helpers.openApp?.("memories")
+            : s.timerRunning
+              ? () => helpers.openApp?.("timer")
+              : null;
       return {
         type: "text",
-        text: `<p>Dein Guthaben: <strong>${snap?.payBalance || "?"}</strong> (NOCO Pay).</p><p><small>«Oeffne Wallet» nur wenn du die App brauchst.</small></p>`
-      };
-    }
-
-    if (/\b(pay|wallet)\b/.test(q) && /\b(auflad|plus|guthaben|10|euro|eur)\b/.test(q)) {
-      const m = raw.match(/(\d+)\s*(?:eur|euro)?/i);
-      const amount = m ? Number(m[1]) : 10;
-      return {
-        type: "action",
-        text: `Lade <strong>+${amount} EUR</strong> auf …`,
-        run: () => helpers.addPayBalance?.(amount)
-      };
-    }
-
-    const timerMins = global.NocoAITime?.parseTimerStartMinutes?.(text);
-    if (timerMins != null && helpers.applyTimerMinutes) {
-      return global.NocoAITime.buildTimerStartAction(timerMins, helpers);
-    }
-
-    const noteCreate = parseNoteCreate(text);
-    if (noteCreate && helpers.createNote) {
-      return {
-        type: "action",
-        text: `Erstelle Notiz <strong>${noteCreate.title}</strong>${noteCreate.body ? " mit Text" : ""} …`,
-        run: () => helpers.createNote({ title: noteCreate.title, body: noteCreate.body, openApp: true })
-      };
-    }
-
-    if (/\b(schreib|trag|ergaenz|füge|fuege)\b/.test(q) && /\bnotiz\b/.test(q) && helpers.appendToActiveNote) {
-      const m = text.match(/notiz[:\s]+(.+)/i) || text.match(/(?:schreib|trag)\s+(.+)/i);
-      const chunk = m?.[1]?.trim();
-      if (chunk && chunk.length > 2) {
-        return {
-          type: "action",
-          text: "Schreibe in deine <strong>aktive Notiz</strong> …",
-          run: () => {
-            helpers.appendToActiveNote(chunk);
-            helpers.openApp?.("notes");
-          }
-        };
-      }
-    }
-
-    if (/\b(loesch|lösch|delete)\b/.test(q) && /\b(aktive\s+)?notiz\b/.test(q) && helpers.deleteActiveNote) {
-      return {
-        type: "action",
-        text: "Loesche die <strong>aktive Notiz</strong> …",
-        run: () => helpers.deleteActiveNote()
-      };
-    }
-
-    if (/\b(neuer chat|neues gespraech|neue unterhaltung)\b/.test(q) || (/\bchat\b/.test(q) && /\b(neu|erstell|start)\b/.test(q) && !/\b(oeffne|offne|such|finde)\b/.test(q))) {
-      return {
-        type: "action",
-        text: "Starte einen <strong>neuen AI-Chat</strong> …",
-        run: () => helpers.startNewChat?.()
+        text: html,
+        offerRun: offer,
+        offerLabel: s.openTaskCount ? "Tasks" : s.nextReminderText ? "Memory" : s.timerRunning ? "Timer" : null,
+        rememberTopic: "inbox"
       };
     }
 
     if (
-      /\b(mehr|max|starker|staerker|premium)\b/.test(q) &&
-      /\b(liquid\s*glass|glas|glass)\b/.test(q)
+      /\b(system status|status report|geraete status|systemueberblick|wie steht das system)\b/.test(q) ||
+      (q === "status" && text.length < 12)
     ) {
-      return {
-        type: "action",
-        text: "Aktiviere <strong>max Liquid Glass</strong> (Boost, Wallpaper, Motion) …",
-        run: () => helpers.enableGlassMode?.()
-      };
+      return { type: "text", text: buildStatusHtml(helpers), rememberTopic: "status" };
     }
 
-    const theme = resolveTheme(q);
-    const themeIntent =
-      theme &&
-      (/\b(theme|design|look|farbe|stimmung|hintergrund|wallpaper)\b/.test(q) ||
-        /\b(stell|setz|wechsel|mach|auf|will|moechte|mochte)\b/.test(q) ||
-        q === theme ||
-        q === `theme ${theme}`);
-    if (themeIntent) {
-      return {
-        type: "action",
-        text: `Theme <strong>${theme}</strong> — Hintergrund & Farben passen sich an …`,
-        run: () => {
-          helpers.setTheme?.(theme, { syncWallpaper: true });
-          helpers.openThemes?.();
-        }
-      };
-    }
-
-    if (/\b(heller|hell|aufhellen|brightness up|more bright)\b/.test(q) && q.length < 48) {
-      return {
-        type: "action",
-        text: "Mache das UI <strong>heller</strong> (Glas-Boost + Helligkeit) …",
-        run: () => helpers.adjustUiBrightness?.("up")
-      };
-    }
-    if (/\b(dunkler|dunkel|abdunkeln|brightness down|dimmer|weniger hell)\b/.test(q) && q.length < 48) {
-      return {
-        type: "action",
-        text: "Mache das UI <strong>dunkler</strong> …",
-        run: () => helpers.adjustUiBrightness?.("down")
-      };
-    }
-
-    if (/\b(widget|widgets)\b/.test(q) && /\b(welche|liste|zeig|was hab)\b/.test(q)) {
-      const list = helpers.listHomeWidgets?.() || [];
-      const names = list.map((id) => helpers.getWidgetTitle?.(id) || id).join(", ");
-      return {
-        type: "text",
-        text: `<p><strong>Home-Widgets</strong></p><p>${names || "Keine"}</p>`
-      };
-    }
-
-    if (/\b(standard|default|zurueck|reset)\b/.test(q) && /\b(widget|widgets|home)\b/.test(q)) {
-      return {
-        type: "action",
-        text: "Setze <strong>Standard-Widgets</strong> …",
-        run: () => helpers.resetHomeWidgets?.()
-      };
-    }
-
-    const packMatch = q.match(/\b(minimal|voll|full|focus|fokus|ai|ki|spiele|games)\b/);
-    if (packMatch && /\b(widget|widgets|home|pack)\b/.test(q)) {
-      const word = packMatch[1];
-      const pack =
-        word === "minimal" ? "minimal" :
-        word === "voll" || word === "full" ? "full" :
-        word === "focus" || word === "fokus" ? "focus" :
-        word === "ai" || word === "ki" ? "ai" :
-        word === "spiele" || word === "games" ? "games" : null;
-      if (pack) {
+    if (/\b(erinnere|erinner|remind)\s+mich\b/.test(q) || /\b(memory|erinnerung)\s+in\s+\d+\b/.test(q)) {
+      const minutes = parseMinutes(q);
+      const label = parseReminderText(raw, q);
+      if (minutes == null) {
         return {
-          type: "action",
-          text: `Widget-Pack <strong>${pack}</strong> wird angewendet …`,
-          run: () => helpers.setHomeWidgetPack?.(pack)
+          type: "text",
+          text: "<p>Wann soll ich erinnern? Z. B. <strong>Erinnere mich in 15 Minuten, Tee</strong> oder <strong>in einer Stunde</strong>.</p>",
+          rememberTopic: "memory"
         };
       }
-    }
-
-    if (/\b(bearbeit|edit|anpassen)\b/.test(q) && /\b(home|widget|start)\b/.test(q)) {
       return {
         type: "action",
-        text: "<strong>Bearbeiten</strong> am Home + Widget-Panel …",
+        text: `<p>Memory in <strong>${minutes} Min</strong>: «${esc(label)}» …</p>`,
         run: () => {
+          helpers.addReminder?.({ text: label, minutes });
+          helpers.showToast?.("Memory: " + label);
+          helpers.openMemories?.();
+        },
+        rememberTopic: "memory"
+      };
+    }
+
+    if (/\b(fokus modus|fokusmodus|pomodoro|konzentration starten|deep work)\b/.test(q)) {
+      return {
+        type: "action",
+        text: "<p><strong>Fokus Modus:</strong> 25-Minuten-Timer startet …</p>",
+        run: () => {
+          helpers.applyTimerMinutes?.(25);
+          helpers.startTimerCountdown?.();
+          helpers.showToast?.("Fokus: 25 Min");
+          void helpers.openApp?.("timer");
+        },
+        rememberTopic: "focus"
+      };
+    }
+
+    if (/\b(offene aufgaben|offene tasks|meine todos|was muss ich erledigen)\b/.test(q)) {
+      const tasks = helpers.getTasks?.() || [];
+      const open = tasks.filter((t) => !t.done);
+      if (!open.length) {
+        return {
+          type: "text",
+          text: "<p>Keine offenen <strong>Tasks</strong>. Sag <strong>Erstelle Aufgabe …</strong> fuer etwas Neues.</p>",
+          rememberTopic: "tasks"
+        };
+      }
+      const lines = open
+        .slice(0, 8)
+        .map((t) => `<li>${esc(t.text)}</li>`)
+        .join("");
+      return {
+        type: "text",
+        text: `<p><strong>${open.length}</strong> offene Aufgabe(n):</p><ul>${lines}</ul>`,
+        offerRun: () => helpers.openApp?.("tasks"),
+        offerLabel: "Tasks",
+        rememberTopic: "tasks"
+      };
+    }
+
+    if (/\b(erledige|erledigt|hake ab|markiere)\s+(aufgabe|task|todo)\b/.test(q) || /\b(erledige|hake ab)\s+/.test(q)) {
+      const m = text.match(/\b(?:erledige|erledigt|hake ab|markiere)\s+(?:aufgabe|task|todo)?\s*(.+)/i);
+      const needle = m ? m[1].trim() : "";
+      if (!needle) {
+        return {
+          type: "text",
+          text: "<p>Was soll erledigt werden? Z. B. <strong>Erledige Aufgabe Milch</strong>.</p>",
+          rememberTopic: "tasks"
+        };
+      }
+      const hit = helpers.completeTask?.(needle);
+      if (!hit) {
+        return {
+          type: "text",
+          text: `<p>Keine offene Aufgabe mit «${esc(needle)}» gefunden.</p>`,
+          rememberTopic: "tasks"
+        };
+      }
+      return {
+        type: "action",
+        text: `<p>Erledigt: <strong>${esc(hit.text)}</strong> ✓</p>`,
+        run: () => helpers.showToast?.("Aufgabe erledigt"),
+        rememberTopic: "tasks"
+      };
+    }
+
+    if (/\b(liste|zeig)\s+(meine\s+)?(erinnerungen|memories|reminder)\b/.test(q)) {
+      const list = helpers.listRemindersDetailed?.() || [];
+      if (!list.length) {
+        return {
+          type: "text",
+          text: "<p>Keine aktiven <strong>Memories</strong>. Beispiel: <strong>Erinnere mich in 10 Minuten, Pause</strong>.</p>",
+          rememberTopic: "memory"
+        };
+      }
+      const lines = list
+        .slice(0, 6)
+        .map((r) => `<li>«${esc(r.text)}» — <strong>${esc(r.eta)}</strong></li>`)
+        .join("");
+      return {
+        type: "text",
+        text: `<p><strong>Erinnerungen:</strong></p><ul>${lines}</ul>`,
+        offerRun: () => helpers.openMemories?.(),
+        offerLabel: "Memory",
+        rememberTopic: "memory"
+      };
+    }
+
+    if (/\b(wann ist|wann laeuft)\s+(mein\s+)?timer\b/.test(q) || q === "timer status") {
+      const t = helpers.getTimerStatus?.();
+      if (!t?.running) {
+        return {
+          type: "text",
+          text: "<p>Kein Timer aktiv. <strong>Starte Timer 10 Minuten</strong> oder <strong>Fokus Modus</strong>.</p>",
+          offerRun: () => helpers.openApp?.("timer"),
+          offerLabel: "Timer",
+          rememberTopic: "timer"
+        };
+      }
+      return {
+        type: "text",
+        text: `<p>Timer (<strong>${esc(t.modeLabel)}</strong>): noch <strong>${esc(t.display)}</strong>${t.endTimeLocale ? ` — Ende ca. <strong>${esc(t.endTimeLocale)}</strong>` : ""}.</p>`,
+        offerRun: () => helpers.openApp?.("timer"),
+        offerLabel: "Timer",
+        rememberTopic: "timer"
+      };
+    }
+
+    if (/\b(wann ist|wann kommt)\s+(meine\s+)?(erinnerung|memory)\b/.test(q)) {
+      const next = helpers.getNextReminder?.();
+      if (!next) {
+        return {
+          type: "text",
+          text: "<p>Keine Erinnerung geplant.</p>",
+          rememberTopic: "memory"
+        };
+      }
+      return {
+        type: "text",
+        text: `<p>«<strong>${esc(next.text)}</strong>» in <strong>${esc(next.eta)}</strong>${next.endTimeLocale ? ` (ca. ${esc(next.endTimeLocale)})` : ""}.</p>`,
+        offerRun: () => helpers.openMemories?.(),
+        offerLabel: "Memory",
+        rememberTopic: "memory"
+      };
+    }
+
+    const needle = extractSearchNeedle(raw, q);
+    if (needle && needle.length >= 2) {
+      const notes = helpers.searchNotes?.(needle, { limit: 4 }) || [];
+      const chats = helpers.searchChats?.(needle, { limit: 4 }) || [];
+      const parts = [];
+      if (notes.length) {
+        parts.push(
+          `<p><strong>Notizen</strong> (${notes.length}):</p><ul>${notes.map((n) => `<li>${esc(n.title)}</li>`).join("")}</ul>`
+        );
+      }
+      if (chats.length) {
+        parts.push(
+          `<p><strong>Chats</strong> (${chats.length}):</p><ul>${chats.map((c) => `<li>${esc(c.name || c.title || "Chat")}</li>`).join("")}</ul>`
+        );
+      }
+      if (!parts.length) {
+        return {
+          type: "text",
+          text: `<p>Nichts zu «<strong>${esc(needle)}</strong>» in Notizen oder AI-Chats.</p>`,
+          rememberTopic: "search"
+        };
+      }
+      const firstNote = notes[0];
+      const firstChat = chats[0];
+      return {
+        type: "text",
+        text: `<p>Suche «<strong>${esc(needle)}</strong>»:</p>${parts.join("")}`,
+        offerRun: () => {
+          if (firstNote?.id) helpers.openNote?.(firstNote.id);
+          else if (firstChat?.id) helpers.openChat?.(firstChat.id);
+        },
+        offerLabel: firstNote ? "Notiz oeffnen" : firstChat ? "Chat oeffnen" : null,
+        rememberTopic: "search"
+      };
+    }
+
+    if (/\b(backup status|keycard status|hab ich backup)\b/.test(q)) {
+      const has = !!localStorage.getItem("noco_mobile_last_keycard");
+      return {
+        type: "text",
+        text: has
+          ? "<p><strong>Keycard</strong> wurde zuletzt genutzt (lokal gespeichert). Fuer neuen Export: <strong>Oeffne Sync</strong>.</p>"
+          : "<p>Noch keine <strong>Keycard</strong> importiert. In <strong>Sync</strong> kannst du exportieren/importieren.</p>",
+        offerRun: () => helpers.openSync?.(),
+        offerLabel: "Sync",
+        rememberTopic: "sync"
+      };
+    }
+
+    if (/\b(performance tip|warum langsam|optimieren|weniger lag)\b/.test(q)) {
+      const s = snap(helpers);
+      const tips = [];
+      if (s.glassBoost) tips.push("«Mehr Performance» — reduziert Glas & Motion");
+      if (s.liveWallpaper) tips.push("Live-Wallpaper in Core ausschalten");
+      if (s.motion) tips.push("Animationen reduzieren in Core");
+      if (!tips.length) tips.push("System laeuft schon im Performance-Modus — «Mehr Liquid Glass» fuer mehr Effekt");
+      return {
+        type: "text",
+        text: `<p><strong>Tipps:</strong></p><ul>${tips.map((t) => `<li>${t}</li>`).join("")}</ul>`,
+        offerRun: s.glassBoost
+          ? () => {
+              helpers.setSettingToggle?.("glassBoost", false);
+              helpers.setSettingToggle?.("motion", false);
+              helpers.setSettingToggle?.("liveWallpaper", false);
+              helpers.showToast?.("Performance-Modus");
+            }
+          : null,
+        offerLabel: s.glassBoost ? "Performance an" : null,
+        rememberTopic: "perf"
+      };
+    }
+
+    if (/\b(schliesse alles|alles schliessen|overlays zu)\b/.test(q)) {
+      return {
+        type: "action",
+        text: "<p>Schliesse Menues und zurueck zum <strong>Home</strong> …</p>",
+        run: () => {
+          helpers.closeCurrentApp?.();
+          helpers.disableEditMode?.();
           helpers.goToPage?.(0);
-          window.setTimeout(() => {
-            helpers.enableEditMode?.();
-            window.setTimeout(() => helpers.openWidgetPanel?.(), 300);
-          }, 280);
-        }
+        },
+        rememberTopic: "nav"
       };
     }
 
-    for (const [word, appId] of Object.entries(APP_OPEN_ALIASES)) {
-      if (q.includes(norm(word)) && /\b(oeffne|offne|open|zeig|starte|geh)\b/.test(q)) {
-        const titles = { settings: "NOCO Core", security: "ShieldGate", themes: "Themes", forge: "Forge", pay: "Pay", sync: "Sync" };
-        const label = titles[appId] || appId;
-        if (appId === "beam") {
-          return { type: "action", text: `Oeffne <strong>NOCO Beam</strong> …`, run: () => helpers.openBeam?.() };
-        }
-        if (appId === "hub") {
-          return { type: "action", text: `Oeffne <strong>NOCO Hub</strong> …`, run: () => helpers.openHub?.() };
-        }
-        return {
-          type: "action",
-          text: `Oeffne <strong>${label}</strong> …`,
-          run: () => helpers.openApp?.(appId)
-        };
-      }
+    if (/\b(zaehle|wie viele)\s+(notizen|chats|aufgaben|apps)\b/.test(q)) {
+      const s = snap(helpers);
+      let line = "";
+      if (/\bnotiz/.test(q)) line = `<strong>${s.noteCount ?? 0}</strong> Notizen`;
+      else if (/\bchat/.test(q)) line = `<strong>${s.chatCount ?? 0}</strong> AI-Chats`;
+      else if (/\baufgab|task/.test(q)) line = `<strong>${s.openTaskCount ?? 0}</strong> offene Tasks von ${(helpers.getTasks?.() || []).length} gesamt`;
+      else if (/\bapp/.test(q)) line = `<strong>${s.installed ?? 0}</strong> installierte Forge-Apps`;
+      if (line) return { type: "text", text: `<p>${line}.</p>`, rememberTopic: "count" };
     }
 
-    if (
-      /\b(zeig|show|oeffne|offne|open).{0,20}(lock\s*screen|sperrbildschirm|sperr screen)\b/.test(q) ||
-      /\b(lock\s*screen|sperrbildschirm)\s*(zeigen|anzeigen|preview)\b/.test(q)
-    ) {
-      return {
-        type: "action",
-        text: "Zeige den <strong>Lock Screen</strong> …",
-        run: () => helpers.showLockScreenPreview?.()
-      };
+    if (/\b(gib mir einen tipp|random tipp|was empfiehlst du)\b/.test(q)) {
+      const s = snap(helpers);
+      const tips = [];
+      if (!s.timerRunning && !s.openTaskCount) tips.push("Starte <strong>Fokus Modus</strong> (25 Min)");
+      if (s.openTaskCount) tips.push("«Erledige Aufgabe …» fuer deine Tasks");
+      if (!s.nextReminderText) tips.push("«Erinnere mich in 20 Minuten …»");
+      tips.push("Island-Schnellmenu: Beam, Hub, Timer, Core");
+      tips.push("«Such in Notizen nach …» findet Inhalte");
+      tips.push("«Ueberrasch mich» oder «Tagesbriefing»");
+      const pick = tips[Math.floor(Math.random() * tips.length)];
+      return { type: "text", text: `<p>${pick}</p>`, rememberTopic: "tip" };
     }
 
-    if (/\b(core|noco core|einstellungen|settings)\b/.test(q) && /\b(oeffne|offne|open|zeig|geh)\b/.test(q)) {
-      const section =
-        /\b(lock|sperre|autolock|auto lock)\b/.test(q) ? "lock" :
-        /\b(shield|schutz|code|passkey)\b/.test(q) ? "shield" :
-        /\b(vault|session|forge)\b/.test(q) ? "vault" : "deck";
-      return {
-        type: "action",
-        text: `Oeffne <strong>NOCO Core</strong> — Tab <strong>${section}</strong> …`,
-        run: () => helpers.navigateCore?.({ section })
-      };
-    }
-
-    const lockSec = parseLockSeconds(q, text);
-    const toggleKey = matchToggle(q);
-    let onOff = parseOnOff(q);
-    if (toggleKey && onOff == null && /\b(umschalten|toggle|wechsel)\b/.test(q)) {
-      onOff = !helpers.getSystemSnapshot?.()[toggleKey];
-    }
-
-    const autoLockIntent =
-      global.NocoAITime?.isAutoLockTimeQuery?.(text, q) ||
-      /\b(autolock|auto lock|autolog|auto log)\b/.test(q) ||
-      (toggleKey === "autoLock" && /\b(autolock|auto lock|autolog|sperre)\b/.test(q));
-
-    if (autoLockIntent && (lockSec != null || (toggleKey === "autoLock" && (onOff != null || /\b(autolock|auto lock|autolog|sperre)\b/.test(q))))) {
-      const seconds = lockSec != null ? lockSec : null;
-      const enable = onOff !== false;
-      if (onOff === false && seconds == null) {
-        return {
-          type: "action",
-          text: "Schalte <strong>Auto-Lock</strong> aus und oeffne Core …",
-          run: () => helpers.navigateCore?.({ section: "lock", toggle: "autoLock", value: false })
-        };
-      }
-      const label = seconds != null ? `${seconds < 60 ? seconds + " Sekunden" : seconds / 60 + " Minuten"}` : enable ? "aktiviert" : "geaendert";
-      return {
-        type: "action",
-        text: `Auto-Lock <strong>${label}</strong> — springe zu Core Lock …`,
-        run: () =>
-          helpers.navigateCore?.({
-            section: "lock",
-            toggle: "autoLock",
-            value: seconds != null ? true : enable,
-            autoLockSeconds: seconds != null ? seconds : undefined
-          })
-      };
-    }
-
-    if (toggleKey && onOff != null) {
-      const meta = TOGGLE_META[toggleKey];
-      const verb = onOff ? "aktiviere" : "deaktiviere";
-      return {
-        type: "action",
-        text: `Ich <strong>${verb}</strong> ${meta.label} in NOCO Core …`,
-        run: () => helpers.navigateCore?.({ section: meta.section, toggle: toggleKey, value: onOff })
-      };
-    }
-
-    if (toggleKey && /\b(ein|an|on|aus|off)\b/.test(q)) {
-      const meta = TOGGLE_META[toggleKey];
-      const val = /\b(aus|off)\b/.test(q) ? false : true;
-      return {
-        type: "action",
-        text: `Stelle <strong>${meta.label}</strong> ${val ? "an" : "aus"} …`,
-        run: () => helpers.navigateCore?.({ section: meta.section, toggle: toggleKey, value: val })
-      };
-    }
-
-    if (/\b(zeig|show).{0,15}(autolock|auto lock|autolog).{0,15}(zeit|dauer|sek|min)/.test(q)) {
-      return {
-        type: "action",
-        text: "Zeige Auto-Lock-Zeit in <strong>Core → Lock</strong> …",
-        run: () => helpers.navigateCore?.({ section: "lock", highlight: "lock-time" })
-      };
-    }
-
-    if (
-      (/\b(alle|all)\b/.test(q) && /\b(widget|widgets)\b/.test(q) && /\b(entfern|loesch|weg|clear|delete)\b/.test(q)) ||
-      /\bwidgets?\s+entfernen\b/.test(q)
-    ) {
-      return {
-        type: "action",
-        text: "Entferne alle Home-Widgets (Willkommen bleibt) …",
-        run: () => helpers.setHomeWidgets?.(["hero"])
-      };
-    }
-
-    const widgetId = matchWidget(q);
-    if (widgetId && /\b(widget|widgets|home)\b/.test(q) && /\b(hinzuf|add|einfueg|einfug|ergaenz|pack)\b/.test(q)) {
-      const title = helpers.getWidgetTitle?.(widgetId) || widgetId;
-      return {
-        type: "action",
-        text: `Fuege Widget <strong>${title}</strong> zum Home hinzu …`,
-        run: () => helpers.addHomeWidget?.(widgetId)
-      };
-    }
-
-    if (widgetId && /\b(widget|widgets)\b/.test(q) && /\b(entfern|loesch|weg)\b/.test(q)) {
-      return {
-        type: "action",
-        text: `Entferne Widget <strong>${widgetId}</strong> …`,
-        run: () => helpers.removeHomeWidget?.(widgetId)
-      };
-    }
-
-    let forgeId = resolveForgeApp(q);
-    if (!forgeId) {
-      const catalog = helpers.getForgeCatalog?.() || [];
-      let best = null;
-      let score = 0;
-      catalog.forEach((app) => {
-        const title = norm(app.title || "");
-        if (q.includes(title) && title.length > score) {
-          score = title.length;
-          best = app.id;
-        }
-      });
-      forgeId = best;
-    }
-
-    if (forgeId && /\b(deinstall|loesch|uninstall|entfern|delete)\b/.test(q)) {
-      const title = helpers.getAppTitle?.(forgeId) || forgeId;
-      return {
-        type: "action",
-        text: `Deinstalliere <strong>${title}</strong> …`,
-        run: () => helpers.uninstallForgeApp?.(forgeId)
-      };
-    }
-
-    if (forgeId && /\b(install|installier|laden|hol)\b/.test(q)) {
-      const title = helpers.getAppTitle?.(forgeId) || forgeId;
-      const catalog = helpers.getForgeCatalog?.() || [];
-      const meta = catalog.find((a) => a.id === forgeId);
-      if (meta?.exclusive && !helpers.isExclusiveActive?.()) {
-        return {
-          type: "text",
-          text: `<p><strong>${title}</strong> ist eine <strong>Exclusive</strong>-App.</p><p>Zuerst Exclusive aktivieren, dann in Forge installieren.</p>${OFFER_HINT}`,
-          offerRun: () => helpers.openExclusive?.(),
-          offerLabel: "Exclusive oeffnen"
-        };
-      }
-      if (helpers.isAppInstalled?.(forgeId)) {
-        return {
-          type: "text",
-          text: `<p><strong>${title}</strong> ist schon installiert.</p><p>Soll ich die App oeffnen?</p>${OFFER_HINT}`,
-          offerRun: () => helpers.openApp?.(forgeId),
-          offerLabel: title
-        };
-      }
+    if (/\b(tagesbriefing|morgen briefing|daily briefing)\b/.test(q) || /^(guten morgen|guten abend|gute nacht)\b/.test(q)) {
+      const hour = new Date().getHours();
+      let greet = "Hallo";
+      if (/guten morgen/.test(q) || (hour >= 5 && hour < 12)) greet = "Guten Morgen";
+      else if (/guten abend/.test(q) || hour >= 18) greet = "Guten Abend";
+      else if (/gute nacht/.test(q) || hour >= 22 || hour < 5) greet = "Gute Nacht";
+      const inbox = buildInboxHtml(helpers);
       return {
         type: "text",
-        text: `<p><strong>${title}</strong> installieren:</p><ol><li>Forge oeffnen</li><li><strong>Installieren</strong> tippen</li><li>Danach unter Apps im Ordner</li></ol><p>Bei Schutz fragt das System nach deinem <strong>4-stelligen Code</strong>.</p>${OFFER_HINT}`,
-        offerRun: () => helpers.installForgeApp?.(forgeId),
-        offerLabel: "Jetzt installieren"
+        text: `<p><strong>${greet}!</strong> Dein NOCO-Tagesbriefing:</p>${inbox}`,
+        rememberTopic: "briefing"
       };
     }
 
-    if (forgeId && /\b(oeffne|offne|open|starte|spiel)\b/.test(q)) {
-      const title = helpers.getAppTitle?.(forgeId) || forgeId;
+    if (/\b(merke dir|merke|notiere schnell|gedanke|schnellnotiz)\b/.test(q)) {
+      const m = text.match(/\b(?:merke dir|merke|notiere schnell|gedanke|schnellnotiz)\s+(.+)/i);
+      const body = m ? m[1].trim().slice(0, 200) : "";
+      if (!body) {
+        return {
+          type: "text",
+          text: "<p>Was soll ich merken? Z. B. <strong>Merke dir Meeting um 15 Uhr vorbereiten</strong>.</p>",
+          rememberTopic: "capture"
+        };
+      }
+      const alsoTask = /\b(aufgabe|todo|task|erledigen)\b/.test(norm(body));
       return {
         type: "action",
-        text: `Starte <strong>${title}</strong> …`,
-        run: () => helpers.openApp?.(forgeId)
+        text: `<p>Gespeichert: <strong>${esc(body.slice(0, 60))}${body.length > 60 ? "…" : ""}</strong>${alsoTask ? " + Task" : ""}</p>`,
+        run: () => {
+          helpers.createNote?.({ title: body.slice(0, 48), body, openApp: false });
+          if (alsoTask) helpers.createTask?.({ text: body.slice(0, 80), openApp: false });
+          helpers.showToast?.("Gespeichert");
+        },
+        rememberTopic: "capture"
       };
     }
 
-    if (theme) {
+    if (/\b(arbeitsmodus|arbeit modus|work mode)\b/.test(q)) {
       return {
         type: "action",
-        text: `Theme <strong>${theme}</strong> …`,
-        run: () => helpers.setTheme?.(theme)
+        text: "<p><strong>Arbeitsmodus:</strong> Fokus-Timer, dunkles Theme, Home …</p>",
+        run: () => {
+          helpers.setTheme?.("midnight", { syncWallpaper: true });
+          helpers.applyTimerMinutes?.(25);
+          helpers.startTimerCountdown?.();
+          helpers.disableEditMode?.();
+          helpers.goToPage?.(0);
+          helpers.showToast?.("Arbeitsmodus aktiv");
+        },
+        rememberTopic: "scene-work"
       };
+    }
+
+    if (/\b(chillmodus|chill modus|entspann modus|relax modus)\b/.test(q)) {
+      return {
+        type: "action",
+        text: "<p><strong>Chillmodus:</strong> warmes Theme, weniger Effekte, Breath optional …</p>",
+        run: () => {
+          helpers.setTheme?.("sunset", { syncWallpaper: true });
+          helpers.setSettingToggle?.("liveWallpaper", false);
+          helpers.goToPage?.(0);
+          helpers.showToast?.("Chillmodus — entspannt");
+        },
+        offerRun: () => helpers.openApp?.("breath"),
+        offerLabel: "Breath",
+        rememberTopic: "scene-chill"
+      };
+    }
+
+    if (/\b(spielmodus|spiel modus|game mode)\b/.test(q)) {
+      return {
+        type: "action",
+        text: "<p><strong>Spielmodus:</strong> Bibliothek → Spiele …</p>",
+        run: () => {
+          helpers.goToPage?.(1);
+          window.setTimeout(() => {
+            helpers.openLibraryTab?.("games");
+            helpers.openLibraryFolder?.("games");
+          }, 320);
+        },
+        rememberTopic: "scene-game"
+      };
+    }
+
+    if (/\b(beam suche|spotlight suche|suche in beam)\s+nach\s+(.+)/.test(q)) {
+      const m = text.match(/\b(?:beam suche|spotlight suche|suche in beam)\s+nach\s+(.+)/i);
+      const needle = m ? m[1].trim() : "";
+      if (needle.length >= 1) {
+        return {
+          type: "action",
+          text: `<p><strong>NOCO Beam</strong> sucht «${esc(needle)}» …</p>`,
+          run: () => helpers.openBeam?.(needle),
+          rememberTopic: "beam"
+        };
+      }
+    }
+
+    if (/\b(ueberrasch mich|überrasch mich|surprise me|zufalls app)\b/.test(q)) {
+      const pool = [
+        "arcade", "quotes", "breath", "dodgerun", "tapdash", "runner", "memorygrid", "sketch",
+        "colorcatch", "mood", "forge", "themes", "timer", "notes", "tasks", "weather", "calculator"
+      ];
+      const ids = pool.filter((id) => helpers.isAppInstalled?.(id) !== false);
+      const pick = (ids.length ? ids : ["forge", "themes", "timer"])[Math.floor(Math.random() * (ids.length || 3))];
+      const title = helpers.getAppTitle?.(pick) || pick;
+      return {
+        type: "action",
+        text: `<p>Ueberraschung: <strong>${esc(title)}</strong> — viel Spass!</p>`,
+        run: () => helpers.openApp?.(pick),
+        rememberTopic: "surprise"
+      };
+    }
+
+    if (/\b(stimmung notieren|mood log|wie fuehle ich mich)\b/.test(q)) {
+      const m = text.match(/\b(?:stimmung notieren|mood log)\s+(.+)/i);
+      const mood = m ? m[1].trim().slice(0, 80) : "";
+      if (!mood) {
+        return {
+          type: "text",
+          text: "<p>Wie fuehlst du dich? <strong>Stimmung notieren gut</strong> oder <strong>Stimmung notieren muede</strong>.</p>",
+          rememberTopic: "mood"
+        };
+      }
+      return {
+        type: "action",
+        text: `<p>Stimmung gespeichert: <strong>${esc(mood)}</strong></p>`,
+        run: () => {
+          helpers.createNote?.({
+            title: "Stimmung " + new Date().toLocaleDateString("de-DE"),
+            body: mood + "\n" + new Date().toLocaleString("de-DE"),
+            openApp: false
+          });
+          if (helpers.isAppInstalled?.("mood")) helpers.openApp?.("mood");
+          else helpers.showToast?.("In Notizen gespeichert");
+        },
+        rememberTopic: "mood"
+      };
+    }
+
+    if (/\b(starte timer|timer starten)\s+(\d+)/.test(q) && !/\b(fokus|minuten)\b/.test(q)) {
+      const m = q.match(/\b(?:starte timer|timer starten)\s+(\d+)/);
+      const mins = m ? Number(m[1]) : 5;
+      return {
+        type: "action",
+        text: `<p>Timer <strong>${mins} Min</strong> startet …</p>`,
+        run: () => {
+          helpers.applyTimerMinutes?.(mins);
+          helpers.startTimerCountdown?.();
+          void helpers.openApp?.("timer");
+        },
+        rememberTopic: "timer"
+      };
+    }
+
+    if (/\b(erstelle aufgabe|neue aufgabe|todo)\s+(.+)/.test(q) && !/\b(wie|was ist)\b/.test(q)) {
+      const m = text.match(/\b(?:erstelle aufgabe|neue aufgabe|todo)\s+(.+)/i);
+      const label = m ? m[1].trim().slice(0, 120) : "";
+      if (label) {
+        return {
+          type: "action",
+          text: `<p>Aufgabe: <strong>${esc(label)}</strong></p>`,
+          run: () => {
+            helpers.createTask?.({ text: label, openApp: true });
+          },
+          rememberTopic: "tasks"
+        };
+      }
     }
 
     return null;
   }
 
-  global.NocoAISystem = { processCommand, processGuide, TOGGLE_META, WIDGET_ALIASES, THEMES };
-})(window);
+  function smartHint(text, helpers) {
+    const q = norm(text);
+    if (q.length < 4) return null;
+    const hints = [];
+    if (/\b(erinner|memory|wecker)\b/.test(q)) hints.push("«Erinnere mich in 15 Minuten, …»");
+    if (/\b(aufgab|task|todo|erledig)\b/.test(q)) hints.push("«Was steht an?» oder «Erledige Aufgabe …»");
+    if (/\b(such|finde)\b/.test(q)) hints.push("«Such in Notizen nach …»");
+    if (/\b(langsam|lag|haengt)\b/.test(q)) hints.push("«Performance Tipp»");
+    if (/\b(island|notch)\b/.test(q)) hints.push("«Was ist die Island?»");
+    if (/\b(ueberrasch|zufall)\b/.test(q)) hints.push("«Ueberrasch mich»");
+    if (/\b(briefing|morgen)\b/.test(q)) hints.push("«Tagesbriefing» oder «Guten Morgen»");
+    if (/\b(merke|notier)\b/.test(q)) hints.push("«Merke dir …»");
+    if (!hints.length) return null;
+    return { text: `<p>System-Tipp: ${hints.join(" · ")}</p>` };
+  }
+
+  global.NocoAISystem = {
+    processGuide,
+    processCommand,
+    smartHint,
+    buildInboxHtml,
+    buildStatusHtml,
+    norm
+  };
+})(typeof window !== "undefined" ? window : globalThis);

@@ -9,12 +9,13 @@
   --ux-ease-soft: cubic-bezier(0.34, 1.2, 0.44, 1);
   --ux-font: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
 
-  /* Chrome-Stack: Island + Titel — reservierter Platz ohne Überlapp */
+  /* Chrome-Stack: nur Island (kein NOCO OS / Home|Apps-Streifen) */
   --island-h: 42px;
   --chrome-gap: 6px;
-  --chrome-title-h: 50px;
-  --chrome-title-pad: 10px;
-  --chrome-stack-h: calc(env(safe-area-inset-top) + var(--island-h) + var(--chrome-gap) + var(--chrome-title-h) + var(--chrome-title-pad));
+  --noco-content-start: calc(env(safe-area-inset-top) + var(--island-h) + 34px + 46px + 18px);
+  --chrome-title-h: 0px;
+  --chrome-title-pad: 0px;
+  --chrome-stack-h: calc(env(safe-area-inset-top) + var(--island-h) + var(--chrome-gap) + 16px);
 
   /* Indirekte Akzentfarben — nur als Glow / Wash, nie flächig */
   --indirect-mint: color-mix(in srgb, var(--mint) 22%, transparent);
@@ -103,28 +104,43 @@ body.glass-boost {
 
 .phone-chrome .island-zone .dynamic-island,
 .phone-chrome .island-zone .island-ai-btn,
-.phone-chrome .island-zone .island-menu:not(.hidden) {
+.phone-chrome .island-zone .island-menu:not(.hidden),
+.phone-chrome .island-zone .island-inline-nav,
+.phone-chrome .island-zone .island-inline-nav .island-page-tab {
   pointer-events: auto;
 }
 
 .phone-chrome .chrome-title-bar {
-  pointer-events: auto;
+  display: flex;
+  flex-shrink: 0;
 }
 
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.island-exclusive-badge {
+  flex: 0 0 auto;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--mint) 40%, transparent);
+  color: color-mix(in srgb, var(--mint) 85%, white);
+}
+
+/* Kein breiter Glas-Streifen — nur die Island hat Glas */
 .chrome-glass-wash {
-  position: absolute;
-  inset: 0;
-  height: var(--chrome-stack-h);
-  pointer-events: none;
-  background:
-    linear-gradient(180deg, rgba(6, 14, 28, 0.55) 0%, rgba(6, 14, 28, 0.2) 72%, transparent 100%),
-    radial-gradient(ellipse 90% 70% at 50% 0%, var(--indirect-blue), transparent 55%),
-    radial-gradient(ellipse 60% 40% at 80% 20%, var(--indirect-violet), transparent 50%);
-  backdrop-filter: blur(36px) saturate(1.7);
-  -webkit-backdrop-filter: blur(36px) saturate(1.7);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  mask-image: linear-gradient(180deg, #000 0%, #000 78%, transparent 100%);
-  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 78%, transparent 100%);
+  display: none !important;
 }
 
 .phone-chrome .island-zone {
@@ -222,7 +238,7 @@ body.glass-boost {
 }
 
 .page-stage > .screen {
-  padding-top: 14px !important;
+  padding-top: var(--noco-content-start, 152px) !important;
   padding-left: 20px !important;
   padding-right: 20px !important;
 }
@@ -249,21 +265,18 @@ body.island-app-mode .phone-chrome .chrome-glass-wash {
   height: calc(env(safe-area-inset-top) + var(--island-h) + var(--chrome-gap) + 18px);
 }
 
-body.sheet-open .phone-chrome .chrome-title-bar.mobile-topbar,
-body.island-app-mode .phone-chrome .chrome-title-bar.mobile-topbar {
-  display: none !important;
-  height: 0 !important;
-  min-height: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: 0 !important;
-  overflow: hidden !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
+body.sheet-open:not(.island-app-mode) .phone-chrome .chrome-title-bar.mobile-topbar {
+  display: flex !important;
+  visibility: visible !important;
 }
 
-body.island-app-mode .island-pages {
-  display: none;
+body.island-app-mode .phone-chrome .chrome-title-bar.mobile-topbar,
+body.island-app-mode .chrome-page-nav {
+  display: none !important;
+}
+
+body.island-app-mode .island-page-tab[data-page="1"] {
+  font-weight: 900;
 }
 
 body.island-app-mode .island-pip[data-island-pip="1"].is-app-nav-hint {
@@ -295,25 +308,30 @@ body.device-handset .phone-chrome .island-zone {
   right: auto !important;
 }
 
+body.device-handset {
+  /* Handset: nur Island + AI — kein zweiter Titelstreifen unter der Notch */
+  --chrome-title-h: 0px;
+  --chrome-title-pad: 0px;
+  --chrome-stack-h: calc(env(safe-area-inset-top) + var(--island-h) + var(--chrome-gap) + 20px);
+}
+
 body.device-handset .phone-chrome {
   padding-top: max(2px, env(safe-area-inset-top));
+}
+
+body.device-handset .phone-chrome .chrome-glass-wash {
+  height: calc(env(safe-area-inset-top) + var(--island-h) + var(--chrome-gap) + 20px);
+}
+
+body.device-handset .phone-chrome .chrome-title-bar.mobile-topbar {
+  display: flex !important;
+  visibility: visible !important;
 }
 
 body.device-handset .phone-chrome .island-zone {
   padding-top: 2px;
   justify-content: center;
   flex-wrap: wrap;
-}
-
-body.device-handset .phone-chrome .mobile-topbar {
-  position: relative !important;
-  top: auto !important;
-  margin-top: 2px;
-  margin-bottom: 4px;
-  padding: 2px 16px 8px !important;
-  background: var(--glass-surface-deep) !important;
-  backdrop-filter: blur(20px) saturate(1.35) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(1.35) !important;
 }
 
 body.device-handset .chrome-title-bar .title-block .eyebrow {
@@ -327,25 +345,29 @@ body.device-handset .chrome-title-bar .title-block strong {
   line-height: 1.02;
 }
 
-body.device-handset .page-stage > .screen {
-  padding-top: calc(var(--chrome-stack-h) + 4px) !important;
+body.device-handset .page-stage > .screen.home-screen,
+body.device-handset .page-stage > .screen.desktop-screen {
+  padding-top: var(--noco-content-start, calc(env(safe-area-inset-top) + 142px)) !important;
+  padding-right: 16px !important;
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)) !important;
+  padding-left: 16px !important;
+  overflow-y: auto !important;
+  scroll-padding-top: var(--noco-content-start, calc(env(safe-area-inset-top) + 142px));
 }
 
 body.device-handset .screen.home-screen {
-  display: flex;
-  flex-direction: column;
+  display: block;
   min-height: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   touch-action: pan-y;
 }
 
 body.device-handset .screen.home-screen .home-bento {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
-  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  padding-top: 0;
+  overflow: visible;
   touch-action: pan-y;
 }
 
@@ -873,12 +895,31 @@ body.hub-open .page-swipe-hint {
   flex-direction: column;
   max-height: min(92vh, 920px);
   background:
-    var(--glass-surface),
-    rgba(4, 10, 20, 0.55);
+    linear-gradient(165deg, rgba(12, 20, 36, 0.94), rgba(6, 12, 24, 0.92)),
+    var(--glass-surface);
   border: 1px solid var(--glass-edge);
   box-shadow: 0 -8px 60px rgba(0, 0, 0, 0.45), 0 0 80px var(--indirect-violet);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: blur(40px) saturate(1.35);
+  -webkit-backdrop-filter: blur(40px) saturate(1.35);
+}
+
+body.device-handset .app-sheet .sheet-card {
+  background: linear-gradient(165deg, rgba(10, 18, 32, 0.97), rgba(6, 12, 22, 0.96));
+}
+
+body.device-handset .app-sheet .sheet-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(5, 10, 20, 0.42);
+  pointer-events: none;
+  z-index: 0;
+}
+
+body.device-handset .app-sheet .sheet-card > * {
+  position: relative;
+  z-index: 1;
 }
 
 .app-sheet #sheetContent {
@@ -923,21 +964,26 @@ body.device-handset .sheet-app-head {
 }
 
 body.device-handset .app-sheet .sheet-close {
-  top: auto;
-  bottom: max(16px, env(safe-area-inset-bottom, 12px));
-  right: 14px;
-  width: 46px;
-  height: 46px;
-  border-radius: 16px;
+  top: max(10px, env(safe-area-inset-top, 8px));
+  bottom: auto;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
   font-size: 22px;
+  z-index: 20;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+
+body.device-handset.noco-ai-sheet .app-sheet .sheet-close {
+  top: max(8px, env(safe-area-inset-top, 6px));
 }
 
 body.device-handset .sheet-app-head {
   padding-right: 12px;
 }
 
-body.device-handset .mobile-app-body {
+body.device-handset .mobile-app-body:not(.noco-ai-app-body) {
   padding-bottom: max(72px, calc(env(safe-area-inset-bottom, 12px) + 56px));
 }
 
@@ -946,6 +992,11 @@ body.device-handset .mobile-app-body {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+body.device-handset.noco-ai-sheet .mobile-app-body.noco-ai-app-body {
+  overflow: hidden !important;
+  padding-bottom: 0 !important;
 }
 
 body.noco-ai-sheet .app-sheet .sheet-card {
@@ -1184,6 +1235,61 @@ body.device-handset .phone {
 
 body.device-handset .desktop-screen {
   padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)) !important;
+}
+
+body.device-handset .desktop-screen .desktop-head {
+  display: none;
+}
+
+body.device-handset .desktop-screen .library-quick {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+/* —— Phone-Frame: Island-only, Inhalt weit unter der Notch (auch Desktop-Vorschau) —— */
+.noco-stage .phone,
+body.device-handset .phone {
+  --chrome-title-h: 0px !important;
+  --chrome-title-pad: 0px !important;
+  --island-stack: calc(env(safe-area-inset-top, 0px) + var(--island-h, 42px) + 28px);
+}
+
+.noco-stage .phone .phone-chrome .chrome-title-bar.mobile-topbar,
+body.device-handset .phone-chrome .chrome-title-bar.mobile-topbar {
+  display: flex !important;
+  visibility: visible !important;
+}
+
+.noco-stage .phone .phone-chrome .chrome-glass-wash,
+body.device-handset .phone-chrome .chrome-glass-wash {
+  height: var(--island-stack);
+  max-height: calc(env(safe-area-inset-top, 0px) + 72px);
+}
+
+.noco-stage .phone .page-stage > .screen.home-screen,
+.noco-stage .phone .page-stage > .screen.desktop-screen,
+body.device-handset .page-stage > .screen.home-screen,
+body.device-handset .page-stage > .screen.desktop-screen {
+  padding-top: var(--noco-content-start, calc(env(safe-area-inset-top) + 142px)) !important;
+  overflow-y: auto !important;
+  scroll-padding-top: var(--noco-content-start, calc(env(safe-area-inset-top) + 142px));
+}
+
+.noco-stage .phone .screen.home-screen .home-bento,
+body.device-handset .screen.home-screen .home-bento {
+  padding-top: 0;
+  margin-top: 0;
+  overflow: visible;
+}
+
+.noco-stage .phone .desktop-screen .library-quick,
+body.device-handset .desktop-screen .library-quick {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.noco-stage .phone .desktop-screen .library-shell {
+  margin-top: 0;
 }
 
 /* —— Focus —— */

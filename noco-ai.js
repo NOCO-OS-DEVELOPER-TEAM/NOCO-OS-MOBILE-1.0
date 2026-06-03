@@ -4,18 +4,18 @@
 (function initNocoAIModule(global) {
   const AI_NAME = "NOCO AI";
   const MAX_LOG_NODES = 56;
-  const TYPING_MS = 340;
-  const TYPING_WIDGET_MS = 260;
+  const TYPING_MS = 260;
+  const TYPING_WIDGET_MS = 200;
 
   const APP_ALIASES = [
-    { id: "settings", words: ["settings", "setting", "einstellungen", "einstellung", "optionen", "preferences", "prefs", "konfiguration", "systemeinstellungen", "core", "noco core", "system", "deck", "konfigurieren", "einstellen", "anpassen system"] },
+    { id: "settings", words: ["settings", "setting", "einstellungen", "einstellung", "optionen", "preferences", "prefs", "konfiguration", "systemeinstellungen", "core", "noco core", "system", "deck", "konfigurieren", "einstellen", "anpassen system", "einstellungs app", "config"] },
     { id: "security", words: ["security", "sicherheit", "shield", "shieldgate", "passkey", "code", "schutz", "scan", "face id", "faceid", "pin", "sperre"] },
     { id: "sync", words: ["sync", "keycard", "import", "export", "backup", "synchron", "verbinden", "key card"] },
-    { id: "forge", words: ["forge", "store", "app store", "appstore", "apps laden", "apps installieren", "neue apps", "shop", "installieren"] },
+    { id: "forge", words: ["forge", "store", "app store", "appstore", "apps laden", "apps installieren", "neue apps", "shop", "installieren", "app laden", "download"] },
     { id: "nocoai", words: ["noco ai", "nocoai", "ki", "ai", "assistent", "chatbot", "copilot", "hilfe ki", "sprachassistent"] },
     { id: "beam", words: ["beam", "noco beam", "suche", "search", "spotlight", "finden", "suchen", "finder"] },
-    { id: "themes", words: ["themes", "theme", "design app", "farben", "look", "aurora", "wallpaper", "midnight", "sunset", "forest"] },
-    { id: "notes", words: ["notes", "notizen", "notiz", "notizblock", "notizbuch", "notepad", "schreibblock", "schnellnotiz", "memo", "tagebuch"] },
+    { id: "themes", words: ["themes", "theme", "theme app", "themes app", "design app", "farben", "look", "aurora", "wallpaper", "midnight", "sunset", "forest", "design"] },
+    { id: "notes", words: ["notes", "notizen", "notiz", "notizblock", "notizbuch", "notepad", "schreibblock", "schnellnotiz", "memo", "tagebuch", "notizen app", "schreib app"] },
     { id: "tasks", words: ["tasks", "aufgaben", "todo", "to do", "checkliste", "erledigen", "task liste", "aufgabenliste"] },
     { id: "timer", words: ["timer", "countdown", "fokus timer", "uhrzeit", "stoppuhr"] },
     { id: "memories", words: ["memory", "erinnerung", "erinnerungen", "reminder", "erinner mich", "wecker", "alarm"] },
@@ -33,6 +33,9 @@
     { id: "memorygrid", words: ["memory", "merken", "grid", "memory grid"] },
     { id: "tapdash", words: ["tap", "dash", "tippen", "tap dash"] },
     { id: "colorcatch", words: ["color", "farbe", "catch", "color catch"] },
+    { id: "reacttap", words: ["react", "reaktion", "react tap", "gruen"] },
+    { id: "blitzmath", words: ["blitz", "mathe", "blitz math", "rechnen spiel"] },
+    { id: "laneswap", words: ["lane", "spur", "lane swap", "wechsel"] },
     { id: "quotes", words: ["quotes", "spruch", "zitat", "daily", "sprueche"] },
     { id: "breath", words: ["breath", "atem", "atmen", "ruhe"] },
     { id: "sketch", words: ["sketch", "zeichnen", "zeichnung", "malen"] },
@@ -52,13 +55,14 @@
 
   const OPEN_VERBS = [
     "offne", "oeffne", "open", "starte", "zeig", "geh zu", "gehe zu", "navigiere", "switch", "launch", "start", "ruf", "hol",
-    "wechsel", "wechsle", "bring mich", "fuehr mich", "fuehre mich", "goto", "gehe", "oeffne mir", "starte mir"
+    "wechsel", "wechsle", "bring mich", "fuehr mich", "fuehre mich", "goto", "gehe", "oeffne mir", "starte mir",
+    "mach auf", "mach", "offnen", "oeffnen", "anmachen", "aufrufen"
   ];
 
   const CHITCHAT = [
     { keys: ["hallo", "hi", "hey", "moin", "servus", "guten tag", "hello", "na"], replies: [
       "Hallo! Ich bin NOCO AI — komplett offline. Du kannst mit mir reden, Apps oeffnen oder Home-Widgets verwalten.",
-      "Hey! Schoen, dass du da bist. Frag mich «Was kannst du?» oder tippe «Oeffne Core».",
+      "Hey! Frag «Was kann ich tun?», «Was kannst du?» oder «Wer bin ich?» — ich antworte smart & offline.",
       "Hi! Alles laeuft lokal auf deinem Geraet — schnell, privat, ohne Cloud."
     ]},
     { keys: ["wie geht", "wie gehts", "wie geht es", "alles fit", "was geht", "wie lauft"], replies: [
@@ -67,7 +71,7 @@
       "Bestens! Offline heisst: sofort antworten, auch ohne Internet."
     ]},
     { keys: ["wer bist", "was bist", "was kannst", "faehigkeiten"], replies: [
-      "Ich bin NOCO AI — offline Assistent fuer NOCO OS Mobile 1.2. Apps oeffnen, navigieren, Tipps geben, Tippfehler korrigieren.",
+      "Ich bin NOCO AI — offline Assistent fuer NOCO OS Mobile. Ich verstehe einfache Fragen, Apps oeffnen, erstellen und navigieren.",
       "Kein echtes Internet-KI-Modell — dafuer hunderte fertige Antworten und starke Befehls-Erkennung.",
       "Sag «Hilfe» fuer eine Befehlsliste, «Oeffne …» fuer Apps, oder plaudere einfach mit mir."
     ]},
@@ -102,7 +106,7 @@
       "Stark — weiter gehts mit «Hilfe» oder einem neuen Chat."
     ]},
     { keys: ["schlecht", "mist", "aerger", "frustriert", "genervt"], replies: [
-      "Verstehe ich. Probier einen Hard-Refresh oder schliess die App kurz — alles bleibt lokal gespeichert.",
+      "Verstehe ich. Wenn es um Leistung geht: frag «Warum ist meine Performance schlecht?» — ich checke deine Einstellungen.",
       "Wenn etwas haengt: Island schliessen, zurueck zum Home, nochmal oeffnen. Ich helfe gern mit «Hilfe».",
       "Atme kurz durch — dann «Oeffne Core» fuer Einstellungen oder «Was kann ich tun?»"
     ]},
@@ -116,7 +120,7 @@
       "Ich kann Erinnerungen nicht pushen (offline), aber Notizen und Tasks bleiben auf dem Geraet.",
       "Tipp: «Oeffne Notiz mit Aufgaben» findet deine Listen automatisch."
     ]},
-    { keys: ["witzig", "lustig", "haha", "lol", "witz"], replies: [
+    { keys: ["witzig", "lustig", "haha", "lol"], replies: [
       "Offline-Witz: Warum ist NOCO AI nie offline? … Doch, ist es — und trotzdem da.",
       "Ich lache in Liquid Glass — Reflexe included.",
       "Humor-Modus: an. Ernst-Modus: «Oeffne Core»."
@@ -140,7 +144,10 @@
 
   const TOPIC_REPLIES = [
     { keys: ["glas", "glass", "liquid", "design look"], text: "Liquid Glass = indirekte Farben, Blur, Glow. In Core: Glass Boost und Motion anpassen." },
-    { keys: ["version", "1.2", "update", "neu"], text: "NOCO OS Mobile 1.2: App-Bibliothek mit Ausklapp, NOCO AI + Widget, Beam, Forge." },
+    {
+      keys: ["version", "1.2", "update", "was ist neu", "neu in 1.2", "changelog"],
+      text: "NOCO OS Mobile 1.2: smartere NOCO AI, App-Bibliothek mit Tabs, Island-only Chrome, Liquid Glass, Beam & Forge."
+    },
     { keys: ["lag", "bug", "fehler", "absturz", "langsam", "haengt"], text: "Alles laeuft offline. Bei Haken: App schliessen, kurz warten. Gesten haben Safety-Timer. NOCO AI blockiert nichts im Hintergrund." },
     { keys: ["keycard", "backup"], text: "Sync in der Core-Bibliothek: Keycard importiert Theme, Apps, Notizen und mehr." },
     { keys: ["exclusive", "premium"], text: "Exclusive = Premium-Apps in Forge. «Oeffne Exclusive» zeigt den Status." },
@@ -209,20 +216,36 @@
     "Zu allgemein fuer mich — ein App-Name oder «Wie erstelle ich …?» hilft."
   ];
 
-  const DEFAULT_SUGGESTIONS = [
-    "Was steht an?",
-    "Helligkeit",
-    "Heller",
-    "Theme Midnight",
-    "Hintergrund",
-    "Wann ist mein Timer rum?",
-    "Inbox",
-    "Erstelle Notiz",
-    "Live Wallpaper an",
-    "Hilfe"
-  ];
+  const DEFAULT_SUGGESTIONS = () => {
+    const nick = global.NocoAIProfile?.getNickname?.();
+    const personal = nick
+      ? [
+          `Was soll ich tun?`,
+          `Was kann ich tun?`,
+          `Was kannst du?`,
+          `Wie geht es dir?`,
+          `Wer bin ich?`
+        ]
+      : [
+          "Was kann ich tun?",
+          "Was kannst du alles?",
+          "Was soll ich tun?",
+          "Wer bin ich?",
+          "Was magst du?",
+          "Ueberrasch mich",
+          "Mach ein Foto",
+          "Mini-Spiel im Chat",
+          "Würfel",
+          "Rate Zahl",
+          "Was kann ich Neues?",
+          "Ich heisse …"
+        ];
+    const base = global.NocoAIFaqBank?.getSuggestionSamples?.(10) || [];
+    return personal.concat(base).slice(0, 14);
+  };
 
-  const WIDGET_SUGGESTIONS = ["Was steht an?", "Inbox", "3 plus 3", "Wie stelle ich Auto-Lock ein?", "Hilfe"];
+  const WIDGET_SUGGESTIONS = () =>
+    (global.NocoAIFaqBank?.getSuggestionSamples?.(6) || []).concat(["3 plus 3", "Hilfe"]).slice(0, 8);
 
   let mountedRoot = null;
   let busy = false;
@@ -236,7 +259,9 @@
     pendingOfferLabel: null,
     lastUserText: null,
     lastTopic: null,
-    lastUltraTopic: null
+    lastUltraTopic: null,
+    chatGame: null,
+    lastGameKind: null
   };
 
   const Chats = () => global.NocoAIChats;
@@ -331,9 +356,15 @@
     if (global.NocoAIUltra?.isBriefingQuery?.(q)) return true;
     if (global.NocoAIUltra?.isFollowUp?.(q, query)) return true;
     if (global.NocoAICreate?.isCreateIntent?.(query, q)) return false;
+    if (global.NocoAIPersonality?.isJokeRequest?.(q)) return true;
+    if (/\b(oeffne|offne|open|starte|zeig|mach)\b/.test(q) && /\b(app|theme|themes|design|forge|timer|notiz|beam|security)\b/.test(q)) {
+      return false;
+    }
     if (global.NocoAISystem?.processGuide?.(query, {})) return true;
     if (/\b(wo finde|where (do i|can i) find|where is|wie erstelle|wie kann ich|how do i|how to)\b/.test(q)) return true;
-    if (/\b(was kann ich|what can i|was kann man|was soll ich|was mach ich|wie geht|wer bist|was bist|hallo|hi |hey |danke|hilfe|help)\b/.test(q)) return true;
+    if (global.NocoAIMeta?.matches?.(q)) return true;
+    if (global.NocoAIEveryday?.matches?.(q)) return true;
+    if (/\b(was kann ich|what can i|was kann man|was soll ich|was mach ich|was magst|wer bin ich|wie geht|wer bist|was bist|hallo|hi |hey |danke|hilfe|help)\b/.test(q)) return true;
     if (/\b(warum|wieso|weshalb|why|who|when)\b/.test(q) && q.length < 80 && !/\b(oeffne|offne|open)\b/.test(q)) return true;
     if (q.endsWith("?") && !OPEN_VERBS.some((v) => hasWholeWord(q, normalize(v)))) return true;
     return false;
@@ -389,7 +420,10 @@
     const q = normalize(query);
     if (!q) return null;
     if (global.NocoAICreate?.isCreateIntent?.(query, q)) return null;
-    if (isQuestionOrChat(query)) return null;
+    if (/\b(oeffne|offne|open|starte|zeig|mach)\s+(die\s+)?(theme|themes|design)\b/.test(q)) {
+      return { appId: "themes", confidence: 94, label: "themes" };
+    }
+    if (isQuestionOrChat(query) && !/\b(oeffne|offne|open|starte|zeig|mach)\b/.test(q)) return null;
     const hasVerb = OPEN_VERBS.some((v) => {
       const nv = normalize(v);
       return nv.length >= 5 ? hasWholeWord(q, nv) : hasWholeWord(q, nv) && !/\b(machen|mache)\b/.test(q);
@@ -399,10 +433,17 @@
       return { appId: "settings", confidence: 85, label: "Core" };
     }
     if (hasVerb || /^(zeig|go|ruf|hol)\s/.test(q)) {
-      return resolveAppFromQuery(q, 68);
+      return resolveAppFromQuery(q, 58);
     }
-    if (q.split(" ").length <= 3 && !isQuestionOrChat(query)) {
-      return resolveAppFromQuery(q, 80);
+    if (/\bapp\b/.test(q) && hasVerb) {
+      const stripped = q.replace(/\b(oeffne|offne|open|die|der|das|app|anwendung)\b/g, " ").trim();
+      if (stripped.length >= 2) {
+        const hit = resolveAppFromQuery(stripped, 52);
+        if (hit) return hit;
+      }
+    }
+    if (q.split(" ").length <= 4 && !isQuestionOrChat(query)) {
+      return resolveAppFromQuery(q, 72);
     }
     return null;
   }
@@ -677,8 +718,11 @@
 
   function formatHelpHtml() {
     return `
-      <p><strong>So sprichst du mit mir</strong></p>
+      <p><strong>NOCO AI — So sprichst du mit mir</strong></p>
       <ul>
+        <li><strong>Einfach fragen:</strong> «Was ist Forge?», «Brauche ich Internet?», «Wie viele Nachrichten?»</li>
+        <li><strong>System & Ort:</strong> «Wo ist Forge?», «Wo bin ich?», «Wie komme ich zu Widgets?» — ich erklaere und oeffne</li>
+        <li><strong>Ein Wort:</strong> «Timer», «Notizen», «Inbox», «Apps» — ich starte oder erklaere</li>
         <li><strong>Apps:</strong> «Oeffne Core», «Starte Forge», «Zeig Wetter»</li>
         <li><strong>Navigation:</strong> «Gehe zu Home», «Gehe zu Apps»</li>
         <li><strong>Core:</strong> «Auto-Lock aus», «Mehr Liquid Glass», «System Status»</li>
@@ -691,11 +735,14 @@
         <li><strong>Smalltalk:</strong> «Wie geht's dir?», «Was kann ich tun?»</li>
         <li><strong>Rechnen:</strong> «3 plus 3», «3*4+5», «3 mal 4 plus 5»</li>
         <li><strong>Daten:</strong> «Inbox», «Meine Notizen», «Offene Aufgaben», «Such ueberall nach …»</li>
+        <li><strong>Sprache:</strong> Sage <strong>«NOCO AI»</strong> (oeffnet mich). Toggle <strong>Hoeren</strong> · Mikro-Button = Diktat</li>
+        <li><strong>Wissen 2.0:</strong> «Was ist die Island?», «Unterschied Beam und AI», «Sprachbefehl», «Build Version»</li>
         <li><strong>Alltagssprache:</strong> Ein Wort reicht — «Timer», «Notizen», «Helligkeit», «Inbox» — ich biete Aktionen oder starte direkt</li>
         <li><strong>Fragen:</strong> «Wie stelle ich Auto-Lock ein?» — «Ja» fuehrt aus</li>
-        <li><strong>Ueberblick:</strong> «Was steht an?», «System Status» — auch «und der Timer?» als Nachfrage</li>
-        <li><strong>Zeit:</strong> «Wann ist mein Timer rum?», «Wann ist meine Erinnerung?»</li>
-        <li><strong>Modi:</strong> «Fokus Modus», «Tagesplan», «Coach»</li>
+        <li><strong>Ueberblick:</strong> «Was steht an?», «Tagesbriefing», «Guten Morgen» — Nachfragen: «und der Timer?»</li>
+        <li><strong>Szenen:</strong> «Arbeitsmodus», «Chillmodus», «Spielmodus», «Ueberrasch mich»</li>
+        <li><strong>Schnell:</strong> «Merke dir …», «Beam suche nach …», «Erstelle Aufgabe …»</li>
+        <li><strong>Zeit:</strong> «Wann ist mein Timer rum?», «Erinnere mich in …»</li>
         <li><strong>Smart:</strong> «Erledige Aufgabe …», «15 Prozent von 80», «10 km in Meilen»</li>
         <li><strong>Wissen:</strong> «Empfehl mir was», «Was ist Forge?»</li>
         <li><strong>Notizen:</strong> «Erstelle Notiz» (leer) · «Erstelle Notiz mit Titel Einkauf»</li>
@@ -928,9 +975,81 @@
   }
 
   function processMessage(query, helpers, context = {}) {
-    const text = String(query || "").trim();
+    const rawInput = String(query || "").trim();
+    let text = global.NocoAISmart?.expandQuery?.(rawInput) || rawInput;
+    text = global.NocoAIUnderstand?.expandQuery?.(text, rawInput, sessionContext) || text;
+    const stash = (result) => {
+      if (result?.text) global.NocoAIRouter?.setCached?.(text, result);
+      return result;
+    };
     if (!text) {
       return { type: "text", text: "Schreib eine Nachricht — z. B. «Hilfe», «Oeffne Core» oder «Wie geht's dir?»" };
+    }
+
+    const cached = global.NocoAIRouter?.getCached?.(text);
+    if (cached) return cached;
+
+    if (sessionContext.chatGame) {
+      const gameCont = global.NocoAIGames?.continueGame?.(text, rawInput, sessionContext, helpers);
+      if (gameCont) return stash(gameCont);
+    }
+
+    const gamesEarly = global.NocoAIGames?.process?.(text, rawInput, helpers, sessionContext);
+    if (gamesEarly) return stash(gamesEarly);
+
+    const analyzed = global.NocoAIRouter?.analyze?.(text, rawInput) || { intent: "general" };
+
+    const mathHit = analyzed.isMath ? global.NocoAIRouter?.tryMath?.(rawInput) : null;
+    if (mathHit) return stash(mathHit);
+
+    const followUp = global.NocoAIUnderstand?.processFollowUp?.(text, rawInput, helpers, sessionContext);
+    if (followUp) {
+      if (followUp.rememberTopic) sessionContext.lastBrainTopic = followUp.rememberTopic;
+      if (followUp.offerRun) {
+        sessionContext.pendingOffer = followUp.offerRun;
+        sessionContext.pendingOfferLabel = followUp.offerLabel || null;
+      }
+      return stash(followUp);
+    }
+
+    const profileEarly = global.NocoAIProfile?.process?.(text, rawInput, helpers);
+    if (profileEarly) {
+      if (profileEarly.rememberTopic) sessionContext.lastBrainTopic = profileEarly.rememberTopic;
+      if (profileEarly.offerRun) {
+        sessionContext.pendingOffer = profileEarly.offerRun;
+        sessionContext.pendingOfferLabel = profileEarly.offerLabel || null;
+      }
+      return stash(profileEarly);
+    }
+
+    const metaEarly = global.NocoAIMeta?.process?.(text, helpers);
+    if (metaEarly) {
+      if (metaEarly.rememberTopic) sessionContext.lastBrainTopic = metaEarly.rememberTopic;
+      if (metaEarly.offerRun) {
+        sessionContext.pendingOffer = metaEarly.offerRun;
+        sessionContext.pendingOfferLabel = metaEarly.offerLabel || null;
+      }
+      return stash(metaEarly);
+    }
+
+    const everydayEarly = global.NocoAIEveryday?.process?.(text, rawInput, helpers);
+    if (everydayEarly) {
+      if (everydayEarly.rememberTopic) sessionContext.lastBrainTopic = everydayEarly.rememberTopic;
+      if (everydayEarly.offerRun) {
+        sessionContext.pendingOffer = everydayEarly.offerRun;
+        sessionContext.pendingOfferLabel = everydayEarly.offerLabel || null;
+      }
+      return stash(everydayEarly);
+    }
+
+    const liveEarly = global.NocoAILive?.process?.(text, helpers);
+    if (liveEarly) {
+      if (liveEarly.rememberTopic) sessionContext.lastBrainTopic = liveEarly.rememberTopic;
+      if (liveEarly.offerRun) {
+        sessionContext.pendingOffer = liveEarly.offerRun;
+        sessionContext.pendingOfferLabel = liveEarly.offerLabel || null;
+      }
+      return stash(liveEarly);
     }
 
     const pendingId = context.pendingAppId || sessionContext.pendingAppId;
@@ -976,41 +1095,127 @@
     if (guide) {
       sessionContext.pendingOffer = guide.offerRun || null;
       sessionContext.pendingOfferLabel = guide.offerLabel || null;
-      return { type: "text", text: guide.text };
+      return stash({ type: "text", text: guide.text });
     }
 
     sessionContext.pendingOffer = null;
     sessionContext.pendingOfferLabel = null;
 
-    const naturalEarly = global.NocoAINatural?.process?.(text, helpers);
-    if (naturalEarly) {
-      if (naturalEarly.offerRun) {
-        sessionContext.pendingOffer = naturalEarly.offerRun;
-        sessionContext.pendingOfferLabel = naturalEarly.offerLabel || null;
+    if (analyzed.intent === "question" || analyzed.intent === "faq") {
+      const qBest = global.NocoAIRouter?.resolveQuestion?.(text, rawInput, helpers, sessionContext);
+      if (qBest) {
+        if (qBest.rememberTopic) sessionContext.lastBrainTopic = qBest.rememberTopic;
+        if (qBest.offerRun) {
+          sessionContext.pendingOffer = qBest.offerRun;
+          sessionContext.pendingOfferLabel = qBest.offerLabel || null;
+        }
+        return stash(qBest);
       }
-      return naturalEarly;
     }
 
-    const lexiconEarly = global.NocoAILexicon?.process?.(text, helpers);
-    if (lexiconEarly) {
-      if (lexiconEarly.offerRun) {
-        sessionContext.pendingOffer = lexiconEarly.offerRun;
-        sessionContext.pendingOfferLabel = lexiconEarly.offerLabel || null;
+    const directEarly = global.NocoAIAnswers?.process?.(text, helpers);
+    if (directEarly) return stash(directEarly);
+
+    if (!global.NocoAIRouter?.shouldSkipChatLane?.(analyzed)) {
+      const personalityEarly = global.NocoAIPersonality?.process?.(text, helpers);
+      if (personalityEarly) return stash(personalityEarly);
+
+      const smartEarly = global.NocoAISmart?.process?.(text, helpers);
+      if (smartEarly) {
+        if (smartEarly.rememberTopic) sessionContext.lastBrainTopic = smartEarly.rememberTopic;
+        if (smartEarly.offerRun) {
+          sessionContext.pendingOffer = smartEarly.offerRun;
+          sessionContext.pendingOfferLabel = smartEarly.offerLabel || null;
+        }
+        return stash(smartEarly);
       }
-      return lexiconEarly;
     }
 
-    const intentEarly = global.NocoAIIntent?.process?.(text, helpers, sessionContext);
-    if (intentEarly) {
-      if (intentEarly.offerRun) {
-        sessionContext.pendingOffer = intentEarly.offerRun;
-        sessionContext.pendingOfferLabel = intentEarly.offerLabel || null;
+    const systemCmdEarly = global.NocoAISystem?.processCommand?.(text, helpers);
+    if (systemCmdEarly) {
+      if (systemCmdEarly.rememberTopic) sessionContext.lastBrainTopic = systemCmdEarly.rememberTopic;
+      if (systemCmdEarly.offerRun) {
+        sessionContext.pendingOffer = systemCmdEarly.offerRun;
+        sessionContext.pendingOfferLabel = systemCmdEarly.offerLabel || null;
       }
-      return intentEarly;
+      return stash(systemCmdEarly);
     }
 
-    const ultraEarly = global.NocoAIUltra?.process?.(text, helpers, sessionContext);
-    if (ultraEarly) return ultraEarly;
+    if (!analyzed.isQuestion) {
+      const knowledgeEarly = global.NocoAIKnowledge?.process?.(text, helpers);
+      if (knowledgeEarly) {
+        if (knowledgeEarly.rememberTopic) sessionContext.lastBrainTopic = knowledgeEarly.rememberTopic;
+        return stash(knowledgeEarly);
+      }
+    }
+
+    const actionsEarly = global.NocoAIActions?.process?.(text, helpers);
+    if (actionsEarly) {
+      if (actionsEarly.rememberTopic) sessionContext.lastBrainTopic = actionsEarly.rememberTopic;
+      if (actionsEarly.offerRun) {
+        sessionContext.pendingOffer = actionsEarly.offerRun;
+        sessionContext.pendingOfferLabel = actionsEarly.offerLabel || null;
+      }
+      return stash(actionsEarly);
+    }
+
+    const chatCmdEarly = global.NocoAIChatCmd?.process?.(text, helpers);
+    if (chatCmdEarly) return stash(chatCmdEarly);
+
+    if (!global.NocoAIRouter?.shouldSkipHeavyTail?.(analyzed, context)) {
+      const diagEarly = global.NocoAIDiagnostics?.process?.(text, helpers);
+      if (diagEarly) return stash(diagEarly);
+
+      const systemMapEarly = global.NocoAISystemMap?.process?.(text, helpers, sessionContext);
+      if (systemMapEarly) {
+        if (systemMapEarly.rememberTopic) sessionContext.lastBrainTopic = systemMapEarly.rememberTopic;
+        if (systemMapEarly.offerRun) {
+          sessionContext.pendingOffer = systemMapEarly.offerRun;
+          sessionContext.pendingOfferLabel = systemMapEarly.offerLabel || null;
+        }
+        return stash(systemMapEarly);
+      }
+
+      const ai12Early = global.NocoAI12?.process?.(text, helpers, sessionContext);
+      if (ai12Early) {
+        if (ai12Early.rememberTopic) sessionContext.lastBrainTopic = ai12Early.rememberTopic;
+        if (ai12Early.offerRun) {
+          sessionContext.pendingOffer = ai12Early.offerRun;
+          sessionContext.pendingOfferLabel = ai12Early.offerLabel || null;
+        }
+        return stash(ai12Early);
+      }
+
+      const naturalEarly = global.NocoAINatural?.process?.(text, helpers);
+      if (naturalEarly) {
+        if (naturalEarly.offerRun) {
+          sessionContext.pendingOffer = naturalEarly.offerRun;
+          sessionContext.pendingOfferLabel = naturalEarly.offerLabel || null;
+        }
+        return stash(naturalEarly);
+      }
+
+      const lexiconEarly = global.NocoAILexicon?.process?.(text, helpers);
+      if (lexiconEarly) {
+        if (lexiconEarly.offerRun) {
+          sessionContext.pendingOffer = lexiconEarly.offerRun;
+          sessionContext.pendingOfferLabel = lexiconEarly.offerLabel || null;
+        }
+        return stash(lexiconEarly);
+      }
+
+      const intentEarly = global.NocoAIIntent?.process?.(text, helpers, sessionContext);
+      if (intentEarly) {
+        if (intentEarly.offerRun) {
+          sessionContext.pendingOffer = intentEarly.offerRun;
+          sessionContext.pendingOfferLabel = intentEarly.offerLabel || null;
+        }
+        return stash(intentEarly);
+      }
+
+      const ultraEarly = global.NocoAIUltra?.process?.(text, helpers, sessionContext);
+      if (ultraEarly) return stash(ultraEarly);
+    }
 
     const createEarly = global.NocoAICreate?.process?.(text, helpers);
     if (createEarly) {
@@ -1035,15 +1240,6 @@
         sessionContext.pendingOfferLabel = sessionContext.pendingOfferLabel || "Coach-Aktion";
       }
       return proEarly;
-    }
-
-    const systemEarly = global.NocoAISystem?.processCommand?.(text, helpers);
-    if (systemEarly) {
-      if (systemEarly.offerRun) {
-        sessionContext.pendingOffer = systemEarly.offerRun;
-        sessionContext.pendingOfferLabel = systemEarly.offerLabel || null;
-      }
-      return systemEarly;
     }
 
     const brain = global.NocoAIBrain?.process?.(text, helpers, sessionContext);
@@ -1135,6 +1331,13 @@
     sessionContext.pendingTitle = null;
 
     const smartFb =
+      global.NocoAISmart?.smartHint?.(text, helpers) ||
+      global.NocoAIUnderstand?.smartHint?.(text) ||
+      global.NocoAISystem?.smartHint?.(text, helpers) ||
+      global.NocoAIKnowledge?.smartHint?.(text, helpers) ||
+      global.NocoAIActions?.smartFallback?.(text, helpers) ||
+      global.NocoAI12?.smartFallback?.(text, helpers) ||
+      global.NocoAISystemMap?.smartHint?.(text, helpers) ||
       global.NocoAIIntent?.smartFallback?.(text, helpers, sessionContext) ||
       global.NocoAIUltra?.smartFallback?.(text, helpers) ||
       global.NocoAIPro?.smartFallback?.(text, normalize(text), helpers);
@@ -1143,7 +1346,12 @@
       return { type: "text", text: softened };
     }
 
-    return { type: "text", text: pickRandom(FALLBACKS) };
+    const fb = pickRandom(FALLBACKS);
+    const wrapped = global.NocoAIProfile?.wrapFallback?.(
+      fb.startsWith("<") ? fb : `<p>${fb}</p>`,
+      helpers
+    );
+    return stash({ type: "text", text: wrapped || fb });
   }
 
   function registerDynamicAliases(helpers) {
@@ -1158,77 +1366,125 @@
 
   function buildTemplate() {
     return `
-      <div class="noco-ai-wrap noco-ai-glass" data-noco-ai-root>
-        <div class="noco-ai-glass-orb noco-ai-glass-orb--violet" aria-hidden="true"></div>
+      <div class="noco-ai-wrap noco-ai-glass noco-ai-shell" data-noco-ai-root>
         <div class="noco-ai-glass-orb noco-ai-glass-orb--mint" aria-hidden="true"></div>
         <div class="noco-ai-glass-orb noco-ai-glass-orb--pink" aria-hidden="true"></div>
-        <header class="noco-ai-header">
-          <div class="noco-ai-hero-row">
-            <div class="noco-ai-model-orb" aria-hidden="true">
-              <span class="noco-ai-model-ring"></span>
-              <span class="noco-ai-model-core">✧</span>
-            </div>
-            <div class="noco-ai-brand">
-              <div class="noco-ai-brand-titles">
+        <div class="noco-ai-skin" aria-hidden="true"></div>
+        <header class="noco-ai-header noco-ai-top">
+          <div class="noco-ai-top-glass">
+            <div class="noco-ai-top-line">
+              <div class="noco-ai-brand-inline">
                 <strong>NOCO AI</strong>
-                <span class="noco-ai-version-pill">1.1</span>
+                <span class="noco-ai-version-pill">offline</span>
               </div>
-              <span class="noco-ai-brand-sub">Offline-Sprachmodell · Apps & Aufgaben</span>
+              <div class="noco-ai-top-rail" role="toolbar" aria-label="NOCO AI Werkzeuge">
+                <button type="button" class="noco-ai-rail-btn" data-noco-ai-tools-toggle aria-expanded="false" title="Menue"><span class="noco-ai-rail-ico">✦</span><span class="noco-ai-rail-lbl">Menue</span></button>
+                <button type="button" class="noco-ai-rail-btn" data-noco-ai-chats-toggle aria-expanded="false" title="Chats"><span class="noco-ai-rail-ico">☰</span><span class="noco-ai-rail-lbl">Chats</span></button>
+                <button type="button" class="noco-ai-rail-btn" data-noco-ai-new-chat title="Neuer Chat"><span class="noco-ai-rail-ico">+</span><span class="noco-ai-rail-lbl">Neu</span></button>
+                <button type="button" class="noco-ai-rail-btn noco-ai-rail-btn--accent" data-noco-ai-plus-toggle title="Exclusive"><span class="noco-ai-rail-ico">Ex</span><span class="noco-ai-rail-lbl">Plus</span></button>
+              </div>
             </div>
-            <div class="noco-ai-status noco-ai-status--compact" aria-hidden="true">
-              <span class="noco-ai-dot"></span>
-              <span>Bereit</span>
-            </div>
+            <p class="noco-ai-top-meta">
+              <span data-noco-ai-active-name>Hauptchat</span>
+              <span class="noco-ai-meta-dot" aria-hidden="true">·</span>
+              <span data-noco-ai-quota-text data-noco-ai-quota-wrap>20 heute</span>
+            </p>
           </div>
-          <div class="noco-ai-quota-row" data-noco-ai-quota-wrap>
-            <span class="noco-ai-quota-text" data-noco-ai-quota-text>20 Nachrichten heute</span>
-            <button type="button" class="noco-ai-quota-plus" data-noco-ai-plus-toggle>Exclusive</button>
+        </header>
+        <section class="noco-ai-stage">
+          <div class="noco-ai-log-scroll noco-ai-glass-panel">
+            <div class="noco-ai-log" data-noco-ai-log role="log" aria-live="polite"></div>
           </div>
-          <div class="noco-ai-toolbar">
-            <button type="button" class="noco-ai-toolbar-btn" data-noco-ai-chats-toggle aria-expanded="false">Chats</button>
-            <span class="noco-ai-active-name" data-noco-ai-active-name>Hauptchat</span>
-            <button type="button" class="noco-ai-toolbar-btn noco-ai-toolbar-btn--icon" data-noco-ai-new-chat aria-label="Neuer Chat">+</button>
-          </div>
-          <aside class="noco-ai-chats-drawer hidden" data-noco-ai-chats-drawer aria-label="Gespeicherte Chats">
+          <aside class="noco-ai-chats-drawer noco-ai-chats-overlay hidden" data-noco-ai-chats-drawer aria-label="Gespeicherte Chats">
             <p class="noco-ai-chats-hint">Langdruck auf einen Chat zum Umbenennen.</p>
             <ul class="noco-ai-chats-list" data-noco-ai-chats-list></ul>
           </aside>
-        </header>
-        <div class="noco-ai-log-scroll">
-          <div class="noco-ai-log" data-noco-ai-log role="log" aria-live="polite"></div>
-        </div>
-        <footer class="noco-ai-footer">
-          <div class="noco-ai-quick-row" role="group" aria-label="Schnellaktionen">
-            <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Mehr Liquid Glass">Glas</button>
-            <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="System Status">Status</button>
-            <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Zeige Lock Screen">Sperre</button>
-            <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Widget Pack AI">Widgets</button>
-            <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Theme Midnight">Theme</button>
-            <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Erstelle Notiz">Notiz</button>
-            <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Erstelle Aufgabe">Task</button>
-            <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Inbox">Inbox</button>
-            <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Was kannst du alles?">Hilfe</button>
-            <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Gib mir einen Tipp">Tipp</button>
-            <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Fokus Modus">Fokus</button>
-            <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Tagesplan">Plan</button>
-            <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Was soll ich jetzt tun?">Coach</button>
-            <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Wann ist mein Timer rum?">Timer?</button>
-            <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Was steht an?">Ueberblick</button>
+        </section>
+        <footer class="noco-ai-footer noco-ai-dock">
+          <div class="noco-ai-quick-strip" data-noco-ai-quick-strip role="group" aria-label="Schnellvorschlaege"></div>
+          <div class="noco-ai-compose-rail" role="toolbar" aria-label="Schnellaktionen">
+            <button type="button" class="noco-ai-rail-mini" data-noco-ai-scroll-bottom title="Nach unten"><span>↓</span><small>Ende</small></button>
+            <button type="button" class="noco-ai-rail-mini" data-noco-ai-pulse title="Pulse"><span>✦</span><small>Pulse</small></button>
+            <button type="button" class="noco-ai-rail-mini" data-noco-ai-help-cmd title="Hilfe"><span>?</span><small>Hilfe</small></button>
+            <button type="button" class="noco-ai-rail-mini" data-noco-ai-voice-mini data-noco-ai-wake-toggle aria-pressed="false" title="Sprache"><span>🎙</span><small>Stimme</small></button>
           </div>
-          <div class="noco-ai-tips" data-noco-ai-tips>
-            <button type="button" class="noco-ai-tips-toggle" data-noco-ai-tips-toggle aria-expanded="false">
-              <span>Vorschlaege</span>
-              <span class="noco-ai-tips-chevron" aria-hidden="true">▾</span>
-            </button>
-            <div class="noco-ai-tips-panel hidden" data-noco-ai-tips-panel>
-              <div class="noco-ai-suggestions" data-noco-ai-chips></div>
-            </div>
-          </div>
-          <div class="noco-ai-compose">
-            <textarea class="noco-ai-input" data-noco-ai-input rows="1" placeholder="Frag mich, oeffne Apps, erstelle Notizen …" aria-label="Nachricht an NOCO AI"></textarea>
+          <div class="noco-ai-compose noco-ai-compose-glass">
+            <button type="button" class="noco-ai-mic-btn" data-noco-ai-mic aria-label="Spracheingabe">🎤</button>
+            <input type="text" class="noco-ai-input noco-ai-input--led" data-noco-ai-input placeholder="SCHREIB MIR · HEY NOCO · NOCO AI" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="send" aria-label="Nachricht an NOCO AI" />
             <button type="button" class="noco-ai-send" data-noco-ai-send aria-label="Senden">↑</button>
           </div>
         </footer>
+        <div class="noco-ai-tools-sheet hidden" data-noco-ai-tools-sheet role="dialog" aria-label="Schnellmenue">
+          <div class="noco-ai-tools-head">
+            <strong>Schnellmenue</strong>
+            <button type="button" class="noco-ai-tools-close" data-noco-ai-tools-close aria-label="Schliessen">×</button>
+          </div>
+          <div class="noco-ai-tools-tabs" role="tablist">
+            <button type="button" class="is-active" role="tab" data-noco-tools-tab="start" aria-selected="true">Start</button>
+            <button type="button" role="tab" data-noco-tools-tab="apps" aria-selected="false">Apps</button>
+            <button type="button" role="tab" data-noco-tools-tab="more" aria-selected="false">Mehr</button>
+          </div>
+          <div class="noco-ai-tools-scroll">
+            <div class="noco-ai-voice-bar" aria-label="Sprache">
+              <span class="noco-ai-voice-status" data-noco-ai-voice-status>«NOCO AI» — Hoeren oder Mikro</span>
+              <button type="button" class="noco-ai-voice-wake" data-noco-ai-wake-toggle aria-pressed="false">Hoeren</button>
+            </div>
+            <div class="noco-ai-tools-panel is-active" data-noco-tools-panel="start" role="tabpanel">
+              <div class="noco-ai-quick-row" role="group">
+                <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Was kann ich tun?">Was kann ich</button>
+                <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Was soll ich tun?">Was soll ich</button>
+                <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Was kannst du alles?">Hilfe</button>
+                <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Tagesbriefing">Briefing</button>
+                <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Ueberrasch mich">Zufall</button>
+                <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Wie geht es dir?">Wie gehts</button>
+              </div>
+              <div class="noco-ai-tips" data-noco-ai-tips>
+                <div class="noco-ai-tips-head">
+                  <button type="button" class="noco-ai-tips-toggle" data-noco-ai-tips-toggle aria-expanded="true">
+                    <span>Alle Vorschlaege</span>
+                    <span class="noco-ai-tips-chevron" aria-hidden="true">▴</span>
+                  </button>
+                </div>
+                <div class="noco-ai-tips-panel" data-noco-ai-tips-panel>
+                  <p class="noco-ai-pulse-line" data-noco-ai-pulse-line hidden></p>
+                  <div class="noco-ai-suggestions" data-noco-ai-chips></div>
+                </div>
+              </div>
+            </div>
+            <div class="noco-ai-tools-panel" data-noco-tools-panel="apps" role="tabpanel" hidden>
+              <div class="noco-ai-quick-row" role="group">
+                <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Wo bin ich?">Ort</button>
+                <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="System Status">Status</button>
+                <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Fokus Modus">Fokus</button>
+                <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Letzte App oeffnen">Letzte App</button>
+                <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Mach auf Forge">Forge</button>
+                <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Oeffne Theme App">Themes</button>
+                <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Was steht an?">Inbox</button>
+                <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Arbeitsmodus">Arbeit</button>
+              </div>
+            </div>
+            <div class="noco-ai-tools-panel" data-noco-tools-panel="more" role="tabpanel" hidden>
+              <div class="noco-ai-quick-row" role="group">
+                <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Mini-Spiel im Chat">Chat-Spiel</button>
+                <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Würfel">Würfel</button>
+                <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Rate Zahl">Rate Zahl</button>
+                <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Witz">Witz</button>
+                <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Wer bin ich?">Wer bin ich</button>
+                <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Ich heisse Noah">Name setzen</button>
+                <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="FAQ Liste">FAQ</button>
+                <button type="button" class="noco-ai-quick-btn" data-noco-ai-cmd="Was ist neu in 1.2?">Neu 1.2</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="noco-ai-mic-consent hidden" data-noco-ai-mic-consent role="dialog" aria-label="Mikrofon fuer Sprache" aria-hidden="true">
+          <div class="noco-ai-mic-consent-card">
+            <p class="noco-ai-mic-consent-title">Sprachbefehle aktivieren</p>
+            <p class="noco-ai-mic-consent-copy">Erlaube das <strong>Mikrofon</strong>, damit «<strong>NOCO AI</strong>» dich hoert — auch ungenau («Noko AI», «No Co AI»). Funktioniert im System und auf dem <strong>Sperrbildschirm</strong>.</p>
+            <button type="button" class="primary-action" data-noco-ai-mic-allow>Mikrofon erlauben</button>
+            <button type="button" class="noco-ai-mic-consent-later" data-noco-ai-mic-later>Später</button>
+          </div>
+        </div>
         <div class="noco-ai-plus-sheet hidden" data-noco-ai-plus-sheet role="dialog" aria-label="NOCO AI Plus">
           <p class="noco-ai-rename-title">NOCO AI Plus</p>
           <p class="noco-ai-plus-copy">Kostenlos: <strong>20 Nachrichten pro Tag</strong>. <strong>Unbegrenzte NOCO AI</strong> ist in <strong>NOCO Exclusive</strong> enthalten — ein Paket, kein separates Plus-Abo.</p>
@@ -1255,11 +1511,15 @@
           <div class="noco-ai-widget-orb" aria-hidden="true"><span>✧</span></div>
           <div class="noco-ai-widget-brand">
             <p class="eyebrow">Sprachmodell</p>
-            <h2>NOCO AI <span class="noco-ai-version-pill noco-ai-version-pill--sm">1.1</span></h2>
+            <h2>NOCO AI <span class="noco-ai-version-pill noco-ai-version-pill--sm">1.2</span></h2>
           </div>
           <button type="button" class="mini-action" data-app="nocoai">Vollbild</button>
         </div>
-        <p class="noco-ai-widget-teaser">Frag mich alles — Apps oeffnen, Notizen, Tasks, System.</p>
+        <p class="noco-ai-widget-teaser">2× Wissen · Sage «NOCO AI» · Fragen & Befehle offline.</p>
+        <div class="noco-ai-widget-pulse-row">
+          <button type="button" class="noco-ai-pulse-btn noco-ai-pulse-btn--widget" data-noco-ai-pulse aria-label="Pulse">✦</button>
+          <span class="noco-ai-pulse-line noco-ai-pulse-line--widget" data-noco-ai-pulse-line></span>
+        </div>
         <div class="noco-ai-widget-chips" data-noco-ai-chips></div>
         <div class="noco-ai-widget-log" data-noco-ai-log role="log"></div>
         <div class="noco-ai-widget-row">
@@ -1276,10 +1536,22 @@
     }
   }
 
-  function scrollChatToBottom(log) {
+  function scrollChatToBottom(log, smooth = false) {
     if (!log) return;
     const scroller = log.closest(".noco-ai-log-scroll") || log;
-    scroller.scrollTop = scroller.scrollHeight;
+    const run = () => {
+      scroller.scrollTop = scroller.scrollHeight + 400;
+      const last = log.lastElementChild;
+      if (last?.scrollIntoView) {
+        try {
+          last.scrollIntoView({ block: "end", behavior: smooth ? "smooth" : "auto" });
+        } catch (_) {
+          last.scrollIntoView(false);
+        }
+      }
+      scroller.scrollTop = scroller.scrollHeight;
+    };
+    requestAnimationFrame(() => requestAnimationFrame(run));
   }
 
   function bindIosKeyboard(root, input) {
@@ -1290,7 +1562,7 @@
       const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
       document.documentElement.style.setProperty("--noco-ai-kb-inset", `${Math.round(inset)}px`);
       root.classList.toggle("noco-ai-keyboard-open", inset > 8);
-      if (inset > 8) scrollChatToBottom(log);
+      if (inset > 8 && document.activeElement === input) scrollChatToBottom(log);
     };
     vv.addEventListener("resize", update);
     vv.addEventListener("scroll", update);
@@ -1333,15 +1605,25 @@
     scrollChatToBottom(log);
   }
 
-  function renderChips(root, suggestions, onChip) {
-    const wrap = root.querySelector("[data-noco-ai-chips]");
-    if (!wrap) return;
-    wrap.innerHTML = suggestions
-      .map((s) => `<button type="button" class="noco-ai-chip" data-noco-ai-chip="${s.replace(/"/g, "&quot;")}">${s}</button>`)
-      .join("");
-    wrap.querySelectorAll("[data-noco-ai-chip]").forEach((btn) => {
-      btn.addEventListener("click", () => onChip(btn.dataset.nocoAiChip || btn.textContent));
-    });
+  function chipLabelFromBtn(btn) {
+    const raw = btn?.dataset?.nocoAiChip || btn?.textContent || "";
+    return String(raw).replace(/\s+/g, " ").trim();
+  }
+
+  function renderChips(root, suggestions) {
+    const stripList = (suggestions || []).slice(0, optionsWidget(root) ? 8 : 6);
+    const menuList = suggestions || [];
+    const renderInto = (wrap, list) => {
+      if (!wrap) return;
+      wrap.innerHTML = list
+        .map(
+          (s) =>
+            `<button type="button" class="noco-ai-chip" data-noco-ai-chip="${s.replace(/"/g, "&quot;")}">${s}</button>`
+        )
+        .join("");
+    };
+    renderInto(root.querySelector("[data-noco-ai-chips]"), menuList);
+    renderInto(root.querySelector("[data-noco-ai-quick-strip]"), stripList);
     const toggle = root.querySelector("[data-noco-ai-tips-toggle]");
     const panel = root.querySelector("[data-noco-ai-tips-panel]");
     if (toggle && panel && !toggle.dataset.bound) {
@@ -1355,19 +1637,30 @@
     }
   }
 
+  function ensureChatApi(root) {
+    if (!root || optionsWidget(root)) return null;
+    if (root._nocoChatApi) return root._nocoChatApi;
+    bindChatPanel(root);
+    return root._nocoChatApi || null;
+  }
+
   function bindChatPanel(root) {
     if (!root || optionsWidget(root)) return;
+    if (root.dataset.nocoChatPanelBound === "1") {
+      root._nocoChatApi?.renderChatList?.();
+      return;
+    }
     const drawer = root.querySelector("[data-noco-ai-chats-drawer]");
     const list = root.querySelector("[data-noco-ai-chats-list]");
     const nameEl = root.querySelector("[data-noco-ai-active-name]");
     const toggle = root.querySelector("[data-noco-ai-chats-toggle]");
-    const newBtn = root.querySelector("[data-noco-ai-new-chat]");
     const renameSheet = root.querySelector("[data-noco-ai-rename-sheet]");
     const renameInput = root.querySelector("[data-noco-ai-rename-input]");
     const renameSave = root.querySelector("[data-noco-ai-rename-save]");
     const renameCancel = root.querySelector("[data-noco-ai-rename-cancel]");
     const renameDelete = root.querySelector("[data-noco-ai-rename-delete]");
     if (!drawer || !list || !Chats()) return;
+    root.dataset.nocoChatPanelBound = "1";
 
     let renameTargetId = null;
     let longPressTimer = null;
@@ -1382,6 +1675,38 @@
       toggle?.setAttribute("aria-expanded", open ? "true" : "false");
     };
 
+    const selectChat = (chatId) => {
+      if (!chatId) return;
+      Chats().setActive(chatId);
+      syncActiveName();
+      renderChatList();
+      const log = root.querySelector("[data-noco-ai-log]");
+      renderLogFromStore(log, false);
+      setDrawerOpen(false);
+      closeTools();
+      helpersFromRoot()?.triggerHaptic?.();
+    };
+
+    const helpersFromRoot = () => root._nocoApi?.helpers;
+
+    const createNewChat = () => {
+      Chats().createChat();
+      renderChatList();
+      const log = root.querySelector("[data-noco-ai-log]");
+      renderLogFromStore(log, false);
+      setDrawerOpen(false);
+      closeTools();
+      helpersFromRoot()?.triggerHaptic?.();
+    };
+
+    const toggleDrawer = () => {
+      const open = drawer.classList.contains("hidden");
+      if (open) closeTools();
+      setDrawerOpen(open);
+      if (open) renderChatList();
+      helpersFromRoot()?.triggerHaptic?.();
+    };
+
     const renderChatList = () => {
       list.innerHTML = "";
       Chats().listChats().forEach((chat) => {
@@ -1389,17 +1714,12 @@
         li.className = "noco-ai-chat-item";
         if (chat.id === Chats().getActiveChat()?.id) li.classList.add("active");
         li.dataset.chatId = chat.id;
+        li.dataset.nocoAiChatItem = chat.id;
+        li.setAttribute("role", "button");
+        li.setAttribute("tabindex", "0");
         const preview = (chat.messages || []).filter((m) => m.role === "user").pop();
         const sub = preview ? String(preview.html).replace(/<[^>]+>/g, "").slice(0, 42) : "Neuer Chat";
         li.innerHTML = `<strong>${chat.name}</strong><span>${sub}</span>`;
-        li.addEventListener("click", () => {
-          Chats().setActive(chat.id);
-          syncActiveName();
-          renderChatList();
-          const log = root.querySelector("[data-noco-ai-log]");
-          renderLogFromStore(log, false);
-          setDrawerOpen(false);
-        });
         const startLongPress = () => {
           longPressTimer = window.setTimeout(() => {
             renameTargetId = chat.id;
@@ -1425,21 +1745,17 @@
       if (navigator.vibrate) navigator.vibrate([8, 40, 8]);
     }
 
-    toggle?.addEventListener("click", () => {
-      const open = drawer.classList.contains("hidden");
-      setDrawerOpen(open);
-      if (open) renderChatList();
-    });
+    const closeTools = () => {
+      root.querySelector("[data-noco-ai-tools-sheet]")?.classList.add("hidden");
+      root.classList.remove("noco-ai-tools-open");
+      root.querySelector("[data-noco-ai-tools-toggle]")?.setAttribute("aria-expanded", "false");
+    };
 
-    newBtn?.addEventListener("click", () => {
-      Chats().createChat();
-      renderChatList();
-      const log = root.querySelector("[data-noco-ai-log]");
-      renderLogFromStore(log, false);
-      setDrawerOpen(false);
-    });
+    root._nocoChatApi = { selectChat, toggleDrawer, createNewChat, setDrawerOpen, renderChatList };
 
-    renameCancel?.addEventListener("click", () => {
+    if (!root.dataset.nocoChatRenameBound) {
+      root.dataset.nocoChatRenameBound = "1";
+      renameCancel?.addEventListener("click", () => {
       renameSheet?.classList.add("hidden");
       renameTargetId = null;
     });
@@ -1459,9 +1775,10 @@
       const log = root.querySelector("[data-noco-ai-log]");
       renderLogFromStore(log, false);
     });
+    }
 
     uiHooks.refreshChats = renderChatList;
-    uiHooks.newChat = () => newBtn?.click();
+    uiHooks.newChat = createNewChat;
     uiHooks.openDrawer = () => {
       setDrawerOpen(true);
       renderChatList();
@@ -1487,11 +1804,11 @@
         ? "Unbegrenzt · in Exclusive enthalten"
         : "Unbegrenzt · NOCO AI";
       btn?.classList.add("is-active");
-      if (btn) btn.textContent = usage.exclusive ? "Exclusive ✓" : "Aktiv";
+      if (btn) btn.textContent = usage.exclusive ? "Ex ✓" : "Ex";
     } else {
-      el.textContent = `${usage.remaining} von ${usage.limit} heute`;
+      el.textContent = `${usage.remaining}/${usage.limit} heute`;
       btn?.classList.remove("is-active");
-      if (btn) btn.textContent = "Exclusive";
+      if (btn) btn.textContent = "Ex";
     }
     if (copy) {
       copy.innerHTML = usage.exclusive
@@ -1503,32 +1820,193 @@
     }
   }
 
+  function appendBotMessage(root, html) {
+    const log = root?.querySelector?.("[data-noco-ai-log]");
+    if (!log) return;
+    appendMessage(log, "bot", html, true);
+    scrollChatToBottom(log);
+  }
+
+  function onNocoRootClick(event) {
+    const root = event.currentTarget;
+    const target = event.target;
+    if (!root || !target?.closest) return;
+
+    const hit = target.closest(
+      "[data-noco-ai-send], [data-noco-ai-scroll-bottom], [data-noco-ai-help-cmd], [data-noco-ai-pulse], [data-noco-ai-tools-toggle], [data-noco-ai-tools-close], [data-noco-ai-chats-toggle], [data-noco-ai-new-chat], [data-noco-ai-plus-toggle], [data-noco-ai-chip], [data-noco-ai-cmd], .noco-ai-quick-btn, [data-noco-ai-game], [data-noco-tools-tab], [data-noco-ai-tips-toggle], [data-noco-ai-chat-item], .noco-ai-rail-btn, .noco-ai-rail-mini"
+    );
+
+    if (!hit) {
+      if (root.classList.contains("noco-ai-tools-open")) {
+        const toolsSheet = root.querySelector("[data-noco-ai-tools-sheet]");
+        const toolsToggle = root.querySelector("[data-noco-ai-tools-toggle]");
+        const t = target;
+        if (!toolsSheet?.contains(t) && !toolsToggle?.contains(t) && !root.querySelector(".noco-ai-dock, .noco-ai-footer")?.contains(t)) {
+          root._nocoApi?.setToolsOpen?.(false);
+        }
+      }
+      return;
+    }
+
+    const api = root._nocoApi || {};
+    const submit = api.submit;
+    const setToolsOpen = api.setToolsOpen;
+    const closeComposePanels = api.closeComposePanels;
+    const log = api.log;
+    const toolsSheet = api.toolsSheet;
+    const helpers = api.helpers;
+    const options = api.options || {};
+    const runCmd = (cmd) => {
+      const text = String(cmd || "").trim();
+      if (!text || busy) return;
+      setToolsOpen?.(false);
+      const input = root.querySelector("[data-noco-ai-input]");
+      if (!input) return;
+      input.value = text;
+      submit?.();
+      helpers?.triggerHaptic?.();
+    };
+
+    if (hit.closest("[data-noco-ai-chats-toggle]")) {
+      ensureChatApi(root)?.toggleDrawer?.();
+      helpers?.triggerHaptic?.();
+      return;
+    }
+    if (hit.closest("[data-noco-ai-new-chat]")) {
+      ensureChatApi(root)?.createNewChat?.();
+      helpers?.triggerHaptic?.();
+      return;
+    }
+    if (hit.closest("[data-noco-ai-scroll-bottom]")) {
+      scrollChatToBottom(root.querySelector("[data-noco-ai-log]"), true);
+      helpers?.triggerHaptic?.();
+      return;
+    }
+
+    if (hit.closest("[data-noco-ai-send]")) {
+      submit?.();
+      return;
+    }
+
+    const tabBtn = hit.closest("[data-noco-tools-tab]");
+    if (tabBtn) {
+      const id = tabBtn.dataset.nocoToolsTab;
+      root.querySelectorAll("[data-noco-tools-tab]").forEach((b) => {
+        b.classList.toggle("is-active", b === tabBtn);
+        b.setAttribute("aria-selected", b === tabBtn ? "true" : "false");
+      });
+      root.querySelectorAll("[data-noco-tools-panel]").forEach((p) => {
+        const on = p.dataset.nocoToolsPanel === id;
+        p.classList.toggle("is-active", on);
+        p.hidden = !on;
+      });
+      helpers?.triggerHaptic?.();
+      return;
+    }
+
+    const tipsToggle = hit.closest("[data-noco-ai-tips-toggle]");
+    if (tipsToggle) {
+      const panel = root.querySelector("[data-noco-ai-tips-panel]");
+      if (panel) {
+        panel.classList.toggle("hidden");
+        const closed = panel.classList.contains("hidden");
+        tipsToggle.setAttribute("aria-expanded", closed ? "false" : "true");
+        tipsToggle.querySelector(".noco-ai-tips-chevron").textContent = closed ? "▾" : "▴";
+      }
+      return;
+    }
+
+    if (hit.closest("[data-noco-ai-tools-close]")) {
+      setToolsOpen?.(false);
+      return;
+    }
+
+    if (hit.closest("[data-noco-ai-help-cmd]")) {
+      closeComposePanels?.();
+      runCmd("Was kannst du alles?");
+      return;
+    }
+
+    const pulseBtn = hit.closest("[data-noco-ai-pulse]");
+    if (pulseBtn) {
+      let cmd = pulseBtn.dataset.pulseCmd || "";
+      if (!cmd && global.NocoAIPulse?.pickPresentation) {
+        cmd = global.NocoAIPulse.pickPresentation(helpers)?.cmd || "";
+      }
+      if (cmd) runCmd(cmd);
+      else helpers?.showToast?.("Pulse — tippe nochmal");
+      return;
+    }
+
+    if (hit.closest("[data-noco-ai-tools-toggle]") && toolsSheet) {
+      setToolsOpen?.(toolsSheet.classList.contains("hidden"));
+      return;
+    }
+
+    const chatItem = hit.closest("[data-noco-ai-chat-item]");
+    if (chatItem) {
+      ensureChatApi(root)?.selectChat?.(chatItem.dataset.chatId || chatItem.dataset.nocoAiChatItem);
+      return;
+    }
+
+    if (hit.closest("[data-noco-ai-plus-toggle]")) {
+      root.querySelector("[data-noco-ai-plus-sheet]")?.classList.toggle("hidden");
+      return;
+    }
+
+    const chip = hit.closest("[data-noco-ai-chip]");
+    if (chip) {
+      const label = chipLabelFromBtn(chip);
+      if (label) runCmd(label);
+      return;
+    }
+
+    const cmdBtn = hit.closest("[data-noco-ai-cmd], .noco-ai-quick-btn");
+    if (cmdBtn) {
+      runCmd(cmdBtn.dataset.nocoAiCmd || cmdBtn.textContent?.trim());
+      return;
+    }
+
+    const gameBtn = hit.closest("[data-noco-ai-game]");
+    if (gameBtn && !options.widget) {
+      global.NocoAIGames?.handleClick?.(gameBtn, root, helpers, { sessionContext });
+    }
+  }
+
+  function bindNocoRootUi(root) {
+    if (!root) return;
+    if (root._nocoRootClick) {
+      root.removeEventListener("click", root._nocoRootClick, false);
+    }
+    root._nocoRootClick = onNocoRootClick;
+    root.addEventListener("click", root._nocoRootClick, false);
+    root.dataset.nocoRootUi = "1";
+  }
+
+  function syncNocoApi(root, api) {
+    root._nocoApi = api;
+    bindNocoRootUi(root);
+  }
+
   function bindChat(root, helpers, options = {}) {
-    if (root.dataset.nocoAiBound === "1") return;
+    const coreBound = root.dataset.nocoAiCoreBound === "1";
     const log = root.querySelector("[data-noco-ai-log]");
     const input = root.querySelector("[data-noco-ai-input]");
     const send = root.querySelector("[data-noco-ai-send]");
     if (!log || !input || !send) return;
-    root.dataset.nocoAiBound = "1";
 
     Chats()?.reload();
     refreshQuotaDisplay(root, helpers);
 
-    const typingMs = options.widget ? TYPING_WIDGET_MS : TYPING_MS;
-    const suggestions = options.widget ? WIDGET_SUGGESTIONS : DEFAULT_SUGGESTIONS;
+    if (!options.widget) {
+      bindChatPanel(root);
+      ensureChatApi(root);
+    }
+
+    const typingMsDefault = options.widget ? TYPING_WIDGET_MS : TYPING_MS;
+    const suggestions = options.widget ? WIDGET_SUGGESTIONS() : DEFAULT_SUGGESTIONS();
 
     const plusSheet = root.querySelector("[data-noco-ai-plus-sheet]");
-    root.querySelector("[data-noco-ai-plus-toggle]")?.addEventListener("click", () => {
-      plusSheet?.classList.toggle("hidden");
-    });
-    root.querySelector("[data-noco-ai-plus-close]")?.addEventListener("click", () => {
-      plusSheet?.classList.add("hidden");
-    });
-    root.querySelector("[data-noco-ai-plus-activate]")?.addEventListener("click", () => {
-      plusSheet?.classList.add("hidden");
-      helpers.openExclusive?.() || helpers.activateNocoAiPlus?.();
-      refreshQuotaDisplay(root, helpers);
-    });
 
     const submit = () => {
       if (busy) return;
@@ -1553,70 +2031,130 @@
       input.value = "";
       sessionContext.lastUserText = text;
       appendMessage(log, "user", text);
-
-      const typing = document.createElement("div");
-      typing.className = "noco-ai-typing";
-      typing.textContent = "NOCO AI …";
-      log.appendChild(typing);
       scrollChatToBottom(log);
 
-      window.setTimeout(() => {
-        typing.remove();
-        let result = processMessage(text, helpers);
-        result = global.NocoAIUltra?.finalize?.(result, text, helpers, sessionContext) || result;
-        const isHtml = result.text.includes("<");
-        appendMessage(log, "bot", result.text, isHtml);
-        if (result.type === "action" && typeof result.run === "function") {
-          window.setTimeout(() => {
-            try {
-              result.run();
-            } catch (_) {}
-          }, 140);
-        }
-        global.NocoAILimits?.recordSend(helpers.getSettings?.() || {});
-        refreshQuotaDisplay(root, helpers);
-        busy = false;
-        send.disabled = false;
+      const ctx = { widget: !!options.widget, fast: !!options.widget };
+      const runAnswer = () => {
+        let result = processMessage(text, helpers, ctx);
         if (!options.widget) {
-          uiHooks.refreshChats?.();
-          input.focus();
+          result = global.NocoAIUltra?.finalize?.(result, text, helpers, sessionContext) || result;
         }
-        Chats()?.maybeAutoRenameActive?.(text);
-        uiHooks.refreshChats?.();
-        global.dispatchEvent?.(new CustomEvent("noco-ai-updated"));
-      }, typingMs);
+        if (result?.text) {
+          result.text = global.NocoAIProfile?.wrapFallback?.(result.text, helpers) || result.text;
+        }
+        const typingMs =
+          global.NocoAIRouter?.getTypingMs?.(result, { widget: !!options.widget }) || typingMsDefault;
+
+        const typing = document.createElement("div");
+        typing.className = "noco-ai-typing";
+        typing.textContent = result.fromCache ? "NOCO AI ✓" : "NOCO AI …";
+        log.appendChild(typing);
+        scrollChatToBottom(log);
+
+        window.setTimeout(() => {
+          typing.remove();
+          const isHtml = String(result?.text || "").includes("<");
+          const botText = result.silent && result.type === "action" ? result.text || "<p>✓</p>" : result.text;
+          appendMessage(log, "bot", botText, isHtml);
+          if (result.type === "action" && typeof result.run === "function") {
+            window.setTimeout(() => {
+              try {
+                result.run();
+              } catch (_) {}
+            }, result.silent ? 20 : result.fromCache ? 40 : 100);
+          }
+          global.NocoAILimits?.recordSend(helpers.getSettings?.() || {});
+          refreshQuotaDisplay(root, helpers);
+          busy = false;
+          send.disabled = false;
+          if (!options.widget) {
+            uiHooks.refreshChats?.();
+            input.focus();
+            Chats()?.maybeAutoRenameActive?.(text);
+          }
+          if (!options.widget) global.dispatchEvent?.(new CustomEvent("noco-ai-updated"));
+        }, typingMs);
+      };
+
+      requestAnimationFrame(runAnswer);
     };
 
-    send.addEventListener("click", submit);
-    input.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" && !event.shiftKey) {
-        event.preventDefault();
-        submit();
-      }
-    });
+    if (!coreBound) {
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
+          submit();
+        }
+      });
+    }
 
-    renderChips(root, suggestions, (label) => {
-      input.value = label;
-      submit();
-    });
-
-    root.querySelectorAll("[data-noco-ai-cmd]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const cmd = btn.dataset.nocoAiCmd || btn.textContent;
+    const pulseApi = global.NocoAIPulse?.bind?.(
+      root,
+      helpers,
+      (cmd) => {
         if (!cmd || busy) return;
         input.value = cmd;
         submit();
+      },
+      { widget: !!options.widget }
+    );
+    const refreshSuggestionChips = () => {
+      const chipList = pulseApi?.refreshChips?.(suggestions) || suggestions;
+      renderChips(root, chipList);
+    };
+
+    const toolsSheet = root.querySelector("[data-noco-ai-tools-sheet]");
+    const chatsDrawer = root.querySelector("[data-noco-ai-chats-drawer]");
+    const chatsToggle = root.querySelector("[data-noco-ai-chats-toggle]");
+    const toolsToggle = root.querySelector("[data-noco-ai-tools-toggle]");
+    const toolsClose = root.querySelector("[data-noco-ai-tools-close]");
+    const setToolsOpen = (open) => {
+      if (!toolsSheet) return;
+      toolsSheet.classList.toggle("hidden", !open);
+      root.classList.toggle("noco-ai-tools-open", open);
+      toolsToggle?.setAttribute("aria-expanded", open ? "true" : "false");
+      if (open) {
+        chatsDrawer?.classList.add("hidden");
+        chatsToggle?.setAttribute("aria-expanded", "false");
+        refreshSuggestionChips();
+      }
+    };
+    const closeComposePanels = () => {
+      setToolsOpen(false);
+      chatsDrawer?.classList.add("hidden");
+      chatsToggle?.setAttribute("aria-expanded", "false");
+    };
+    if (!coreBound) {
+      root.dataset.nocoAiCoreBound = "1";
+      root.querySelector("[data-noco-ai-plus-close]")?.addEventListener("click", () => {
+        plusSheet?.classList.add("hidden");
       });
+      root.querySelector("[data-noco-ai-plus-activate]")?.addEventListener("click", () => {
+        plusSheet?.classList.add("hidden");
+        helpers.openExclusive?.() || helpers.activateNocoAiPlus?.();
+        refreshQuotaDisplay(root, helpers);
+      });
+    }
+
+    syncNocoApi(root, {
+      submit,
+      setToolsOpen,
+      closeComposePanels,
+      log,
+      toolsSheet,
+      helpers,
+      options
     });
 
-    const footer = root.querySelector(".noco-ai-footer");
-    const resizeInput = () => {
-      input.style.height = "auto";
-      input.style.height = `${Math.min(88, Math.max(44, input.scrollHeight))}px`;
-    };
+    refreshSuggestionChips();
+
+    const footer = root.querySelector(".noco-ai-dock") || root.querySelector(".noco-ai-footer");
     input.style.overflow = "hidden";
-    input.addEventListener("input", resizeInput);
-    resizeInput();
+    input.addEventListener("focus", () => {
+      closeComposePanels();
+    });
+    input.addEventListener("click", (event) => event.stopPropagation());
+
     if (document.body.classList.contains("device-handset") && !options.widget) {
       bindIosKeyboard(root, input);
     }
@@ -1628,11 +2166,50 @@
       },
       { passive: false }
     );
-    footer?.addEventListener("touchmove", (event) => event.stopPropagation(), { passive: true });
+    footer?.addEventListener(
+      "touchmove",
+      (event) => {
+        if (event.target.closest(".noco-ai-quick-strip, .noco-ai-compose, .noco-ai-compose-rail")) {
+          event.stopPropagation();
+        }
+      },
+      { passive: true }
+    );
     input.addEventListener("wheel", (event) => event.stopPropagation(), { passive: true });
 
     renderLogFromStore(log, options.widget);
-    if (!options.widget) bindChatPanel(root);
+    if (!options.widget) {
+      ensureChatApi(root);
+      bindVoiceUI(root, input, submit);
+    }
+  }
+
+  function bindVoiceUI(root, input, submitFn) {
+    const status = root.querySelector("[data-noco-ai-voice-status]");
+    const wakeBtns = root.querySelectorAll("[data-noco-ai-wake-toggle]");
+    const micBtn = root.querySelector("[data-noco-ai-mic]");
+    if (!global.NocoAIVoice) return;
+    global.NocoAIVoice.bindStatusElement?.(status);
+    wakeBtns.forEach((btn) => global.NocoAIVoice.bindWakeToggle?.(btn, root));
+    global.NocoAIVoice.bindMicButton?.(
+      micBtn,
+      () => input,
+      (text) => {
+        if (text) {
+          input.value = text;
+          submitFn();
+        }
+      },
+      root
+    );
+    if (root.dataset.nocoVoiceEvents === "1") return;
+    root.dataset.nocoVoiceEvents = "1";
+    global.addEventListener("noco-ai-voice-command", (event) => {
+      const text = event.detail?.text;
+      if (!text || busy) return;
+      input.value = text;
+      if (event.detail?.autoSend) submitFn();
+    });
   }
 
   function focusChatInput(root, options = {}) {
@@ -1654,14 +2231,48 @@
   function mount(root, helpers) {
     if (!root) return;
     mountedRoot = root;
+    delete root.dataset.nocoAiCoreBound;
+    delete root.dataset.nocoPulseBound;
+    delete root.dataset.nocoVoiceEvents;
+    delete root.dataset.nocoChatPanelBound;
+    delete root.dataset.nocoChatRenameBound;
+    delete root.dataset.nocoRootUi;
+    if (root._nocoRootClick) {
+      root.removeEventListener("click", root._nocoRootClick, false);
+      root._nocoRootClick = null;
+    }
+    root._nocoChatApi = null;
+    root.querySelectorAll("[data-noco-ai-mic]").forEach((el) => delete el.dataset.nocoVoiceBound);
+    root.querySelectorAll("[data-noco-ai-wake-toggle]").forEach((el) => delete el.dataset.nocoWakeBound);
     registerDynamicAliases(helpers);
     bindChat(root, helpers, { widget: false });
     refreshQuotaDisplay(root, helpers);
+    helpers.refreshAiPlaceholder?.();
+    const log = root.querySelector("[data-noco-ai-log]");
+    const nick = helpers.getNickname?.() || global.NocoAIProfile?.getNickname?.();
+    if (log && nick && log.children.length === 0) {
+      const greet = global.NocoAIProfile?.heyHtml?.(nick) || `Hey ${nick}`;
+      appendMessage(
+        log,
+        "bot",
+        `<p>${greet} — ich kenne dich. Probier: <strong>Was kann ich tun?</strong>, <strong>Was soll ich tun?</strong> oder <strong>Was steht an?</strong></p>`,
+        true
+      );
+    } else if (log && log.children.length === 0) {
+      appendMessage(
+        log,
+        "bot",
+        "<p><strong>NOCO AI</strong> — offline & schnell. Frag: <strong>Was kannst du?</strong>, <strong>Was kann ich tun?</strong>, <strong>Wer bin ich?</strong> (nach «Ich heisse …»).</p>",
+        true
+      );
+    }
     focusChatInput(root);
   }
 
   function mountWidget(root, helpers) {
     if (!root) return;
+    delete root.dataset.nocoAiCoreBound;
+    delete root.dataset.nocoPulseBound;
     registerDynamicAliases(helpers);
     bindChat(root, helpers, { widget: true });
   }
@@ -1678,14 +2289,18 @@
   global.NocoAI = {
     buildTemplate,
     buildWidgetMarkup,
+    formatHelpHtml,
     mount,
     mountWidget,
     focusChatInput,
     processMessage,
+    appendBotMessage,
+    getSessionContext: () => sessionContext,
     DEFAULT_SUGGESTIONS,
     resolveAppFromQuery,
     registerDynamicAliases,
     renderLogFromStore,
-    uiRefreshChats: () => uiHooks.refreshChats?.()
+    uiRefreshChats: () => uiHooks.refreshChats?.(),
+    openChatDrawer: () => uiHooks.openDrawer?.()
   };
 })(window);

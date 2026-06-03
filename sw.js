@@ -1,4 +1,4 @@
-const CACHE = "noco-mobile-1-2-ui-ai-v151";
+const CACHE = "noco-mobile-1-2-ui-ai-v160";
 const ASSETS = [
   "./",
   "./index.html",
@@ -53,8 +53,10 @@ const ASSETS = [
   "./noco-ai-personality.js",
   "./noco-ai-smart.js",
   "./noco-ai-12.js",
+  "./noco-ai-wake-engine.js",
   "./noco-ai-voice.js",
   "./noco-ai.js",
+  "./noco-ai-interact-fix.js",
   "./app.js",
   "./manifest.webmanifest",
   "./icon.svg"

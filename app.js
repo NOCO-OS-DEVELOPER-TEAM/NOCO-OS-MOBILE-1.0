@@ -7,7 +7,7 @@ const largeClock = document.getElementById("largeClock");
 const largeDate = document.getElementById("largeDate");
 const screenTrack = document.getElementById("screenTrack");
 const pageStage = document.getElementById("pageStage");
-const NOCO_BUILD = window.NOCO_BUILD || "151";
+const NOCO_BUILD = window.NOCO_BUILD || "160";
 const screenTitle = document.getElementById("screenTitle");
 
 /** Doppelte/veraltete Topbars entfernen — phone-chrome Titelzeile behalten. */
@@ -1303,7 +1303,7 @@ function initPageScrollSync() {
 
 function isTapTarget(target) {
   return !!target?.closest?.(
-    "button, a, input, textarea, select, label, [role='button'], [data-app], [data-folder], [data-library-folder], [data-library-tab], [data-action], [data-shortcut], [data-open-panel], .app-icon, .folder-tile, .quick-tile, .library-app, .library-tab, .library-quick-app, .shortcut-btn, .mini-action, .beam-strip, .forge-install, .icon-orb, .icon-orb-glyph, [data-app-icon], .widget-add-fab, .edit-fab, .noco-ai-chip, .noco-ai-quick-btn, .noco-ai-game-btn, .noco-ai-rail-mini, .noco-ai-rail-btn, .noco-ai-send, [data-noco-ai-mic-allow], [data-noco-ai-mic-later], .noco-ai-mic-consent-card, [data-noco-ai-cmd], [data-noco-ai-game], [data-noco-ai-pulse], [data-noco-ai-scroll-bottom], [data-noco-ai-help-cmd], [data-noco-ai-tools-toggle], [data-noco-ai-tools-close], [data-noco-tools-tab], [data-noco-ai-chats-toggle], [data-noco-ai-new-chat], [data-noco-ai-chat-item], [data-noco-ai-plus-toggle], [data-noco-ai-mic], [data-noco-ai-wake-toggle], [data-noco-ai-voice-mini]"
+    "button, a, input, textarea, select, label, [role='button'], [data-app], [data-folder], [data-library-folder], [data-library-tab], [data-action], [data-shortcut], [data-open-panel], .app-icon, .folder-tile, .quick-tile, .library-app, .library-tab, .library-quick-app, .shortcut-btn, .mini-action, .beam-strip, .forge-install, .icon-orb, .icon-orb-glyph, [data-app-icon], .widget-add-fab, .edit-fab, .noco-ai-chip, .noco-ai-quick-btn, .noco-ai-game-btn, .noco-ai-rail-mini, .noco-ai-rail-btn, .noco-ai-send, [data-noco-ai-mic-allow], [data-noco-ai-mic-later], .noco-ai-mic-consent-card, [data-noco-ai-ad-feature-ok], [data-noco-ai-ad-feature-later], .noco-ai-ad-feature-card, [data-noco-ai-cmd], [data-noco-ai-game], [data-noco-ai-pulse], [data-noco-ai-scroll-bottom], [data-noco-ai-help-cmd], [data-noco-ai-tools-toggle], [data-noco-ai-tools-close], [data-noco-tools-tab], [data-noco-ai-chats-toggle], [data-noco-ai-new-chat], [data-noco-ai-chat-item], [data-noco-ai-plus-toggle], [data-noco-ai-plus-close], [data-noco-ai-plus-activate], [data-noco-ai-mic], [data-noco-ai-wake-toggle], [data-noco-ai-voice-mini]"
   );
 }
 
@@ -2517,6 +2517,9 @@ function mountNocoAIIfNeeded(appId) {
   if (appId !== "nocoai" || !window.NocoAI) return;
   const root = sheetContent?.querySelector("[data-noco-ai-root]");
   if (!root) return;
+  if (!window.NocoAIChats) {
+    showToast("Chat-Modul laedt nicht — ?fresh=1");
+  }
   window.NocoAI.mount(root, getNocoAIHelpers());
   updateClock();
   requestAnimationFrame(() => {
@@ -4836,12 +4839,7 @@ screenTrack?.addEventListener("pointercancel", endPageDragPointer);
 
 document.addEventListener("click", async (event) => {
   resetAutoLockTimer();
-  if (
-    Date.now() < suppressClickUntil &&
-    !event.target.closest(
-      "[data-noco-ai-mic-consent], [data-noco-ai-chip], [data-noco-ai-cmd], .noco-ai-quick-btn, [data-noco-ai-game], [data-noco-ai-tools-sheet], .noco-ai-tools-scroll, [data-noco-ai-send], [data-noco-ai-pulse], .noco-ai-rail-mini, .noco-ai-rail-btn, [data-noco-ai-scroll-bottom], [data-noco-ai-help-cmd], [data-noco-ai-tools-toggle], [data-noco-ai-tools-close], [data-noco-ai-chats-toggle], [data-noco-ai-new-chat], [data-noco-ai-chat-item], [data-noco-ai-plus-toggle], [data-noco-ai-voice-mini], [data-noco-ai-mic], [data-noco-ai-wake-toggle], [data-noco-tools-tab], [data-noco-ai-tips-toggle], [data-noco-ai-quick-strip], [data-noco-ai-root] button, [data-noco-ai-root] .noco-ai-rail-btn, [data-noco-ai-root] .noco-ai-rail-mini"
-    )
-  ) {
+  if (Date.now() < suppressClickUntil && !event.target.closest("[data-noco-ai-root]")) {
     event.preventDefault();
     event.stopPropagation();
     return;
@@ -5991,7 +5989,7 @@ function startSheetSwipe(event) {
   if (editMode || appSheet.classList.contains("hidden")) return;
   if (currentApp === "nocoai") return;
   if (event.target.closest("[data-noco-ai-root]")) return;
-  if (event.target.closest("[data-noco-ai-mic-consent], .noco-ai-mic-consent-card, [data-noco-ai-plus-sheet], [data-noco-ai-rename-sheet], [data-noco-ai-tools-sheet], .noco-ai-tools-scroll")) return;
+  if (event.target.closest("[data-noco-ai-ad-feature], .noco-ai-ad-feature-card, [data-noco-ai-mic-consent], .noco-ai-mic-consent-card, [data-noco-ai-plus-sheet], [data-noco-ai-rename-sheet], [data-noco-ai-tools-sheet], .noco-ai-tools-scroll")) return;
   if (
     event.target.closest(
       ".noco-ai-log-scroll, [data-noco-ai-log], .noco-ai-chats-overlay, [data-noco-ai-chats-list], [data-noco-ai-chats-drawer], .noco-ai-quick-strip, .noco-ai-top, .noco-ai-dock, .noco-ai-footer, .noco-ai-compose-rail, .noco-ai-rail-btn, .noco-ai-rail-mini"
@@ -6996,6 +6994,7 @@ window.setInterval(() => {
   updateLockClock();
   if (isLocked) renderLockWidgets();
 }, 1000);
+window.__nocoMountHelpers = getNocoAIHelpers;
 window.NocoAIVoice?.init?.(getNocoAIHelpers);
 window.addEventListener("pageshow", () => {
   purgeLegacyChrome();

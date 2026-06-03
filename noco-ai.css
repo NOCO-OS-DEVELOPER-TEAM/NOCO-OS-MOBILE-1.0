@@ -530,9 +530,9 @@ body.noco-ai-wake-on .island-ai-btn {
 .hidden { display: none !important; }
 
 .noco-ai-mic-consent {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: 120;
+  z-index: 240;
   display: flex;
   align-items: center;
   justify-content: center;

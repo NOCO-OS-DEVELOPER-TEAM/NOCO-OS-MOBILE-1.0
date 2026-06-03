@@ -277,7 +277,7 @@
 
   function getWakeToast() {
     const name = getNickname();
-    return name ? `Hey ${name} — ich hoere zu` : "NOCO AI — sprich oder tippe";
+    return name ? `Hey ${name} — NOCO AD 1.0 aktiv` : "Hey Noco — tippe oder nutze Mikro fuer Diktat";
   }
 
   global.NocoAIProfile = {

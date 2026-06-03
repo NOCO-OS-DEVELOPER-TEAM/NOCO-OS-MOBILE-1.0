@@ -1,5 +1,5 @@
 /**
- * NOCO AI — Multi-Chat Speicher (localStorage)
+ * NOCO AI — Multi-Chat Speicher (localStorage + Speicher-Fallback)
  */
 (function initNocoAIChats(global) {
   const STORAGE_KEY = "noco_mobile_ai_chats_v1";
@@ -8,6 +8,9 @@
 
   const WELCOME_HTML =
     "<p><strong>NOCO AI</strong> — ich kenne dein System.</p><p>Frag <strong>«Wo ist Forge?»</strong>, <strong>«Wo bin ich?»</strong> oder <strong>«Was steht an?»</strong>. Ein Wort reicht: Timer · Notizen · Apps.</p>";
+
+  let memoryStore = null;
+  let storageOk = true;
 
   function createId() {
     return "c_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 7);
@@ -27,18 +30,6 @@
         }
       ]
     };
-  }
-
-  function loadStore() {
-    try {
-      const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-      if (raw?.chats?.length && raw.activeId) {
-        return sanitizeStore(raw);
-      }
-    } catch (_) {}
-    const store = createDefaultStore();
-    saveStore(store);
-    return store;
   }
 
   function sanitizeStore(store) {
@@ -63,9 +54,51 @@
   }
 
   function saveStore(store) {
+    memoryStore = store;
+    if (!storageOk) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    } catch (_) {
+      storageOk = false;
+      try {
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+      } catch (_) {}
+    }
+  }
+
+  function loadStore() {
+    const tryParse = (raw) => {
+      if (!raw) return null;
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed?.chats?.length && parsed.activeId) return sanitizeStore(parsed);
+      } catch (_) {}
+      return null;
+    };
+
+    try {
+      const fromLs = tryParse(localStorage.getItem(STORAGE_KEY));
+      if (fromLs) {
+        memoryStore = fromLs;
+        return fromLs;
+      }
+    } catch (_) {
+      storageOk = false;
+    }
+
+    try {
+      const fromSs = tryParse(sessionStorage.getItem(STORAGE_KEY));
+      if (fromSs) {
+        memoryStore = fromSs;
+        return fromSs;
+      }
     } catch (_) {}
+
+    if (memoryStore?.chats?.length) return memoryStore;
+
+    const store = createDefaultStore();
+    saveStore(store);
+    return store;
   }
 
   let store = loadStore();
@@ -73,6 +106,10 @@
   function reload() {
     store = loadStore();
     return store;
+  }
+
+  function flush() {
+    saveStore(store);
   }
 
   function getActiveChat() {
@@ -178,10 +215,6 @@
       .filter((w) => w.length >= 2);
   }
 
-  /**
-   * @param {string} query
-   * @param {{ preferQuestions?: boolean, limit?: number }} [options]
-   */
   function searchChats(query, options = {}) {
     const limit = options.limit ?? 5;
     const preferQuestions = !!options.preferQuestions;
@@ -225,8 +258,17 @@
     return renameChat(chat.id, name);
   }
 
+  if (typeof document !== "undefined") {
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") flush();
+    });
+    window.addEventListener("pagehide", flush);
+    window.addEventListener("beforeunload", flush);
+  }
+
   global.NocoAIChats = {
     reload,
+    flush,
     listChats,
     getActiveChat,
     setActive,

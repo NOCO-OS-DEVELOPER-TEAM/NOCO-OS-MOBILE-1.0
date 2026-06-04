@@ -54,8 +54,18 @@ body.device-handset {
 }
 
 .chrome-page-nav,
-.phone-chrome .chrome-title-bar.mobile-topbar {
+.phone-chrome .chrome-title-bar,
+.phone-chrome .chrome-title-bar.mobile-topbar,
+.phone-chrome .title-block,
+.phone-chrome .chrome-page-nav {
   display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
 }
 
 /* Fade im Chrome-Bereich */

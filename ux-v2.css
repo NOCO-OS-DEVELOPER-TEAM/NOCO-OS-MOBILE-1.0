@@ -639,7 +639,20 @@ body.hub-open .page-swipe-hint {
 
 .home-bento > .bento-hero { animation-delay: 0.04s; }
 .home-bento > .home-row-duo { animation-delay: 0.1s; }
-.home-bento > .bento-shortcuts { animation-delay: 0.16s; }
+.home-bento > .bento-shortcuts {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+.home-bento > .bento-shortcuts .shortcut-btn,
+.home-bento > .bento-shortcuts .shortcut-grid,
+.home-bento > .bento-shortcuts .icon-orb,
+.home-bento > .bento-shortcuts .shortcut-label {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
 .home-bento > .bento-note { animation-delay: 0.22s; }
 .home-bento > .bento-sync { animation-delay: 0.28s; }
 .home-bento > .bento-feed { animation-delay: 0.34s; }

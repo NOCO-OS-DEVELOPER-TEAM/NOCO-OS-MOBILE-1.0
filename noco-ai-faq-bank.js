@@ -33,8 +33,10 @@
     const name = label || appId;
     return {
       keys,
-      answer: () =>
-        `<p>${hint || `«Oeffne ${esc(name)}»`} — in der App-Bibliothek unter <strong>${esc(name)}</strong>.`}</p>`,
+      answer: () => {
+        const lead = hint || `«Oeffne ${esc(name)}»`;
+        return `<p>${lead} — in der App-Bibliothek unter <strong>${esc(name)}</strong>.</p>`;
+      },
       run: (h) => () => h.openApp?.(appId),
       topic: appId,
       silentAnswer: `✓ ${name}`

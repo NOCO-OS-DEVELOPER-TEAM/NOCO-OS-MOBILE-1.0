@@ -1,3 +1,6 @@
+/** Browser: kein Node-`global` — einheitlich globalThis. */
+const global = typeof globalThis !== "undefined" ? globalThis : window;
+
 const noteInput = document.getElementById("noteInput");
 const saveState = document.getElementById("saveState");
 const saveBtn = document.getElementById("saveBtn");
@@ -7,8 +10,8 @@ const largeClock = document.getElementById("largeClock");
 const largeDate = document.getElementById("largeDate");
 const screenTrack = document.getElementById("screenTrack");
 const pageStage = document.getElementById("pageStage");
-const NOCO_BUILD = window.NOCO_BUILD || "166";
-const screenTitle = document.getElementById("screenTitle");
+const NOCO_BUILD = window.NOCO_BUILD || "167";
+const screenTitle = null;
 
 /** Doppelte/veraltete Topbars entfernen — phone-chrome Titelzeile behalten. */
 function purgeLegacyChrome() {
@@ -960,8 +963,17 @@ function shortcutById(id) {
 
 function renderShortcuts() {
   if (!shortcutGrid) return;
-  const cols = Math.min(3, Math.max(2, Math.ceil(activeShortcuts.length / 2)));
+  const cols = Math.min(4, Math.max(2, activeShortcuts.length <= 4 ? activeShortcuts.length : Math.ceil(activeShortcuts.length / 2)));
   shortcutGrid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+  shortcutGrid.style.opacity = "1";
+  shortcutGrid.style.visibility = "visible";
+  const host = shortcutGrid.closest(".bento-shortcuts");
+  if (host) {
+    host.style.opacity = "1";
+    host.style.visibility = "visible";
+    host.classList.remove("is-widget-hidden");
+    host.hidden = false;
+  }
   shortcutGrid.innerHTML = activeShortcuts.map((id) => {
     const shortcut = shortcutById(id);
     return `
@@ -2379,6 +2391,7 @@ function applyVisibleWidgets() {
     }
   });
   banners.forEach((banner) => home.prepend(banner));
+  renderShortcuts();
   refreshWidgetEditButtons();
   updateClock();
 }
@@ -4531,10 +4544,34 @@ document.querySelectorAll("[data-open-nocoai]").forEach((btn) => {
   btn.addEventListener("click", openNocoAIFromIsland);
 });
 
+function goIslandHome(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  setIslandExpanded(false);
+  hapticTap();
+  const sheetOpen = !!(currentApp && appSheet && !appSheet.classList.contains("hidden"));
+  if (sheetOpen) void closeAppToPage(0);
+  else void goToPage(0);
+}
+
+document.querySelectorAll("[data-island-cycle-page], #islandModeIcon").forEach((el) => {
+  el.addEventListener("click", goIslandHome);
+  el.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      goIslandHome(event);
+    }
+  });
+});
+
 dynamicIsland?.addEventListener("click", (event) => {
+  if (event.target.closest("[data-island-cycle-page], .island-mode-icon, #islandModeIcon")) return;
   event.stopPropagation();
   if (event.target.closest(".island-menu")) return;
   if (event.target.closest("[data-open-nocoai]")) return;
+  if (event.target.closest("[data-island-page]")) return;
   setIslandExpanded(!islandOpen);
   hapticTap();
 });

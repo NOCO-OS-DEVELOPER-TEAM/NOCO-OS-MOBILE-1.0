@@ -37,8 +37,8 @@
     siccherheit: "sicherheit",
     thems: "themes",
     thme: "theme",
-    noc ai: "noco ai",
-    noko ai: "noco ai",
+    "noco ai": "noco ai",
+    "noko ai": "noco ai",
     nocoai: "noco ai",
     spolight: "spotlight",
     spotlght: "spotlight",
@@ -98,7 +98,7 @@
     });
     t = fixTokens(norm(t));
     if (ctx?.lastBrainTopic === "inbox" && /^(und|auch|noch)\s/.test(t)) {
-      if (/\b(timer\b/.test(t)) return "wann ist mein timer";
+      if (/\b(timer)\b/.test(t)) return "wann ist mein timer";
       if (/\b(memory|erinnerung)\b/.test(t)) return "liste erinnerungen";
       if (/\b(task|aufgab|todo)\b/.test(t)) return "offene aufgaben";
       if (/\b(notiz)\b/.test(t)) return "wie viele notizen";

@@ -631,6 +631,12 @@ body.noco-ai-sheet .noco-top-fade {
   display: none !important;
 }
 
+body.noco-ai-sheet .app-sheet {
+  background:
+    radial-gradient(circle at 12% 12%, color-mix(in srgb, var(--blue, #5eb8ff) 24%, transparent), transparent 34%),
+    linear-gradient(150deg, #030810, #0c1830 58%, #091225) !important;
+}
+
 body.noco-ai-sheet .app-sheet .sheet-card {
   display: flex !important;
   flex-direction: column !important;

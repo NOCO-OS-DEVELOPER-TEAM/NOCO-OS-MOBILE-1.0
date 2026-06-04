@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de" data-noco-build="164">
+<html lang="de" data-noco-build="166">
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
@@ -19,23 +19,23 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./styles.css?v=164" />
-  <link rel="stylesheet" href="./ux-v2.css?v=164" />
-  <link rel="stylesheet" href="./noco-icons.css?v=164" />
-  <link rel="stylesheet" href="./noco-library.css?v=164" />
-  <link rel="stylesheet" href="./noco-forge.css?v=164" />
-  <link rel="stylesheet" href="./noco-ai.css?v=164" />
-  <link rel="stylesheet" href="./noco-ai-app.css?v=164" />
-  <link rel="stylesheet" href="./noco-exclusive.css?v=164" />
-  <link rel="stylesheet" href="./noco-reminders.css?v=164" />
-  <link rel="stylesheet" href="./noco-home-edit.css?v=164" />
-  <link rel="stylesheet" href="./noco-device.css?v=164" />
-  <link rel="stylesheet" href="./noco-chrome-fix.css?v=164" />
-  <link rel="stylesheet" href="./noco-pc-frame.css?v=164" />
-  <link rel="stylesheet" href="./noco-handset.css?v=164" />
-  <link rel="stylesheet" href="./noco-ui-polish.css?v=164" />
-  <link rel="stylesheet" href="./noco-liquid-exit.css?v=164" />
-  <link rel="stylesheet" href="./noco-island-ai.css?v=164" />
+  <link rel="stylesheet" href="./styles.css?v=166" />
+  <link rel="stylesheet" href="./ux-v2.css?v=166" />
+  <link rel="stylesheet" href="./noco-icons.css?v=166" />
+  <link rel="stylesheet" href="./noco-library.css?v=166" />
+  <link rel="stylesheet" href="./noco-forge.css?v=166" />
+  <link rel="stylesheet" href="./noco-ai.css?v=166" />
+  <link rel="stylesheet" href="./noco-ai-app.css?v=166" />
+  <link rel="stylesheet" href="./noco-exclusive.css?v=166" />
+  <link rel="stylesheet" href="./noco-reminders.css?v=166" />
+  <link rel="stylesheet" href="./noco-home-edit.css?v=166" />
+  <link rel="stylesheet" href="./noco-device.css?v=166" />
+  <link rel="stylesheet" href="./noco-chrome-fix.css?v=166" />
+  <link rel="stylesheet" href="./noco-pc-frame.css?v=166" />
+  <link rel="stylesheet" href="./noco-handset.css?v=166" />
+  <link rel="stylesheet" href="./noco-ui-polish.css?v=166" />
+  <link rel="stylesheet" href="./noco-liquid-exit.css?v=166" />
+  <link rel="stylesheet" href="./noco-island-ai.css?v=166" />
   <style id="noco-critical-layout">
     .phone-chrome .chrome-page-nav,
     .phone-chrome .chrome-title-bar { display: none !important; }
@@ -54,7 +54,7 @@
 </head>
 <body>
   <div class="noco-stage">
-    <p class="stage-caption">NOCO OS Mobile 1.2 · Build 164 · <a href="?fresh=1">Cache leeren</a></p>
+    <p class="stage-caption">NOCO OS Mobile 1.2 · Build 166 · <a href="?fresh=1">Cache leeren</a></p>
 
     <div class="phone-frame">
       <main class="phone" id="phoneRoot" aria-label="NOCO OS Mobile">
@@ -219,7 +219,7 @@
         </section>
 
         <div id="coachBanner" class="coach-banner hidden" role="status">
-          <p>Wische für Apps · Island-Punkte: Home/Apps · ✧ am Rand = NOCO AI · × unten rechts schliesst.</p>
+          <p>Home ↔ Apps: seitlich wischen · In Apps: × unten rechts oder Island · ✧ = NOCO AI</p>
           <button type="button" id="coachDismiss">OK</button>
         </div>
 
@@ -238,7 +238,7 @@
 
         <section id="appSheet" class="app-sheet hidden" aria-live="polite">
           <div class="sheet-card noco-glass-scroll">
-            <div class="sheet-drag-handle" id="sheetDragHandle" role="button" tabindex="0" aria-label="App schliessen — nach unten ziehen oder tippen"></div>
+            <div class="sheet-drag-handle" id="sheetDragHandle" hidden aria-hidden="true"></div>
             <button type="button" id="closeSheet" class="sheet-close" aria-label="Schliessen">×</button>
             <div id="sheetContent"></div>
           </div>
@@ -278,9 +278,8 @@
           <div id="lockTimerLive" class="timer-live-banner hidden" role="status" aria-live="polite"></div>
           <div id="lockMemoryLive" class="timer-live-banner timer-live-banner--memory hidden" role="status" aria-live="polite"></div>
           <div id="lockWidgets" class="lock-widgets"></div>
-          <p class="lock-swipe-hint" aria-hidden="true">Nach oben wischen</p>
           <div class="lock-actions">
-            <button type="button" id="unlockBtn" class="primary-action lock-hold-btn" aria-label="2 Sekunden halten zum Entsperren">2 Sekunden halten</button>
+            <button type="button" id="unlockBtn" class="primary-action lock-hold-btn" aria-label="Entsperren">Entsperren</button>
             <button type="button" id="lockWaitBtn" class="security-action"><strong>1 Minute warten</strong><small>Auto-Lock Demo</small></button>
           </div>
         </section>
@@ -368,12 +367,12 @@
   </div>
 
   <script>
-    window.NOCO_BUILD = "164";
+    window.NOCO_BUILD = "166";
     (function () {
       if ("caches" in window) {
         caches.keys().then(function (keys) {
           keys.forEach(function (k) {
-            if (k.indexOf("noco-mobile") >= 0 && k.indexOf("v164") < 0) caches.delete(k);
+            if (k.indexOf("noco-mobile") >= 0 && k.indexOf("v166") < 0) caches.delete(k);
           });
         });
       }
@@ -409,7 +408,7 @@
       }
     })();
   </script>
-  <script src="./noco-ai-chats.js?v=164"></script>
+  <script src="./noco-ai-chats.js?v=166"></script>
   <script src="./noco-notes.js"></script>
   <script src="./noco-reminders.js"></script>
   <script src="./noco-ai-math.js"></script>
@@ -423,37 +422,39 @@
   <script src="./noco-ai-lexicon.js"></script>
   <script src="./noco-ai-limits.js"></script>
   <script src="./noco-ai-brain.js"></script>
-  <script src="./noco-ai-router.js?v=164"></script>
-  <script src="./noco-ai-understand.js?v=164"></script>
-  <script src="./noco-ai-profile.js?v=164"></script>
-  <script src="./noco-ai-live.js?v=164"></script>
-  <script src="./noco-ai-system.js?v=164"></script>
+  <script src="./noco-ai-router.js?v=166"></script>
+  <script src="./noco-ai-understand.js?v=166"></script>
+  <script src="./noco-ai-profile.js?v=166"></script>
+  <script src="./noco-ai-live.js?v=166"></script>
+  <script src="./noco-ai-system.js?v=166"></script>
   <script src="./noco-ai-systemmap.js"></script>
   <script src="./noco-ai-diagnostics.js"></script>
   <script src="./noco-ai-chatcmd.js"></script>
-  <script src="./noco-ai-answers.js?v=164"></script>
-  <script src="./noco-ai-faq-bank.js?v=164"></script>
-  <script src="./noco-ai-knowledge.js?v=164"></script>
-  <script src="./noco-ai-actions.js?v=164"></script>
-  <script src="./noco-ai-smart.js?v=164"></script>
-  <script src="./noco-ai-personality.js?v=164"></script>
-  <script src="./noco-ai-12.js?v=164"></script>
-  <script src="./noco-ai-wake-engine.js?v=164"></script>
-  <script src="./noco-ai-voice.js?v=164"></script>
-  <script src="./noco-ai-games.js?v=164"></script>
-  <script src="./noco-ai-pulse.js?v=164"></script>
-  <script src="./noco-ai-meta.js?v=164"></script>
-  <script src="./noco-ai-everyday.js?v=164"></script>
-  <script src="./noco-ai.js?v=164"></script>
-  <script src="./noco-ai-interact-fix.js?v=164"></script>
+  <script src="./noco-ai-answers.js?v=166"></script>
+  <script src="./noco-ai-faq-bank.js?v=166"></script>
+  <script src="./noco-ai-knowledge.js?v=166"></script>
+  <script src="./noco-ai-actions.js?v=166"></script>
+  <script src="./noco-ai-smart.js?v=166"></script>
+  <script src="./noco-ai-personality.js?v=166"></script>
+  <script src="./noco-ai-12.js?v=166"></script>
+  <script src="./noco-ai-wake-engine.js?v=166"></script>
+  <script src="./noco-ai-voice.js?v=166"></script>
+  <script src="./noco-ai-games.js?v=166"></script>
+  <script src="./noco-ai-pulse.js?v=166"></script>
+  <script src="./noco-ai-meta.js?v=166"></script>
+  <script src="./noco-ai-everyday.js?v=166"></script>
+  <script src="./noco-ai.js?v=166"></script>
+  <script src="./noco-ai-interact-fix.js?v=166"></script>
   <script src="./noco-device.js"></script>
-  <script src="./app.js?v=164"></script>
+  <script src="./app.js?v=166"></script>
   <script>
     window.addEventListener("load", function () {
       var cap = document.querySelector(".stage-caption");
       if (location.protocol === "file:") {
-        if (cap) cap.innerHTML += ' · <strong style="color:#fbbf24">file:// — bitte lokalen Server nutzen</strong>';
-        return;
+        if (cap) {
+          cap.innerHTML +=
+            ' · <span style="color:#fbbf24">Datei-Modus: UI ok · Sprache/Hey Noco nur mit HTTPS</span>';
+        }
       }
       if (!window.NocoAIEveryday) {
         if (cap) {

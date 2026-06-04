@@ -1450,7 +1450,11 @@ body.hub-open .screen-track {
   z-index: 75;
   align-content: start;
   place-items: stretch center;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 .lock-screen::before {

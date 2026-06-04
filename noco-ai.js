@@ -918,7 +918,7 @@
     if (/\b(schliess|schliesse|close)\b/.test(q) && /\b(app|fenster|sheet)\b/.test(q)) {
       return {
         type: "text",
-        text: "Tippe oben rechts auf <strong>×</strong> oder wische die App nach unten weg."
+        text: "Tippe unten rechts auf <strong>×</strong> oder nutze die <strong>Island</strong> (Home/Apps)."
       };
     }
 
@@ -1897,30 +1897,23 @@
     return true;
   }
 
-  function maybeShowMicConsentAfterIntro(root) {
-    window.setTimeout(() => {
-      if (global.NocoAIVoice?.needsMicPrompt?.()) {
-        global.NocoAIVoice.showMicConsentIfNeeded?.(root, { force: true });
-      }
-    }, 480);
-    window.setTimeout(() => {
-      if (global.NocoAIVoice?.needsMicPrompt?.()) {
-        global.NocoAIVoice.showMicConsentIfNeeded?.(root, { force: true });
-      }
-    }, 1800);
-  }
-
   function finishAdFeatureIntro(root) {
     writeAdFeatureIntroSeen();
     hideAdFeatureIntro(root);
-    maybeShowMicConsentAfterIntro(root);
   }
 
+  /** Kein Auto-Overlay beim Oeffnen — Mikro/AD nur ueber 🎤 oder Einstellungen. */
   function promptAdFeatureOnOpen(root) {
     if (!root || optionsWidget(root)) return;
-    window.setTimeout(() => {
-      if (!showAdFeatureIntro(root)) maybeShowMicConsentAfterIntro(root);
-    }, 900);
+    if (!readAdFeatureIntroSeen()) writeAdFeatureIntroSeen();
+    hideAdFeatureIntro(root);
+    const sheet = root.querySelector("[data-noco-ai-mic-consent]");
+    if (sheet) {
+      sheet.classList.add("hidden");
+      sheet.setAttribute("aria-hidden", "true");
+    }
+    root.classList.remove("noco-ai-mic-prompt");
+    document.body.classList.remove("noco-ai-mic-open", "noco-ai-ad-open");
   }
 
   function clearNocoWireMarks(root) {

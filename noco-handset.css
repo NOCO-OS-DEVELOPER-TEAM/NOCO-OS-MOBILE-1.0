@@ -97,6 +97,29 @@ body.island-app-mode #closeSheet {
   overflow-y: auto;
 }
 
+/* Apps: nur scrollen, nicht seitlich zur Home-Seite wischen */
+body.island-app-mode #appSheet .sheet-card,
+body.island-app-mode #appSheet #sheetContent,
+body.island-app-mode #appSheet .mobile-app-body,
+body.island-app-mode #appSheet .noco-glass-scroll {
+  touch-action: pan-y;
+}
+
+body.island-app-mode .screen-track {
+  touch-action: pan-y pinch-zoom;
+}
+
+/* Widgets: Taps auf Buttons/Eingaben nicht vom Karten-Layer schlucken */
+.widget-card button,
+.widget-card input,
+.widget-card textarea,
+.widget-card select,
+.widget-card a,
+.widget-card .shortcut-btn {
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
 /* —— Seiten-Wischen flüssiger —— */
 body.device-handset .page-stage.page-swiping {
   touch-action: none;

@@ -7,7 +7,7 @@ const largeClock = document.getElementById("largeClock");
 const largeDate = document.getElementById("largeDate");
 const screenTrack = document.getElementById("screenTrack");
 const pageStage = document.getElementById("pageStage");
-const NOCO_BUILD = window.NOCO_BUILD || "164";
+const NOCO_BUILD = window.NOCO_BUILD || "166";
 const screenTitle = document.getElementById("screenTitle");
 
 /** Doppelte/veraltete Topbars entfernen — phone-chrome Titelzeile behalten. */
@@ -143,10 +143,8 @@ let dodgeGame = {
   obstacleY: -14
 };
 
-const UNLOCK_HOLD_MS = 2000;
-let unlockHoldRaf = 0;
-let unlockHoldStarted = 0;
-let lockSwipeStart = null;
+/** Apps schliessen nur per × / Island — kein Wischen zur Home/Apps-Seite. */
+const ENABLE_APP_SHEET_SWIPE = false;
 
 const NOCO_AI_LABEL = "NOCO AI";
 
@@ -160,8 +158,23 @@ const GESTURE = {
   sheetSnap: 84,
   sheetVelocity: 0.46,
   verticalCancelRatio: 1.08,
-  clickSuppressMs: 360
+  clickSuppressMs: 140
 };
+
+/** Klicks nach Wisch-Geste nicht blockieren (Buttons, ×, Eingaben, NOCO AI). */
+const CLICK_SUPPRESS_ALLOW =
+  "[data-sheet-exit-close], .sheet-exit-corner, #sheetExitCorner, #closeSheet, .sheet-close, " +
+  "input, textarea, select, [contenteditable='true'], " +
+  "[data-noco-ai-root], [data-noco-ai-input], [data-noco-ai-send], [data-noco-ai-mic], [data-noco-ai-chip], " +
+  "[data-noco-ai-cmd], [data-noco-ai-tools-toggle], [data-noco-ai-chats-toggle], [data-noco-ai-ad-feature-ok], [data-noco-ai-ad-feature-later], " +
+  "[data-noco-ai-mic-allow], [data-noco-ai-mic-later], " +
+  ".app-sheet, #sheetContent, .sheet-card, .toggle-card, [data-toggle-setting], [data-settings-section], [data-lock-time], " +
+  "[data-noco-wake-phrase], [data-noco-wake-sens], .menu-picker, .menu-content, .settings-row, " +
+  ".shortcut-btn, .shortcut-grid, [data-shortcut], [data-open-nocoai], .noco-ai-orb, " +
+  ".dynamic-island, .island-action, .island-menu, [data-island-page], [data-island-app], [data-open-hub], " +
+  "[data-app], .app-icon, .library-app, .library-quick-app, [data-hub-app], [data-go-page], " +
+  ".dock-btn, [data-widget-toggle], .widget-add-fab, .edit-fab, #editBtn, " +
+  "#unlockBtn, #lockEditBtn, #lockWaitBtn, .lock-widget, .lock-hold-btn";
 
 const APP_GLYPHS = {
   settings: "⚙",
@@ -1135,67 +1148,19 @@ async function unlockFromLockScreen() {
   showToast("Entsperrt");
 }
 
-function setUnlockHoldProgress(progress) {
-  if (!unlockBtn) return;
-  const clamped = Math.max(0, Math.min(1, progress));
-  unlockBtn.style.setProperty("--hold-progress", String(clamped));
-}
-
 function cancelUnlockHold() {
-  if (unlockHoldRaf) window.cancelAnimationFrame(unlockHoldRaf);
-  unlockHoldRaf = 0;
-  unlockHoldStarted = 0;
   unlockBtn?.classList.remove("is-holding");
-  setUnlockHoldProgress(0);
-}
-
-function tickUnlockHold() {
-  if (!unlockHoldStarted) return;
-  const progress = (Date.now() - unlockHoldStarted) / UNLOCK_HOLD_MS;
-  setUnlockHoldProgress(progress);
-  if (progress >= 1) {
-    cancelUnlockHold();
-    void unlockFromLockScreen();
-    return;
-  }
-  unlockHoldRaf = window.requestAnimationFrame(tickUnlockHold);
-}
-
-function startUnlockHold() {
-  if (!unlockBtn || !lockScreen || lockScreen.classList.contains("hidden")) return;
-  cancelUnlockHold();
-  unlockHoldStarted = Date.now();
-  unlockBtn.classList.add("is-holding");
-  setUnlockHoldProgress(0);
-  unlockHoldRaf = window.requestAnimationFrame(tickUnlockHold);
+  unlockBtn?.style.removeProperty("--hold-progress");
 }
 
 function initLockScreenGestures() {
   if (!unlockBtn) return;
-  unlockBtn.addEventListener("pointerdown", (event) => {
+  unlockBtn.addEventListener("click", (event) => {
     event.preventDefault();
-    startUnlockHold();
+    event.stopPropagation();
+    hapticTap();
+    void unlockFromLockScreen();
   });
-  ["pointerup", "pointerleave", "pointercancel"].forEach((type) => {
-    unlockBtn.addEventListener(type, cancelUnlockHold);
-  });
-
-  lockScreen?.addEventListener("touchstart", (event) => {
-    if (event.target.closest("button, input, textarea, .lock-edit")) return;
-    const touch = event.touches[0];
-    lockSwipeStart = { x: touch.clientX, y: touch.clientY, at: Date.now() };
-  }, { passive: true });
-
-  lockScreen?.addEventListener("touchend", (event) => {
-    if (!lockSwipeStart) return;
-    const touch = event.changedTouches[0];
-    const dx = touch.clientX - lockSwipeStart.x;
-    const dy = touch.clientY - lockSwipeStart.y;
-    lockSwipeStart = null;
-    if (dy < -70 && Math.abs(dy) > Math.abs(dx) * 1.15) {
-      void unlockFromLockScreen();
-    }
-  }, { passive: true });
 }
 
 function resetAutoLockTimer() {
@@ -1301,6 +1266,7 @@ function isTapTarget(target) {
 
 function canStartPageSwipe(event) {
   if (editMode || pageDrag) return false;
+  if (document.body.classList.contains("island-app-mode")) return false;
   if (document.body.classList.contains("sheet-open")) return false;
   if (!spotlightPanel?.classList.contains("hidden")) return false;
   if (!hubPanel?.classList.contains("hidden")) return false;
@@ -1823,16 +1789,20 @@ function openWidgetPanelFromHome() {
   document.body.classList.add("sheet-open");
 }
 
+const DEFAULT_VISIBLE_WIDGETS = ["hero", "clock", "status", "shortcuts", "notes"];
+
 function visibleWidgetIds() {
   try {
     const saved = JSON.parse(localStorage.getItem("noco_mobile_visible_widgets") || "null");
     if (Array.isArray(saved)) {
       const ids = saved.filter((id) => widgetDefinitions[id]);
+      if (!ids.length) return [...DEFAULT_VISIBLE_WIDGETS];
       if (!ids.includes("clock")) ids.unshift("clock");
+      if (!ids.includes("shortcuts")) ids.push("shortcuts");
       return ids;
     }
   } catch (_) {}
-  return ["hero", "clock", "status", "shortcuts", "notes"];
+  return [...DEFAULT_VISIBLE_WIDGETS];
 }
 
 function saveVisibleWidgets(ids) {
@@ -3134,7 +3104,7 @@ function renderAppSheet(appId, html, options = {}) {
   requestAnimationFrame(() => {
     appSheet.classList.remove("app-navigating");
   });
-  armGestureSafety(800);
+  armGestureSafety(320);
   setIslandExpanded(false);
   dismissCoach();
   const card = appSheet.querySelector(".sheet-card");
@@ -4482,7 +4452,18 @@ libraryQuickEditFab?.addEventListener("click", (event) => {
   openLibraryQuickEditor();
 });
 saveBtn.addEventListener("click", saveNote);
-closeSheet.addEventListener("click", () => closeAppToPage(currentPage));
+function handleSheetExitClose(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  void closeAppToPage(currentPage);
+}
+
+closeSheet.addEventListener("click", handleSheetExitClose);
+document.querySelectorAll("[data-sheet-exit-close]").forEach((btn) => {
+  btn.addEventListener("click", handleSheetExitClose, false);
+});
 
 document.getElementById("coachDismiss")?.addEventListener("click", dismissCoach);
 
@@ -4637,14 +4618,14 @@ screenTrack?.addEventListener("pointercancel", endPageDragPointer);
 
 document.addEventListener("click", async (event) => {
   resetAutoLockTimer();
-  if (
-    Date.now() < suppressClickUntil &&
-    !event.target.closest(
-      "[data-noco-ai-root], .app-sheet, #sheetContent, .sheet-card, .toggle-card, [data-toggle-setting], [data-settings-section], [data-lock-time], [data-noco-wake-phrase], [data-noco-wake-sens], .menu-picker, .menu-content, .settings-row, #closeSheet, .sheet-close"
-    )
-  ) {
+  if (Date.now() < suppressClickUntil && !event.target.closest(CLICK_SUPPRESS_ALLOW)) {
     event.preventDefault();
     event.stopPropagation();
+    return;
+  }
+
+  if (event.target.closest("[data-sheet-exit-close]")) {
+    handleSheetExitClose(event);
     return;
   }
 
@@ -5732,6 +5713,7 @@ function runHubAction(action) {
 }
 
 function startSheetSwipe(event) {
+  if (!ENABLE_APP_SHEET_SWIPE) return;
   if (editMode || appSheet.classList.contains("hidden")) return;
   if (event.target.closest("textarea, input, select, .code-keypad, .code-key, .runner-stage, .dodge-stage, .memory-grid, .color-game-grid")) return;
   const touch = event.touches[0];
@@ -5748,6 +5730,7 @@ function startSheetSwipe(event) {
 }
 
 function moveSheetSwipe(event) {
+  if (!ENABLE_APP_SHEET_SWIPE) return;
   if (!appSwipe || appSwipe.cancelled) return;
   const touch = event.touches[0];
   const dx = touch.clientX - appSwipe.x;
@@ -5778,6 +5761,7 @@ function moveSheetSwipe(event) {
 }
 
 async function endSheetSwipe(event) {
+  if (!ENABLE_APP_SHEET_SWIPE) return;
   if (!appSwipe) return;
   const touch = event.changedTouches[0];
   const dx = touch.clientX - appSwipe.x;
@@ -5837,10 +5821,7 @@ document.addEventListener("touchmove", movePageDrag, { passive: false });
 document.addEventListener("touchend", endPageDrag, { passive: true });
 document.addEventListener("touchcancel", endPageDrag, { passive: true });
 
-appSheet.addEventListener("touchstart", startSheetSwipe, { passive: true });
-appSheet.addEventListener("touchmove", moveSheetSwipe, { passive: false });
-appSheet.addEventListener("touchend", endSheetSwipe, { passive: true });
-appSheet.addEventListener("touchcancel", cancelSheetSwipe, { passive: true });
+/* Kein Wischen in Apps — nur Scroll im Sheet, Schliessen per × / Island */
 
 function saveMobileOrder() {
   const widgetOrder = Array.from(document.querySelectorAll(".draggable-widget:not([hidden])")).map((item) => item.dataset.widgetId);
@@ -6554,7 +6535,7 @@ function startReorder(event) {
     || event.target.closest(".draggable-desktop");
   if (!target || target.closest(".app-sheet")) return;
   event.preventDefault();
-  suppressClickUntil = Date.now() + 620;
+  suppressClickUntil = Date.now() + 280;
   target.setPointerCapture?.(event.pointerId);
   reorderDrag = {
     item: target,
@@ -6582,7 +6563,7 @@ function moveReorder(event) {
     hapticTap();
   }
   if (!reorderDrag.started) return;
-  suppressClickUntil = Date.now() + 620;
+  suppressClickUntil = Date.now() + 280;
   reorderDrag.ghost.style.left = event.clientX + "px";
   reorderDrag.ghost.style.top = event.clientY + "px";
   const candidates = document.elementsFromPoint(event.clientX, event.clientY);
@@ -6607,7 +6588,7 @@ function endReorder(event) {
   reorderDrag.ghost?.remove();
   document.querySelectorAll(".drop-target").forEach((node) => node.classList.remove("drop-target"));
   if (reorderDrag.started) {
-    suppressClickUntil = Date.now() + 620;
+    suppressClickUntil = Date.now() + 280;
     saveMobileOrder();
     showToast("Layout aktualisiert");
   }

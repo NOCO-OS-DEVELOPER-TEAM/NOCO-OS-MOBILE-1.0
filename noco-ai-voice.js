@@ -384,7 +384,7 @@
         }
         await handleMicAllow(root, allowBtn);
       },
-      true
+      false
     );
 
     document.addEventListener("click", (event) => {
@@ -572,11 +572,12 @@
     getHelpers = typeof helpersFactory === "function" ? helpersFactory : () => helpersFactory || {};
     initMicConsentUI();
     bindGlobalWakeLifecycle();
+    const fileProto = global.location?.protocol === "file:";
     micConsented = readMicConsent();
     const prefOn = readWakePref();
-    wakeEnabled = micConsented && prefOn !== false;
+    wakeEnabled = micConsented && prefOn !== false && !fileProto;
     if (micConsented && prefOn === false) wakeEnabled = false;
-    if (micConsented && wakeEnabled) {
+    if (micConsented && wakeEnabled && !fileProto) {
       window.setTimeout(startWakeLoop, 700);
       window.setTimeout(resumeWakeListening, 2400);
       document.body.classList.add("noco-ai-wake-on");
@@ -598,6 +599,10 @@
     }
     if (cfg.enabled != null) {
       if (!micConsented && cfg.enabled) {
+        if (global.location?.protocol === "file:") {
+          getHelpers().showToast?.("Hey Noco: Datei-Modus — GitHub Pages oder Live Server nutzen");
+          return;
+        }
         showMicConsentIfNeeded(consentRoot || document.querySelector("[data-noco-ai-root]"), { force: true });
         return;
       }

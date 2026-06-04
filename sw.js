@@ -1,4 +1,4 @@
-const CACHE = "noco-mobile-1-2-ui-ai-v164";
+const CACHE = "noco-mobile-1-2-ui-ai-v166";
 
 function cacheOk(response) {
   return response && response.status === 200 && (response.type === "basic" || response.type === "default");

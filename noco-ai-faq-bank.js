@@ -495,7 +495,7 @@
     ),
     txt(
       ["swipe gesten", "wischen hilfe", "gesten steuerung"],
-      "<p>Horizontal: Home ↔ Apps. In App: zurueck zur Seite. Lock: nach oben wischen.</p>",
+      "<p>Horizontal: Home ↔ Apps. App schliessen: <strong>×</strong> oder Island. Lock: <strong>Entsperren</strong> tippen.</p>",
       null,
       "nav"
     ),

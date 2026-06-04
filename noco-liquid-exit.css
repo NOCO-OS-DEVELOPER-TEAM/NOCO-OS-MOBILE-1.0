@@ -124,7 +124,7 @@ body.noco-ai-mic-open #sheetExitCorner {
   position: absolute;
   right: 14px;
   bottom: max(14px, env(safe-area-inset-bottom, 0px));
-  z-index: 90;
+  z-index: 120;
   width: 52px;
   min-width: 52px;
   max-width: 52px;
@@ -152,7 +152,9 @@ body.island-app-mode #appSheet:not(.hidden) .sheet-exit-corner,
 body.island-app-mode #appSheet:not(.hidden) #sheetExitCorner,
 body.sheet-open #shortcutPanel:not(.hidden) .sheet-exit-corner,
 body.sheet-open #widgetPanel:not(.hidden) .sheet-exit-corner {
-  display: grid;
+  display: grid !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
 }
 
 body.island-app-mode #closeSheet,

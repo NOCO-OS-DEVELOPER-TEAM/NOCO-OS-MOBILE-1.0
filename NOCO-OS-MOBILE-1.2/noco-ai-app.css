@@ -1,0 +1,744 @@
+/* Build 149 — NOCO AI Chats + Scroll Fix */
+
+.noco-ai-wrap.noco-ai-shell {
+  --noco-ai-dock-h: 118px;
+  display: grid !important;
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas: "top" "stage" "dock";
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.noco-ai-skin {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 90% 55% at 50% 0%, rgba(94, 234, 212, 0.12), transparent 52%),
+    radial-gradient(ellipse 65% 45% at 92% 72%, rgba(139, 124, 248, 0.16), transparent 48%),
+    radial-gradient(ellipse 55% 40% at 8% 88%, rgba(244, 114, 182, 0.1), transparent 42%),
+    linear-gradient(168deg, rgba(5, 10, 22, 0.94) 0%, rgba(9, 16, 32, 0.9) 45%, rgba(3, 7, 16, 0.96) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -20px 40px rgba(0, 0, 0, 0.32);
+}
+
+.noco-ai-wrap.noco-ai-shell .noco-ai-glass-orb--mint {
+  width: 160px;
+  height: 160px;
+  top: 8%;
+  right: -40px;
+  left: auto;
+  opacity: 0.55;
+  filter: blur(48px);
+}
+
+.noco-ai-wrap.noco-ai-shell .noco-ai-glass-orb--pink {
+  width: 120px;
+  height: 120px;
+  bottom: 22%;
+  left: auto;
+  right: 8%;
+  opacity: 0.45;
+  filter: blur(44px);
+}
+
+.noco-ai-top {
+  grid-area: top;
+  flex-shrink: 0;
+  z-index: 70;
+  position: relative;
+  pointer-events: auto;
+  touch-action: manipulation;
+  padding: 4px 4px 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(8, 14, 28, 0.45);
+  backdrop-filter: blur(26px) saturate(1.75);
+  -webkit-backdrop-filter: blur(26px) saturate(1.75);
+}
+
+.noco-ai-top-glass {
+  border-radius: 22px;
+  padding: 8px 10px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 6px 22px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(18px) saturate(1.5);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+}
+
+.noco-ai-top-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.noco-ai-brand-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.noco-ai-brand-inline strong {
+  font-size: 15px;
+  letter-spacing: -0.02em;
+}
+
+.noco-ai-top-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 0;
+  font-size: 11px;
+  opacity: 0.72;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.noco-ai-meta-dot {
+  opacity: 0.45;
+}
+
+.noco-ai-top-rail {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+}
+
+.noco-ai-rail-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-width: 40px;
+  height: auto;
+  min-height: 40px;
+  padding: 4px 5px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #eef6ff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.noco-ai-rail-btn:active {
+  transform: scale(0.94);
+}
+
+.noco-ai-rail-btn[aria-expanded="true"],
+.noco-ai-rail-btn.is-on {
+  background: rgba(139, 124, 248, 0.32);
+  border-color: rgba(139, 124, 248, 0.5);
+  box-shadow: 0 0 16px rgba(139, 124, 248, 0.25);
+}
+
+.noco-ai-rail-ico {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.noco-ai-rail-lbl {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  opacity: 0.82;
+  line-height: 1;
+}
+
+.noco-ai-rail-btn--accent {
+  min-width: 40px;
+  padding: 4px 6px;
+  color: #dffcf8;
+  background: linear-gradient(135deg, rgba(94, 234, 212, 0.25), rgba(139, 124, 248, 0.28));
+}
+
+.noco-ai-rail-btn--accent.is-active {
+  background: linear-gradient(135deg, rgba(94, 234, 212, 0.45), rgba(139, 124, 248, 0.5));
+}
+
+.noco-ai-stage {
+  grid-area: stage;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  z-index: 1;
+  pointer-events: auto;
+  padding: 2px 4px 2px;
+}
+
+.noco-ai-glass-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+  backdrop-filter: blur(20px) saturate(1.5);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 8px 28px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.noco-ai-stage .noco-ai-log-scroll {
+  flex: 1;
+  min-height: 0;
+  padding: 10px 10px 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+.noco-ai-wrap.noco-ai-shell .noco-ai-msg {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.noco-ai-wrap.noco-ai-shell .noco-ai-msg.user {
+  background: linear-gradient(145deg, rgba(139, 124, 248, 0.32), rgba(99, 102, 241, 0.22));
+  border: 1px solid rgba(167, 139, 250, 0.28);
+  border-radius: 20px 20px 6px 20px;
+  box-shadow: 0 4px 20px rgba(139, 124, 248, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.noco-ai-wrap.noco-ai-shell .noco-ai-msg.bot {
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025));
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 20px 20px 20px 6px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.noco-ai-chats-overlay.hidden {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden;
+}
+
+.noco-ai-chats-overlay {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  z-index: 8;
+  pointer-events: auto;
+  margin: 0;
+  border-radius: 18px;
+  background: rgba(6, 12, 26, 0.88);
+  backdrop-filter: blur(28px) saturate(1.7);
+  -webkit-backdrop-filter: blur(28px) saturate(1.7);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 20px 56px rgba(0, 0, 0, 0.5);
+}
+
+.noco-ai-wrap.noco-ai-shell .noco-ai-chats-drawer.noco-ai-chats-overlay {
+  display: flex;
+  flex-direction: column;
+  max-height: none;
+  overflow: hidden;
+}
+
+.noco-ai-wrap.noco-ai-shell .noco-ai-chats-overlay .noco-ai-chats-hint {
+  flex-shrink: 0;
+  margin: 10px 12px 6px;
+}
+
+.noco-ai-wrap.noco-ai-shell .noco-ai-chats-overlay .noco-ai-chats-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  padding: 0 8px 12px;
+}
+
+.noco-ai-compose-rail {
+  position: relative;
+  z-index: 72;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.noco-ai-dock {
+  grid-area: dock;
+  position: relative;
+  z-index: 72;
+  pointer-events: auto;
+  touch-action: manipulation;
+  flex-shrink: 0;
+  padding: 4px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+  border-top: none;
+  background: transparent;
+}
+
+.noco-ai-quick-strip {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 2px 6px;
+  margin-bottom: 2px;
+  scrollbar-width: none;
+}
+.noco-ai-quick-strip::-webkit-scrollbar {
+  display: none;
+}
+.noco-ai-quick-strip .noco-ai-chip {
+  flex-shrink: 0;
+}
+
+.noco-ai-compose-rail {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+  margin-bottom: 6px;
+  padding: 0;
+  position: relative;
+  z-index: 3;
+  pointer-events: auto;
+}
+
+.noco-ai-rail-mini {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: 100%;
+  min-height: 40px;
+  height: auto;
+  padding: 4px 2px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  touch-action: manipulation;
+  cursor: pointer;
+  color: rgba(236, 244, 255, 0.9);
+  font-size: 13px;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.noco-ai-rail-mini.is-on {
+  background: rgba(94, 234, 212, 0.2);
+  border-color: rgba(94, 234, 212, 0.4);
+}
+
+.noco-ai-compose-glass {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+  backdrop-filter: blur(28px) saturate(1.7);
+  -webkit-backdrop-filter: blur(28px) saturate(1.7);
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.noco-ai-compose-glass .noco-ai-input--led {
+  background: linear-gradient(180deg, rgba(2, 12, 22, 0.95), rgba(3, 18, 32, 0.9));
+  border-color: rgba(94, 234, 212, 0.38);
+  box-shadow:
+    inset 0 0 20px rgba(94, 234, 212, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.noco-ai-compose-glass .noco-ai-send {
+  box-shadow: 0 6px 24px rgba(99, 102, 241, 0.45);
+}
+
+.noco-ai-tools-sheet.hidden {
+  pointer-events: none !important;
+  visibility: hidden;
+}
+
+.noco-ai-tools-sheet {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: calc(var(--noco-ai-dock-h, 118px) + env(safe-area-inset-bottom, 0px) + 4px);
+  top: 52px;
+  z-index: 50;
+  pointer-events: auto;
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  background: linear-gradient(165deg, rgba(12, 20, 38, 0.94), rgba(6, 12, 26, 0.92));
+  backdrop-filter: blur(32px) saturate(1.85);
+  -webkit-backdrop-filter: blur(32px) saturate(1.85);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+}
+
+.noco-ai-tools-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.noco-ai-tools-close {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.noco-ai-tools-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 6px 10px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.noco-ai-tools-tabs button {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  border-radius: 12px;
+  padding: 7px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.noco-ai-tools-tabs button.is-active {
+  background: rgba(139, 124, 248, 0.28);
+  border-color: rgba(139, 124, 248, 0.45);
+}
+
+.noco-ai-tools-panel {
+  display: none;
+  padding: 0 10px 8px;
+}
+.noco-ai-tools-panel.is-active {
+  display: block;
+}
+.noco-ai-tools-panel[hidden] {
+  display: none !important;
+}
+
+.noco-ai-tools-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 0 8px;
+}
+
+.noco-ai-tools-scroll .noco-ai-quick-btn {
+  font-size: 10px;
+  padding: 4px 7px;
+}
+
+.noco-ai-tools-scroll .noco-ai-tips-panel {
+  max-height: 68px;
+  overflow-y: auto;
+}
+
+.noco-ai-wrap.noco-ai-tools-open::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  bottom: calc(var(--noco-ai-dock-h, 118px) + env(safe-area-inset-bottom, 0px));
+  z-index: 44;
+  background: rgba(2, 6, 14, 0.45);
+  pointer-events: none;
+}
+
+.noco-ai-wrap.noco-ai-tools-open .noco-ai-stage {
+  opacity: 0.55;
+}
+
+.noco-ai-wrap.noco-ai-shell .noco-ai-ad-feature {
+  position: fixed;
+  inset: 0;
+  z-index: 245;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(16px, env(safe-area-inset-top, 12px)) 16px max(16px, env(safe-area-inset-bottom, 12px));
+  background: rgba(4, 8, 18, 0.9);
+  backdrop-filter: blur(22px) saturate(1.55);
+  -webkit-backdrop-filter: blur(22px) saturate(1.55);
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.noco-ai-ad-feature.hidden,
+.noco-ai-mic-consent.hidden {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+.noco-ai-ad-feature-card {
+  width: min(100%, 360px);
+  padding: 18px 16px 14px;
+  border-radius: 22px;
+  border: 1px solid rgba(94, 234, 212, 0.35);
+  background: linear-gradient(165deg, rgba(12, 22, 42, 0.98), rgba(6, 12, 26, 0.96));
+  box-shadow:
+    0 24px 56px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 0 32px rgba(94, 234, 212, 0.12);
+}
+
+.noco-ai-ad-feature-badge {
+  display: inline-block;
+  margin: 0 0 8px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #042f2e;
+  background: linear-gradient(135deg, #5eead4, #a5f3fc);
+}
+
+.noco-ai-ad-feature-title {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.noco-ai-ad-feature-lead {
+  margin: 0 0 10px;
+  font-size: 13px;
+  opacity: 0.88;
+  line-height: 1.45;
+}
+
+.noco-ai-ad-feature-list {
+  margin: 0 0 12px;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.5;
+  opacity: 0.92;
+}
+
+.noco-ai-ad-feature-list li + li {
+  margin-top: 8px;
+}
+
+.noco-ai-ad-feature-note {
+  margin: 0 0 14px;
+  font-size: 11px;
+  opacity: 0.72;
+  line-height: 1.4;
+}
+
+.noco-ai-ad-feature-later {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  opacity: 0.75;
+  cursor: pointer;
+}
+
+body.noco-ai-ad-open .noco-ai-ad-feature:not(.hidden) {
+  z-index: 252;
+}
+
+.noco-ai-wrap.noco-ai-shell .noco-ai-mic-consent {
+  position: fixed;
+  inset: 0;
+  z-index: 240;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(16px, env(safe-area-inset-top, 12px)) 16px max(16px, env(safe-area-inset-bottom, 12px));
+  background: rgba(4, 8, 18, 0.88);
+  backdrop-filter: blur(20px) saturate(1.5);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+body.noco-ai-mic-open .app-sheet {
+  z-index: 40;
+}
+
+body.noco-ai-mic-open .noco-ai-mic-consent:not(.hidden) {
+  z-index: 250;
+}
+
+.noco-ai-wrap.noco-ai-shell .noco-ai-plus-sheet,
+.noco-ai-wrap.noco-ai-shell .noco-ai-rename-sheet {
+  bottom: calc(var(--noco-ai-dock-h, 108px) + env(safe-area-inset-bottom, 0px) + 10px);
+  z-index: 48;
+}
+
+.noco-ai-keyboard-open .noco-ai-dock {
+  padding-bottom: calc(8px + var(--noco-ai-kb-inset, 0px));
+}
+
+body.noco-ai-sheet .noco-top-fade {
+  display: none !important;
+}
+
+body.noco-ai-sheet .app-sheet .sheet-card {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+  background: transparent !important;
+}
+
+body.noco-ai-sheet .app-sheet #sheetContent {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0 !important;
+}
+
+body.noco-ai-sheet .mobile-app-body.noco-ai-app-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 0 !important;
+  gap: 0 !important;
+}
+
+body.noco-ai-sheet .mobile-app-body.noco-ai-app-body > .noco-ai-wrap.noco-ai-shell {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+}
+
+body.device-handset.noco-ai-sheet .mobile-app-body.noco-ai-app-body {
+  padding-bottom: 0 !important;
+}
+
+body.noco-ai-sheet .noco-ai-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+body.noco-ai-sheet .noco-ai-stage .noco-ai-log-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+}
+
+body.noco-ai-sheet .noco-ai-dock {
+  flex-shrink: 0;
+  margin-top: auto;
+}
+
+.noco-ai-game-card {
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+.noco-ai-game-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.noco-ai-game-grid--emoji .noco-ai-game-btn {
+  font-size: 20px;
+  min-width: 44px;
+}
+.noco-ai-game-btn {
+  border: 1px solid rgba(94, 234, 212, 0.35);
+  background: rgba(94, 234, 212, 0.12);
+  color: inherit;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.noco-ai-tools-sheet {
+  pointer-events: auto;
+}
+.noco-ai-chip,
+.noco-ai-quick-btn {
+  touch-action: manipulation;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.noco-ai-rail-btn,
+.noco-ai-rail-mini,
+.noco-ai-send,
+.noco-ai-mic-btn {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+body.noco-ai-sheet .sheet-card {
+  border-radius: 0 !important;
+}
+
+body.noco-ai-sheet .app-sheet {
+  padding: 0 !important;
+}

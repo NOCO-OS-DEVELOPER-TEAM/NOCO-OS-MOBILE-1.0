@@ -1,0 +1,241 @@
+/* Build 135 — Transparent Chrome, Island, Edge-AI, Exit unten rechts */
+
+:root {
+  --mint: #48c6b7;
+  --blue: #5eb8ff;
+  --violet: #b89cff;
+  --bg-a: #030810;
+  --bg-b: #0c1830;
+  --chrome-island-h: 40px;
+  --chrome-nav-h: 0px;
+  --chrome-title-h: 0px;
+  --noco-content-start: calc(env(safe-area-inset-top, 0px) + var(--chrome-island-h) + 20px);
+}
+
+html {
+  background: linear-gradient(150deg, var(--bg-a), var(--bg-b) 58%, #091225);
+}
+
+/* —— Chrome: transparent, nur Island —— */
+.phone-chrome {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.phone-chrome .chrome-page-nav,
+.phone-chrome .chrome-title-bar {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+.phone-chrome .island-zone {
+  background: transparent !important;
+  padding: 6px 0 2px !important;
+  min-height: var(--chrome-island-h) !important;
+  justify-content: center !important;
+}
+
+.noco-top-fade {
+  height: var(--noco-content-start) !important;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--bg-a) 55%, transparent) 0%,
+    transparent 100%
+  ) !important;
+}
+
+/* —— Island: ein Pill, kein Doppel-Rahmen —— */
+.dynamic-island {
+  min-width: 0 !important;
+  max-width: none !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.island-compact {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 118px;
+  max-width: min(72vw, 200px);
+  padding: 8px 16px !important;
+  border-radius: 999px !important;
+  background: rgba(8, 16, 30, 0.42) !important;
+  backdrop-filter: blur(22px) saturate(1.5) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(1.5) !important;
+  border: 1px solid color-mix(in srgb, var(--mint) 32%, rgba(255, 255, 255, 0.12)) !important;
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+}
+
+.island-inline-nav {
+  display: none !important;
+}
+
+.island-pips {
+  display: flex !important;
+  gap: 6px;
+}
+
+.island-pip {
+  width: 8px;
+  height: 8px;
+}
+
+.island-clock {
+  color: color-mix(in srgb, var(--mint) 92%, white) !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  text-shadow: 0 0 14px color-mix(in srgb, var(--mint) 35%, transparent);
+}
+
+.island-pip.active {
+  width: 18px;
+  background: linear-gradient(90deg, var(--mint), var(--blue)) !important;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--mint) 40%, transparent);
+}
+
+.noco-edge-ai {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+body.noco-ai-sheet .noco-ai-orb {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+body.noco-ai-mic-open .sheet-exit-corner,
+body.noco-ai-mic-open #sheetExitCorner {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+/* —— × unten rechts (Apps, Panels, Edit) —— */
+.sheet-exit-corner {
+  position: absolute;
+  right: 14px;
+  bottom: max(14px, env(safe-area-inset-bottom, 0px));
+  z-index: 120;
+  width: 52px;
+  min-width: 52px;
+  max-width: 52px;
+  height: 52px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 16px;
+  flex: none;
+  font-size: 26px;
+  font-weight: 300;
+  line-height: 1;
+  color: #041018;
+  display: none;
+  place-items: center;
+  cursor: pointer;
+  pointer-events: auto;
+  background: linear-gradient(135deg, var(--mint), var(--blue), var(--violet));
+  box-shadow:
+    0 10px 32px rgba(0, 0, 0, 0.45),
+    0 0 24px color-mix(in srgb, var(--mint) 32%, transparent);
+}
+
+body.island-app-mode #appSheet:not(.hidden) .sheet-exit-corner,
+body.island-app-mode #appSheet:not(.hidden) #sheetExitCorner,
+body.sheet-open #shortcutPanel:not(.hidden) .sheet-exit-corner,
+body.sheet-open #widgetPanel:not(.hidden) .sheet-exit-corner {
+  display: grid !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
+}
+
+body.island-app-mode #closeSheet,
+body.island-app-mode .app-sheet .sheet-card > .sheet-close,
+body.sheet-open #shortcutPanel:not(.hidden) .sheet-card > .sheet-close,
+body.sheet-open #widgetPanel:not(.hidden) .sheet-card > .sheet-close {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Kein voller schwarzer Streifen unten — nur das schwebende × */
+body.island-app-mode .app-sheet .sheet-card {
+  padding-bottom: 0 !important;
+}
+
+body.island-app-mode #appSheet #sheetContent .mobile-app-body {
+  padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+.sheet-exit-dock,
+.sheet-panel-footer,
+.sheet-footer-done {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+/* Schnellzugriff / Widget-Panel */
+.shortcut-panel-sheet,
+.widget-panel-sheet {
+  z-index: 32;
+}
+
+.shortcut-panel-sheet .sheet-card,
+.widget-panel-sheet .sheet-card {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 12px) !important;
+  padding-bottom: max(16px, env(safe-area-inset-bottom, 0px)) !important;
+  border-radius: 0 !important;
+  background: rgba(6, 12, 24, 0.88) !important;
+  backdrop-filter: blur(28px) saturate(1.35) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(1.35) !important;
+}
+
+body.sheet-open.edit-mode .phone-chrome {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+body.sheet-open.edit-mode .phone-chrome .dynamic-island,
+body.sheet-open.edit-mode .island-menu:not(.hidden) {
+  pointer-events: auto;
+  opacity: 1;
+}
+
+/* Footer-Leiste entfernt — nur sheet-exit-corner (×) */
+
+/* Bearbeiten: Stift bleibt unten rechts, × im Panel schliesst alles */
+body.edit-mode.home-page .home-edit-hint,
+body.edit-mode.desktop-page .library-edit-hint {
+  right: 72px;
+  max-width: calc(100% - 130px);
+}
+
+body.edit-mode .edit-fab-home#homeEditFab,
+body.edit-mode .edit-fab-library-pen {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--mint) 50%, transparent),
+    0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+.lock-hold-btn,
+.lock-edit {
+  background: linear-gradient(135deg, var(--mint), var(--blue), var(--violet)) !important;
+}
+
+body.device-handset .phone-chrome .chrome-title-bar.mobile-topbar,
+body.device-handset .chrome-page-nav {
+  display: none !important;
+}
+
+body.device-handset .phone-chrome .chrome-glass-wash {
+  height: calc(env(safe-area-inset-top) + var(--chrome-island-h) + 8px) !important;
+  background: transparent !important;
+}

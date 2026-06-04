@@ -1,0 +1,177 @@
+/* App-Bibliothek — Tabs + statisches Grid (ohne Ausklapp-Lag) */
+
+.desktop-head .desktop-hint {
+  margin: 0;
+}
+
+.library-quick {
+  margin: 0 0 14px;
+  padding-top: 0;
+  scroll-margin-top: var(--noco-content-start, calc(env(safe-area-inset-top) + 142px));
+}
+
+body.device-handset .library-quick,
+.noco-stage .phone .library-quick {
+  margin-top: 0;
+  padding-top: 0;
+  scroll-margin-top: var(--noco-content-start, calc(env(safe-area-inset-top) + 142px));
+}
+
+body.device-handset .library-quick-label {
+  margin-top: 4px;
+}
+
+.library-quick-label {
+  margin: 0 0 8px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.library-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.library-quick-app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px 7px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font-size: 9px;
+  font-weight: 800;
+  touch-action: manipulation;
+}
+
+.library-quick-app .icon-orb,
+.library-quick-app [class*="icon-orb"] {
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px;
+  min-height: 34px;
+  border-radius: 12px !important;
+  margin: 0 !important;
+  font-size: 16px !important;
+}
+
+.library-quick-app:active {
+  transform: scale(0.97);
+}
+
+.library-quick-app span {
+  line-height: 1.2;
+  text-align: center;
+}
+
+.library-shell {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.library-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.library-tab {
+  min-height: 34px;
+  padding: 0 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 900;
+  touch-action: manipulation;
+}
+
+.library-tab.active {
+  border-color: color-mix(in srgb, var(--mint) 42%, transparent);
+  background:
+    radial-gradient(circle at 20% 0%, color-mix(in srgb, var(--mint) 22%, transparent), transparent 48%),
+    rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--mint) 14%, transparent);
+}
+
+.library-tab:active {
+  transform: scale(0.97);
+}
+
+.library-panel {
+  min-height: 120px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 10px 8px 12px;
+}
+
+.library-apps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px 8px;
+}
+
+.library-apps--static .library-app {
+  opacity: 1;
+  transform: none;
+  animation: none;
+}
+
+.library-app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+.library-app:active {
+  transform: scale(0.96);
+}
+
+.library-app span {
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.library-empty {
+  margin: 0;
+  padding: 24px 12px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+body.device-handset .library-panel {
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+}
+
+body.device-handset .library-tab,
+body.device-handset .library-quick-app {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+@media (max-width: 360px) {
+  .library-apps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

@@ -10,7 +10,7 @@ const largeClock = document.getElementById("largeClock");
 const largeDate = document.getElementById("largeDate");
 const screenTrack = document.getElementById("screenTrack");
 const pageStage = document.getElementById("pageStage");
-const NOCO_BUILD = window.NOCO_BUILD || "167";
+const NOCO_BUILD = window.NOCO_BUILD || "170";
 const screenTitle = null;
 
 /** Doppelte/veraltete Topbars entfernen — phone-chrome Titelzeile behalten. */
@@ -170,7 +170,8 @@ const CLICK_SUPPRESS_ALLOW =
   "input, textarea, select, [contenteditable='true'], " +
   "[data-noco-ai-root], [data-noco-ai-input], [data-noco-ai-send], [data-noco-ai-mic], [data-noco-ai-chip], " +
   "[data-noco-ai-cmd], [data-noco-ai-tools-toggle], [data-noco-ai-chats-toggle], [data-noco-ai-ad-feature-ok], [data-noco-ai-ad-feature-later], " +
-  "[data-noco-ai-mic-allow], [data-noco-ai-mic-later], " +
+  "[data-noco-ai-mic-allow], [data-noco-ai-mic-later], [data-noco-ai-ad-privacy-check], " +
+  "[data-noco-ai-stt-allow], [data-noco-ai-stt-later], [data-noco-ai-stt-privacy-check], " +
   ".app-sheet, #sheetContent, .sheet-card, .toggle-card, [data-toggle-setting], [data-settings-section], [data-lock-time], " +
   "[data-noco-wake-phrase], [data-noco-wake-sens], .menu-picker, .menu-content, .settings-row, " +
   ".shortcut-btn, .shortcut-grid, [data-shortcut], [data-open-nocoai], .noco-ai-orb, " +
@@ -601,7 +602,7 @@ function loadSettings() {
       exclusivePlan: "",
       nocoAiPlus: false,
       nocoAiWakeOn: true,
-      nocoAiWakeSensitivity: 1,
+      nocoAiWakeSensitivity: 0,
       nocoAiWakePhrases: ["hey-noko", "hey-noco", "noco-ai", "hey-noco-ai"],
       aiNickname: "",
       payBalance: 24,
@@ -676,7 +677,7 @@ function syncNocoAiWakeSettings() {
   if (settings.nocoAiWakePhrases == null || !settings.nocoAiWakePhrases.length) {
     settings.nocoAiWakePhrases = ["hey-noko", "hey-noco", "noco-ai", "hey-noco-ai"];
   }
-  if (settings.nocoAiWakeSensitivity == null) settings.nocoAiWakeSensitivity = 1;
+  if (settings.nocoAiWakeSensitivity == null) settings.nocoAiWakeSensitivity = 0;
   window.NocoAIVoice.applyWakeSettings({
     enabled: settings.nocoAiWakeOn !== false,
     sensitivity: Number(settings.nocoAiWakeSensitivity),
@@ -702,7 +703,7 @@ function nocoAiWakeSettingsHtml() {
   const sens = Number(settings.nocoAiWakeSensitivity ?? 1);
   const wakeOn = settings.nocoAiWakeOn !== false;
   return `
-    ${toggleRow("nocoAiWakeOn", "NOCO Audio Detection 1.0", "Auf der ganzen Website zuhoeren — oeffnet NOCO AI bei Aktivierungswort")}
+    ${toggleRow("nocoAiWakeOn", "NOCO Audio Detection 1.0", "Lokal: nur Hey Noko / NOCO — oeffnet NOCO AI (ohne App kein Mitschreiben)")}
     <div class="settings-row"><span>Mikro</span><strong>${window.NocoAIVoice?.hasMicConsent?.() ? "Freigegeben" : "Noch nicht erlaubt"}</strong></div>
     <button class="settings-row" data-action="noco-ai-mic-setup"><span>Mikrofon einrichten</span><strong>${window.NocoAIVoice?.hasMicConsent?.() ? "OK" : "Start"}</strong></button>
     <div class="core-section-title"><p class="eyebrow">Aktivierungswoerter</p><h3>z. B. Hey Noco</h3></div>
@@ -1272,7 +1273,7 @@ function initPageScrollSync() {
 
 function isTapTarget(target) {
   return !!target?.closest?.(
-    "button, a, input, textarea, select, label, [role='button'], [data-app], [data-folder], [data-library-folder], [data-library-tab], [data-action], [data-shortcut], [data-open-panel], .app-icon, .folder-tile, .quick-tile, .library-app, .library-tab, .library-quick-app, .shortcut-btn, .mini-action, .beam-strip, .forge-install, .icon-orb, .icon-orb-glyph, [data-app-icon], .widget-add-fab, .edit-fab, .noco-ai-chip, .noco-ai-quick-btn, .noco-ai-game-btn, .noco-ai-rail-mini, .noco-ai-rail-btn, .noco-ai-send, [data-noco-ai-mic-allow], [data-noco-ai-mic-later], .noco-ai-mic-consent-card, [data-noco-ai-ad-feature-ok], [data-noco-ai-ad-feature-later], .noco-ai-ad-feature-card, [data-noco-ai-cmd], [data-noco-ai-game], [data-noco-ai-pulse], [data-noco-ai-scroll-bottom], [data-noco-ai-help-cmd], [data-noco-ai-tools-toggle], [data-noco-ai-tools-close], [data-noco-tools-tab], [data-noco-ai-chats-toggle], [data-noco-ai-new-chat], [data-noco-ai-chat-item], [data-noco-ai-plus-toggle], [data-noco-ai-plus-close], [data-noco-ai-plus-activate], [data-noco-ai-mic], [data-noco-ai-wake-toggle], [data-noco-ai-voice-mini]"
+    "button, a, input, textarea, select, label, [role='button'], [data-app], [data-folder], [data-library-folder], [data-library-tab], [data-action], [data-shortcut], [data-open-panel], .app-icon, .folder-tile, .quick-tile, .library-app, .library-tab, .library-quick-app, .shortcut-btn, .mini-action, .beam-strip, .forge-install, .icon-orb, .icon-orb-glyph, [data-app-icon], .widget-add-fab, .edit-fab, .noco-ai-chip, .noco-ai-quick-btn, .noco-ai-game-btn, .noco-ai-rail-mini, .noco-ai-rail-btn, .noco-ai-send, [data-noco-ai-mic-allow], [data-noco-ai-mic-later], [data-noco-ai-ad-privacy-check], .noco-ai-mic-consent-card, [data-noco-ai-ad-feature-ok], [data-noco-ai-ad-feature-later], .noco-ai-ad-feature-card, [data-noco-ai-stt-allow], [data-noco-ai-stt-later], [data-noco-ai-stt-privacy-check], .noco-ai-stt-consent-card, [data-noco-ai-cmd], [data-noco-ai-game], [data-noco-ai-pulse], [data-noco-ai-scroll-bottom], [data-noco-ai-help-cmd], [data-noco-ai-tools-toggle], [data-noco-ai-tools-close], [data-noco-tools-tab], [data-noco-ai-chats-toggle], [data-noco-ai-new-chat], [data-noco-ai-chat-item], [data-noco-ai-plus-toggle], [data-noco-ai-plus-close], [data-noco-ai-plus-activate], [data-noco-ai-mic], [data-noco-ai-wake-toggle], [data-noco-ai-voice-mini]"
   );
 }
 
@@ -2712,9 +2713,14 @@ function listRemindersDetailedForAI() {
     });
 }
 
+let lastTimerLiveSec = -1;
+
 function updateTimerLiveSurfaces() {
   const rem = getTimerRemaining();
   const running = timerState.running;
+  const sec = Math.max(0, Math.ceil(rem));
+  if (running && sec === lastTimerLiveSec) return;
+  lastTimerLiveSec = running ? sec : -1;
   const display = formatTimerDisplay(rem);
   const modeLabel = TIMER_MODE_LABELS[timerState.mode] || "Timer";
 
@@ -3138,6 +3144,7 @@ function renderAppSheet(appId, html, options = {}) {
 }
 
 function closeAppSheetVisual() {
+  const wasNocoAi = currentApp === "nocoai";
   if (currentApp === "device") window.NocoDevice?.unmount?.();
   if (currentApp) cacheAppState(currentApp);
   lockScreen?.classList.remove("lock-behind-sheet");
@@ -3148,6 +3155,7 @@ function closeAppSheetVisual() {
   cleanupGestureState();
   currentApp = null;
   updateIslandUI();
+  if (wasNocoAi) window.NocoAIVoice?.resumeWakeForApp?.();
 }
 
 function settingsTemplate() {
@@ -6668,13 +6676,12 @@ if ("serviceWorker" in navigator && location.protocol !== "file:") {
 }
 
 function applyDeviceLayoutClass() {
-  const touchPrimary = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
-  const phoneWidth = window.matchMedia("(max-width: 520px)").matches;
-  const standalone = window.matchMedia("(display-mode: standalone)").matches;
-  const handset = touchPrimary && (phoneWidth || standalone);
+  const desktopPreview = new URLSearchParams(location.search).has("desktop");
+  const handset = !desktopPreview;
   document.documentElement.classList.toggle("device-handset", handset);
   document.body.classList.toggle("device-handset", handset);
   document.body.classList.toggle("desktop-preview", !handset);
+  document.documentElement.dataset.nocoLayout = handset ? "handset" : "desktop";
 }
 
 purgeLegacyChrome();

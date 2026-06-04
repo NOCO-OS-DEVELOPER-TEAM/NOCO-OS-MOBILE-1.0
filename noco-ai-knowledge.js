@@ -43,6 +43,12 @@
         "<p><strong>NOCO OS Mobile 1.2</strong> ist dein offline Phone-UI: <strong>Home</strong> (Widgets), <strong>Apps</strong> (Bibliothek), <strong>Island</strong> oben, <strong>NOCO AI</strong> als Assistent — alles lokal im Browser/PWA.</p>"
     },
     {
+      keys: ["was ist noco ai", "was kann noco ai", "noco ai erklaeren", "ki assistent noco"],
+      answer: () =>
+        "<p><strong>NOCO AI</strong> ist eine <strong>KI</strong> — aber fuer <strong>System-Befehle</strong> und <strong>Smalltalk</strong>, nicht fuer allgemeines Weltwissen wie ChatGPT.</p>" +
+        "<p><strong>Stark:</strong> «Oeffne …», Timer, Notizen, FAQ. <strong>Schwach:</strong> News, tiefe Recherche. <strong>Hey Noko</strong> schreibt Befehle ins Feld; <strong>🎤</strong> = Diktat nur bei Klick.</p>"
+    },
+    {
       keys: ["was ist die island", "dynamic island", "insel oben", "leiste oben uhr"],
       answer: () =>
         "<p>Die <strong>Island</strong> zeigt Uhr, Seiten-Punkte (Home/Apps) und <strong>✧ NOCO AI</strong>. Tippen oeffnet das Schnellmenu: Home, Apps, Beam, Hub, Edit.</p>"

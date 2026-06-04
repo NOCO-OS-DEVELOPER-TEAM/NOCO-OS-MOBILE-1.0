@@ -119,7 +119,10 @@
     if (/\b(wer bist du|was bist du|bist du echt|bist du ki)\b/.test(q)) {
       return {
         type: "text",
-        text: `<p>Ich bin <strong>NOCO AI</strong> — dein lokaler Assistent fuer NOCO OS Mobile. Kein Cloud-Modell, aber viele Befehle, Wissen & Sprache.</p>`,
+        text:
+          "<p>Ja — ich bin eine <strong>KI</strong>, aber kein ChatGPT: ich bin fuer <strong>NOCO OS</strong> gebaut.</p>" +
+          "<p><strong>Gut:</strong> System-Befehle, Apps, Timer, Notizen, FAQ zu NOCO, Smalltalk.</p>" +
+          "<p><strong>Nicht mein Ding:</strong> allgemeine Wissensfragen, lange Recherche, Bilder — dafuer lieber 🎤-Diktat + dein Text.</p>",
         rememberTopic: "identity"
       };
     }

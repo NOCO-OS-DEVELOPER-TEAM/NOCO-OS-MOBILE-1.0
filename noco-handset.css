@@ -132,3 +132,24 @@ body.device-handset .page-stage > .screen {
 body.device-handset .page-stage.page-swiping > .screen {
   overflow: hidden !important;
 }
+
+/* Immer Hochformat-Phone — kein Querformat-Stretch auf PC */
+body.device-handset .noco-stage,
+body.device-handset .phone-frame {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body.device-handset .folder-strip,
+body.device-handset #folderStrip {
+  overflow: hidden;
+}
+
+body.device-handset .folder-tile {
+  overflow: hidden;
+  contain: layout paint;
+}
+
+body.device-handset .folder-tile:active {
+  transform: scale(0.94);
+}

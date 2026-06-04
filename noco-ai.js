@@ -72,9 +72,9 @@
       "Bestens! Offline heisst: sofort antworten, auch ohne Internet."
     ]},
     { keys: ["wer bist", "was bist", "was kannst", "faehigkeiten"], replies: [
-      "Ich bin NOCO AI — offline Assistent fuer NOCO OS Mobile. Ich verstehe einfache Fragen, Apps oeffnen, erstellen und navigieren.",
-      "Kein echtes Internet-KI-Modell — dafuer hunderte fertige Antworten und starke Befehls-Erkennung.",
-      "Sag «Hilfe» fuer eine Befehlsliste, «Oeffne …» fuer Apps, oder plaudere einfach mit mir."
+      "Ich bin eine KI — aber eher fuer <strong>System-Befehle</strong> und <strong>Smalltalk</strong> als fuer allgemeines Weltwissen.",
+      "Stark bei: Apps oeffnen, Timer, Notizen, NOCO OS erklaeren, Witze & Chat. Schwach bei: Mathe ohne Befehl, News, lange Recherche.",
+      "Frag <strong>Was kannst du?</strong> oder sag <strong>Oeffne …</strong> — fuer Diktat nur 🎤 tippen (nicht automatisch)."
     ]},
     { keys: ["danke", "thx", "thanks", "super", "cool", "nice", "perfekt", "geil", "stark"], replies: [
       "Gern! Ich bin jederzeit da — offline und ohne Wartezeit.",
@@ -739,7 +739,7 @@
         <li><strong>Smalltalk:</strong> «Wie geht's dir?», «Was kann ich tun?»</li>
         <li><strong>Rechnen:</strong> «3 plus 3», «3*4+5», «3 mal 4 plus 5»</li>
         <li><strong>Daten:</strong> «Inbox», «Meine Notizen», «Offene Aufgaben», «Such ueberall nach …»</li>
-        <li><strong>Sprache:</strong> <strong>NOCO AD 1.0</strong> — <strong>Hey Noco</strong>, <strong>NOCO</strong>, <strong>AI</strong> (oeffnet mich). <strong>AD 1.0</strong> an/aus · <strong>Mikro</strong> = Diktat</li>
+        <li><strong>Sprache:</strong> <strong>NOCO AD 1.0</strong> — <strong>Hey Noko</strong> schreibt Befehle ins Feld. <strong>🎤</strong> = Wort-zu-Text nur bei Klick — kein Dauer-Diktat</li>
         <li><strong>Wissen 2.0:</strong> «Was ist die Island?», «Unterschied Beam und AI», «Sprachbefehl», «Build Version»</li>
         <li><strong>Alltagssprache:</strong> Ein Wort reicht — «Timer», «Notizen», «Helligkeit», «Inbox» — ich biete Aktionen oder starte direkt</li>
         <li><strong>Fragen:</strong> «Wie stelle ich Auto-Lock ein?» — «Ja» fuehrt aus</li>
@@ -1430,7 +1430,7 @@
           </div>
           <div class="noco-ai-tools-scroll">
             <div class="noco-ai-voice-bar" aria-label="Sprache">
-              <span class="noco-ai-voice-status" data-noco-ai-voice-status>NOCO AD 1.0 — Hey Noco · Mikro = Diktat</span>
+              <span class="noco-ai-voice-status" data-noco-ai-voice-status>AD 1.0 = Aktivierungswort · 🎤 = Diktat nur bei Klick</span>
               <button type="button" class="noco-ai-voice-wake" data-noco-ai-wake-toggle aria-pressed="false">AD 1.0</button>
             </div>
             <div class="noco-ai-tools-panel is-active" data-noco-tools-panel="start" role="tabpanel">
@@ -1483,25 +1483,53 @@
         </div>
         <div class="noco-ai-ad-feature hidden" data-noco-ai-ad-feature role="dialog" aria-label="NOCO Audio Detection 1.0" aria-hidden="true">
           <div class="noco-ai-ad-feature-card">
-            <p class="noco-ai-ad-feature-badge">Neu</p>
+            <p class="noco-ai-ad-feature-badge">NOCO · lokal</p>
             <p class="noco-ai-ad-feature-title">NOCO Audio Detection 1.0</p>
-            <p class="noco-ai-ad-feature-lead">Wir haben ein neues Feature fuer dich:</p>
+            <p class="noco-ai-ad-feature-lead">Unser <strong>eigenes</strong> Aktivierungswort-System — empfohlen fuer Sprachbefehle. <strong>Kein</strong> Browser-Diktat, kein Cloud-Chat.</p>
             <ul class="noco-ai-ad-feature-list">
-              <li>Sage <strong>Hey Noco</strong>, <strong>NOCO</strong>, <strong>AI</strong> oder aehnlich — <strong>NOCO AI oeffnet sich automatisch</strong>.</li>
-              <li>Geht <strong>ueberall im System</strong>: Home, Apps und <strong>Sperrbildschirm</strong> — einfach sagen.</li>
-              <li>Was du danach sagst, landet <strong>direkt im Textfeld</strong> — tippe oder sprich weiter.</li>
+              <li><strong>Nur Aktivierungswoerter</strong> (Hey Noko, NOCO, NOCO AI) — kein Dauer-Mitlesen.</li>
+              <li><strong>Lokal auf deinem Geraet</strong> — Muster-Erkennung im Browser, <strong>nichts an NOCO-Server</strong>.</li>
+              <li><strong>Datenschutz (nur NOCO AD)</strong>: Audio bleibt auf dem Geraet; nur das Aktivierungswort wird ausgewertet.</li>
             </ul>
-            <p class="noco-ai-ad-feature-note">Aktiviere <strong>AD 1.0</strong> im Menue und erlaube das Mikro beim ersten Mal.</p>
-            <button type="button" class="primary-action" data-noco-ai-ad-feature-ok onclick="window.NocoAI&&window.NocoAI.dismissAdIntro()">Super, verstanden</button>
-            <button type="button" class="noco-ai-ad-feature-later" data-noco-ai-ad-feature-later onclick="window.NocoAI&&window.NocoAI.dismissAdIntro()">Spaeter</button>
+            <p class="noco-ai-ad-feature-note"><strong>🎤 Diktat</strong> ist <strong>getrennt</strong> (Browser-Spracherkennung) und hat <strong>eigene</strong> Hinweise — nicht in diesen AD-Datenschutz.</p>
+            <label class="noco-ai-privacy-check">
+              <input type="checkbox" data-noco-ai-ad-privacy-check />
+              <span>Datenschutzhinweise fuer <strong>NOCO Audio Detection</strong> gelesen und verstanden</span>
+            </label>
+            <button type="button" class="primary-action" data-noco-ai-ad-feature-ok disabled>AD-Datenschutz bestaetigen</button>
+            <button type="button" class="noco-ai-ad-feature-later" data-noco-ai-ad-feature-later>Spaeter</button>
           </div>
         </div>
-        <div class="noco-ai-mic-consent hidden" data-noco-ai-mic-consent role="dialog" aria-label="Mikrofon fuer Sprache" aria-hidden="true">
+        <div class="noco-ai-mic-consent hidden" data-noco-ai-mic-consent role="dialog" aria-label="NOCO Audio Detection aktivieren" aria-hidden="true">
           <div class="noco-ai-mic-consent-card">
-            <p class="noco-ai-mic-consent-title">Sprachbefehle aktivieren</p>
-            <p class="noco-ai-mic-consent-copy">Erlaube das <strong>Mikrofon</strong>. <strong>NOCO Audio Detection 1.0</strong> erkennt <strong>Hey Noco</strong>, <strong>NOCO</strong>, <strong>AI</strong> &amp; Varianten — eigenes System, kein Dauer-STT. <strong>Mikro</strong> = Diktat ins Eingabefeld.</p>
-            <button type="button" class="primary-action" data-noco-ai-mic-allow onclick="window.NocoAIVoice&&window.NocoAIVoice.allowMicClick(event)">Mikrofon erlauben</button>
+            <p class="noco-ai-mic-consent-title">NOCO Audio Detection 1.0</p>
+            <p class="noco-ai-mic-consent-copy">Mikro nur fuer <strong>NOCO AD</strong> (lokal, Aktivierungswort → Textfeld). Wir empfehlen <strong>nur NOCO AD</strong> fuer Sprache — kein Dauer-Diktat.</p>
+            <ul class="noco-ai-mic-consent-list">
+              <li>Verarbeitung <strong>lokal</strong> im Browser</li>
+              <li><strong>Keine</strong> NOCO-Cloud, kein Mitschnitt deiner Gespraeche</li>
+            </ul>
+            <label class="noco-ai-privacy-check">
+              <input type="checkbox" data-noco-ai-ad-privacy-check />
+              <span>Datenschutzhinweise fuer <strong>NOCO Audio Detection</strong> akzeptieren</span>
+            </label>
+            <button type="button" class="primary-action" data-noco-ai-mic-allow disabled onclick="window.NocoAIVoice&&window.NocoAIVoice.allowMicClick(event)">NOCO AD aktivieren</button>
             <button type="button" class="noco-ai-mic-consent-later" data-noco-ai-mic-later>Später</button>
+          </div>
+        </div>
+        <div class="noco-ai-stt-consent hidden" data-noco-ai-stt-consent role="dialog" aria-label="Browser-Diktat Hinweise" aria-hidden="true">
+          <div class="noco-ai-stt-consent-card">
+            <p class="noco-ai-stt-consent-title">Browser-Spracherkennung (🎤 Diktat)</p>
+            <p class="noco-ai-stt-consent-copy"><strong>Nicht NOCO AD:</strong> 🎤 nutzt die <strong>Spracherkennung deines Browsers</strong> (z.&nbsp;B. Google/Apple). Audio kann je nach Geraet <strong>online</strong> verarbeitet werden — eigene Regeln des Anbieters.</p>
+            <ul class="noco-ai-stt-consent-list">
+              <li>Kein NOCO-Aktivierungswort — nur Wort-zu-Text bei 🎤-Klick</li>
+              <li>Getrennt von <strong>NOCO AD Datenschutz</strong></li>
+            </ul>
+            <label class="noco-ai-privacy-check noco-ai-privacy-check--stt">
+              <input type="checkbox" data-noco-ai-stt-privacy-check />
+              <span>Hinweise zur <strong>Browser-Spracherkennung</strong> gelesen (nicht NOCO AD)</span>
+            </label>
+            <button type="button" class="primary-action" data-noco-ai-stt-allow disabled>Diktat-Hinweise akzeptieren</button>
+            <button type="button" class="noco-ai-stt-consent-later" data-noco-ai-stt-later>Später</button>
           </div>
         </div>
         <div class="noco-ai-plus-sheet hidden" data-noco-ai-plus-sheet role="dialog" aria-label="NOCO AI Plus">
@@ -1897,23 +1925,50 @@
     return true;
   }
 
+  function adPrivacyAcceptedIn(root) {
+    const sheet = root?.querySelector?.("[data-noco-ai-ad-feature]:not(.hidden), [data-noco-ai-mic-consent]:not(.hidden)");
+    const box = sheet?.querySelector?.("[data-noco-ai-ad-privacy-check]");
+    return !!box?.checked;
+  }
+
+  function wireAdPrivacyGates(root) {
+    if (!root || root.dataset.nocoAdPrivacyWired === "1") return;
+    root.dataset.nocoAdPrivacyWired = "1";
+    root.querySelectorAll("[data-noco-ai-ad-privacy-check]").forEach((box) => {
+      const card = box.closest(".noco-ai-ad-feature-card, .noco-ai-mic-consent-card");
+      const okBtn = card?.querySelector("[data-noco-ai-ad-feature-ok], [data-noco-ai-mic-allow]");
+      const sync = () => {
+        if (okBtn) okBtn.disabled = !box.checked;
+      };
+      box.addEventListener("change", sync);
+      sync();
+    });
+  }
+
   function finishAdFeatureIntro(root) {
+    if (!adPrivacyAcceptedIn(root)) {
+      nocoBridgeHelpers?.showToast?.("Bitte AD-Datenschutz bestaetigen");
+      return;
+    }
+    try {
+      localStorage.setItem("noco_ai_ad_privacy_v1", "1");
+    } catch (_) {}
     writeAdFeatureIntroSeen();
     hideAdFeatureIntro(root);
   }
 
-  /** Kein Auto-Overlay beim Oeffnen — Mikro/AD nur ueber 🎤 oder Einstellungen. */
   function promptAdFeatureOnOpen(root) {
     if (!root || optionsWidget(root)) return;
-    if (!readAdFeatureIntroSeen()) writeAdFeatureIntroSeen();
     hideAdFeatureIntro(root);
-    const sheet = root.querySelector("[data-noco-ai-mic-consent]");
-    if (sheet) {
-      sheet.classList.add("hidden");
-      sheet.setAttribute("aria-hidden", "true");
-    }
     root.classList.remove("noco-ai-mic-prompt");
     document.body.classList.remove("noco-ai-mic-open", "noco-ai-ad-open");
+  }
+
+  function showAdIntroIfNeeded(root) {
+    const scope = root || document.querySelector("[data-noco-ai-root]");
+    if (!scope || optionsWidget(scope)) return;
+    if (readAdFeatureIntroSeen()) return;
+    window.setTimeout(() => showAdFeatureIntro(scope), 320);
   }
 
   function clearNocoWireMarks(root) {
@@ -2046,6 +2101,7 @@
     }
 
     if (target.closest("[data-noco-ai-mic-allow], [data-noco-ai-mic-later], [data-noco-ai-mic-consent]")) return;
+    if (target.closest("[data-noco-ai-stt-allow], [data-noco-ai-stt-later], [data-noco-ai-stt-consent]")) return;
 
     const root = target.closest("[data-noco-ai-root]");
     if (!root) return;
@@ -2108,6 +2164,8 @@
         global.NocoAIVoice?.focusInputForDictation?.(root);
         if (global.NocoAIVoice?.needsMicPrompt?.()) {
           global.NocoAIVoice?.showMicConsentIfNeeded?.(root, { force: true });
+        } else if (global.NocoAIVoice?.needsSttPrompt?.()) {
+          global.NocoAIVoice?.showSttConsentIfNeeded?.(root, { force: true });
         } else {
           window.setTimeout(() => root.querySelector("[data-noco-ai-mic]")?.click?.(), 120);
         }
@@ -2421,6 +2479,8 @@
   }
 
   function bindVoiceUI(root, input, submitFn) {
+    wireAdPrivacyGates(root);
+    global.NocoAIVoice?.wireSttPrivacyGates?.(root);
     const status = root.querySelector("[data-noco-ai-voice-status]");
     const wakeBtns = root.querySelectorAll("[data-noco-ai-wake-toggle]");
     const micBtn = root.querySelector("[data-noco-ai-mic]");
@@ -2441,10 +2501,12 @@
     if (root.dataset.nocoVoiceEvents === "1") return;
     root.dataset.nocoVoiceEvents = "1";
     global.addEventListener("noco-ai-voice-command", (event) => {
-      const text = event.detail?.text;
-      if (!text || !canSendNow()) return;
+      const text = String(event.detail?.text || "").trim();
+      if (!text) return;
       input.value = text;
-      if (event.detail?.autoSend) submitFn();
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      global.NocoAI?.focusChatInput?.(root);
+      if (event.detail?.autoSend && canSendNow()) submitFn();
     });
   }
 
@@ -2498,7 +2560,7 @@
     ensureNocoDocumentBridge(helpers);
     registerDynamicAliases(helpers);
     bindChat(root, helpers, { widget: false });
-    global.NocoAIVoice?.resumeWakeListening?.();
+    global.NocoAIVoice?.pauseWakeForApp?.();
     const sendBtn = root.querySelector("[data-noco-ai-send]");
     if (sendBtn) sendBtn.disabled = false;
     refreshQuotaDisplay(root, helpers);
@@ -2536,6 +2598,7 @@
     processMessage,
     appendBotMessage,
     dismissAdIntro,
+    showAdIntroIfNeeded,
     tap,
     tapSend,
     getSessionContext: () => sessionContext,

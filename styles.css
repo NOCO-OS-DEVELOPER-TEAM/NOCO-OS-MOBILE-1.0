@@ -977,6 +977,15 @@ textarea:focus {
   justify-content: flex-start;
   padding: 10px 6px 8px;
   text-align: center;
+  overflow: hidden;
+  contain: layout paint;
+  isolation: isolate;
+  box-sizing: border-box;
+}
+
+.folder-tile .icon-orb {
+  flex: 0 0 auto;
+  max-width: 100%;
 }
 
 .app-grid {
@@ -3196,9 +3205,11 @@ body.device-handset .firstlight-card {
 }
 
 @media (orientation: landscape) and (max-height: 520px) {
-  body.device-handset .phone {
-    width: min(52vh, 430px);
-    height: min(calc(100dvh - 12px), 932px);
+  body.device-handset .phone,
+  body.device-handset .phone-frame {
+    width: min(390px, calc(100vw - 24px));
+    height: min(calc(100dvh - 24px), 844px);
+    max-height: min(calc(100dvh - 24px), 844px);
   }
 }
 

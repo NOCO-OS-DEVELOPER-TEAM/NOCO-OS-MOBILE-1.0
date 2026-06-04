@@ -11,16 +11,17 @@
   const DEFAULT_PROFILES = ["hey-noko", "hey-noco", "noco-ai", "hey-noco-ai"];
 
   let wakeConfig = {
-    sensitivity: 1,
+    sensitivity: 0,
     enabledProfiles: DEFAULT_PROFILES.slice(),
-    allowSoft: false
+    allowSoft: false,
+    chime: false
   };
 
   function getThresholds() {
     const s = Number(wakeConfig.sensitivity);
-    if (s === 0) return { match: 0.54, soft: 0.99, noiseMult: 3.35, minSpeech: 340 };
-    if (s === 2) return { match: 0.4, soft: 0.34, noiseMult: 2.35, minSpeech: 280 };
-    return { match: 0.5, soft: 0.99, noiseMult: 2.85, minSpeech: 300 };
+    if (s === 0) return { match: 0.58, soft: 0.99, noiseMult: 3.5, minSpeech: 360 };
+    if (s === 2) return { match: 0.46, soft: 0.4, noiseMult: 2.4, minSpeech: 300 };
+    return { match: 0.52, soft: 0.99, noiseMult: 3.0, minSpeech: 320 };
   }
 
   const WAKE_PROFILES = [
@@ -55,52 +56,25 @@
     const n = norm(raw);
     const compact = n.replace(/\s+/g, "");
 
-    const hasAi = /\b(ai|ei|ay|a i|i|assistant|assistent)\b/.test(n) || /ai|ei|ay/.test(compact);
+    const hasNoko =
+      /\b(noko|no ko)\b/.test(n) || /\bnoko\b/.test(compact) || /heynoko/.test(compact);
     const hasNoco =
-      /\b(noco|noko|no co|no ko|nocho|nacho)\b/.test(n) ||
-      /noco|noko|nocho|nacho/.test(compact);
-    const hasHey = /\b(hey|hallo|ok|yo|hi|hello|hei)\b/.test(n) || /^he/.test(compact);
+      /\b(noco|no co)\b/.test(n) || /\bnoco\b/.test(compact) || /heynoco/.test(compact);
+    const hasNocoAi =
+      /\b(noco ai|noko ai|nocoai|nokoai)\b/.test(n) ||
+      /nocoai|nokoai/.test(compact);
+    const hasHeyNoko = /\b(hey|hallo|hei)\s+(noko|noco)\b/.test(n) || /^he(y|i)?noko/.test(compact);
+    const hasAiOnly = /\b(noco ai|noko ai|nocoai|nokoai)\b/.test(n);
 
-    if (hasNoco || (hasHey && compact.length >= 5)) {
-      const after = raw
-        .replace(/\b(hey|hallo|ok|yo|hi|hello|hei)\b/gi, " ")
-        .replace(/\b(noco|noko|no\s*co|no\s*ko|nocho)\s*(ai|ei|ay|a\.?\s*i\.?|i)?\b/gi, " ")
-        .replace(/\b(ai|ei|ay|assistant|assistent)\b/gi, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-      return { matched: true, command: after, phrase: n.slice(0, 48) };
-    }
+    if (!(hasNoko || hasNoco || hasNocoAi || hasHeyNoko || hasAiOnly)) return null;
 
-    if (compact.length >= 2 && compact.length <= 20) {
-      const targets = [
-        "noco",
-        "noko",
-        "nocoai",
-        "nokoai",
-        "nocoay",
-        "nochoai",
-        "nocoi",
-        "heynoko",
-        "heynoco",
-        "oknoco",
-        "ai",
-        "ei"
-      ];
-      for (const t of targets) {
-        if (compact === t || compact.includes(t)) {
-          return { matched: true, command: "", phrase: compact };
-        }
-      }
-      if (hasHey && (compact.includes("co") || compact.includes("ko"))) {
-        return { matched: true, command: "", phrase: compact };
-      }
-    }
-
-    if (/\b(no|na|nho)\b/.test(n) && /\b(co|ko|go)\b/.test(n)) {
-      return { matched: true, command: "", phrase: n };
-    }
-
-    return null;
+    const after = raw
+      .replace(/\b(hey|hallo|hei|ok|yo|hi)\b/gi, " ")
+      .replace(/\b(noko|noco|no\s*ko|no\s*co)\s*(ai)?\b/gi, " ")
+      .replace(/\b(nocoai|nokoai|ai)\b/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    return { matched: true, command: after, phrase: n.slice(0, 48) };
   }
 
   function resampleSeries(series, targetLen) {
@@ -193,20 +167,13 @@
       const score = scoreProfile(samples, profile);
       if (!best || score > best.score) best = { profile, score };
     });
-    const heuristic = scoreHeuristic(samples);
-    const top = Math.max(best?.score || 0, heuristic * 0.92);
-    const pick =
-      best && best.score >= heuristic * 0.92
-        ? best
-        : { profile: { id: "ad-heuristic", label: "NOCO AD" }, score: heuristic };
-
-    if (top >= th.match) {
-      return { profile: pick.profile, score: top, command: "" };
+    if (!best || best.score < th.match) {
+      if (wakeConfig.allowSoft && best && best.score >= th.soft) {
+        return { profile: best.profile, score: best.score, command: "", soft: true };
+      }
+      return null;
     }
-    if (wakeConfig.allowSoft && top >= th.soft) {
-      return { profile: pick.profile, score: top, command: "", soft: true };
-    }
-    return null;
+    return { profile: best.profile, score: best.score, command: "" };
   }
 
   class NocoAudioDetectionEngine {
@@ -242,6 +209,7 @@
     }
 
     playChime() {
+      if (wakeConfig.chime === false) return;
       if (!this.ctx) return;
       try {
         const t = this.ctx.currentTime;
@@ -249,10 +217,10 @@
         const gain = this.ctx.createGain();
         osc.type = "sine";
         osc.frequency.setValueAtTime(740, t);
-        osc.frequency.exponentialRampToValueAtTime(1180, t + 0.1);
+        osc.frequency.exponentialRampToValueAtTime(980, t + 0.08);
         gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.exponentialRampToValueAtTime(0.16, t + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+        gain.gain.exponentialRampToValueAtTime(0.06, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         osc.start(t);
@@ -321,9 +289,9 @@
       if (now - this.lastWakeAt < COOLDOWN_MS) return;
 
       const hit = matchCapture(samples);
-      if (hit) {
+      if (hit && hit.score >= getThresholds().match) {
         this.lastWakeAt = now;
-        this.playChime();
+        if (hit.score >= 0.56) this.playChime();
         this.onStatus(`NOCO AD: ${hit.profile.label}`, "hit");
         this.onWake({
           phrase: hit.profile.label,
@@ -387,6 +355,7 @@
       wakeConfig.enabledProfiles = cfg.enabledProfiles.slice();
     }
     if (cfg.allowSoft != null) wakeConfig.allowSoft = !!cfg.allowSoft;
+    if (cfg.chime != null) wakeConfig.chime = !!cfg.chime;
     if (wakeConfig.sensitivity === 2) wakeConfig.allowSoft = true;
     else wakeConfig.allowSoft = false;
     try {

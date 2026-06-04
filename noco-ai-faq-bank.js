@@ -257,8 +257,10 @@
     ),
 
     txt(
-      ["was ist noco ai genau", "wofuer ist der assistent", "ki in noco"],
-      "<p><strong>NOCO AI</strong> ist dein <strong>offline</strong> Helfer: Fragen, Apps steuern, Notizen/Tasks, Timer, Sprache — alles lokal.</p>",
+      ["was ist noco ai genau", "wofuer ist der assistent", "ki in noco", "was ist noco ai", "was kann noco ai"],
+      "<p><strong>NOCO AI</strong> ist eine <strong>KI</strong> in NOCO OS — aber kein allgemeiner ChatGPT-Ersatz.</p>" +
+        "<p><strong>Gut:</strong> System-Befehle, Apps, Timer, Notizen, NOCO-FAQ, Smalltalk — offline/lokal.</p>" +
+        "<p><strong>Eher nicht:</strong> allgemeines Weltwissen, lange Recherche. <strong>Sprache:</strong> <strong>Hey Noko</strong> = Befehl ins Feld · <strong>🎤</strong> = Diktat nur bei Klick.</p>",
       null,
       "nocoai"
     ),
@@ -289,6 +291,13 @@
     txt(
       ["speicherst du meine daten", "cloud upload", "server senden"],
       "<p><strong>Nein.</strong> Alles in <strong>localStorage</strong> auf deinem Geraet — privat & offline.</p>",
+      null,
+      "privacy"
+    ),
+    txt(
+      ["datenschutz sprache", "mikro datenschutz", "noco ad datenschutz", "diktat datenschutz"],
+      "<p><strong>NOCO AD</strong>: eigene Datenschutz-Hinweise (lokal, Aktivierungswort).</p>" +
+        "<p><strong>🎤 Diktat</strong>: eigene Hinweise zur <strong>Browser-Spracherkennung</strong> — nicht NOCO AD. Wir empfehlen <strong>nur NOCO AD</strong> fuer Befehle.</p>",
       null,
       "privacy"
     ),

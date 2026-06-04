@@ -103,25 +103,28 @@
   function buildWhoAreYou(helpers) {
     const hey = nameLine(helpers);
     const intro = hey
-      ? `<p>${hey} — ich bin <strong>NOCO AI</strong>, dein Offline-Assistent in NOCO OS Mobile.</p>`
-      : "<p>Ich bin <strong>NOCO AI</strong> — kein Cloud-Chatbot, sondern dein lokaler Copilot im System.</p>";
+      ? `<p>${hey} — ich bin <strong>NOCO AI</strong>, eine KI in NOCO OS Mobile.</p>`
+      : "<p>Ich bin <strong>NOCO AI</strong> — eine KI, aber kein allgemeiner Cloud-Chatbot.</p>";
     return {
       type: "text",
       text:
         intro +
-        "<p>Ich verstehe Fragen, fuehre Befehle aus (Apps, Timer, Notizen, Inbox) und kenne hunderte FAQ-Antworten — alles auf deinem Geraet, ohne Wartezeit.</p>" +
-        "<p>Frag mich: <strong>Was kannst du?</strong>, <strong>Was kann ich tun?</strong> oder <strong>Was soll ich jetzt tun?</strong></p>",
+        "<p><strong>Klar gesagt:</strong> Ich bin eine KI, kann aber eher <strong>System-Befehle</strong> und <strong>Smalltalk</strong> als allgemeine Fragen (News, tiefe Recherche, freie Mathe ohne Befehl).</p>" +
+        "<p><strong>Stark:</strong> Apps oeffnen, Timer, Notizen, NOCO-FAQ, Witze, Coach. <strong>Schwach:</strong> Weltwissen wie Google.</p>" +
+        "<p>Frag: <strong>Was kannst du?</strong> · Sprache: <strong>NOCO AD 1.0</strong> = Aktivierungswort ins Feld · <strong>🎤</strong> = Wort-zu-Text nur bei Klick.</p>",
       rememberTopic: "identity"
     };
   }
 
   function buildWhatCanYouDo(helpers) {
     const cap = global.NocoAIAnswers?.buildCapabilitiesHtml?.(helpers);
-    const body = cap || "<p>Apps, Fragen, Notizen, Timer, Sprache — offline.</p>";
+    const body =
+      cap ||
+      "<p><strong>System:</strong> Apps, Timer, Notizen, Themes, Beam.</p><p><strong>Chat:</strong> Smalltalk, Witze, NOCO-FAQ — <em>nicht</em> allgemeines Weltwissen.</p>";
     const hey = nameLine(helpers);
     const lead = hey
-      ? `<p>${hey} — hier ist, was <strong>ich</strong> fuer dich kann:</p>`
-      : `<p>${pick(["Gute Frage!", "Klar —", "Alles lokal:"])} Das kann <strong>NOCO AI</strong>:</p>`;
+      ? `<p>${hey} — ich bin eine KI, aber eher fuer <strong>Befehle & Smalltalk</strong>:</p>`
+      : `<p>Ich bin eine <strong>KI</strong>, kann aber eher <strong>System-Befehle</strong> als Google-Fragen:</p>`;
     return {
       type: "text",
       text: lead + body,

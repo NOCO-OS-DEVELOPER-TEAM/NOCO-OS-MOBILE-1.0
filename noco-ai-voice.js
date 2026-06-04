@@ -5,6 +5,9 @@
   const WAKE_KEY = "noco_ai_wake_v1";
   const MIC_CONSENT_KEY = "noco_ai_mic_consent_v2";
   const MIC_DEFERRED_KEY = "noco_ai_mic_deferred_v2";
+  const AD_PRIVACY_KEY = "noco_ai_ad_privacy_v1";
+  const STT_CONSENT_KEY = "noco_ai_stt_consent_v1";
+  const STT_DEFERRED_KEY = "noco_ai_stt_deferred_v1";
   const COOLDOWN_MS = 1400;
   let lastWakeAt = 0;
 
@@ -13,6 +16,8 @@
   let dictationRecognition = null;
   let wakeEnabled = false;
   let micConsented = false;
+  let sttConsented = false;
+  let sttMicReady = false;
   let listeningWake = false;
   let listeningDictation = false;
   let statusEl = null;
@@ -61,6 +66,66 @@
       localStorage.setItem(MIC_CONSENT_KEY, "0");
     } catch (_) {}
     micConsented = false;
+  }
+
+  function readSttConsent() {
+    try {
+      return localStorage.getItem(STT_CONSENT_KEY) === "1";
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function readSttDeferred() {
+    try {
+      return localStorage.getItem(STT_DEFERRED_KEY) === "1";
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function writeSttConsent(on) {
+    try {
+      localStorage.setItem(STT_CONSENT_KEY, on ? "1" : "0");
+      if (on) localStorage.setItem(STT_DEFERRED_KEY, "0");
+    } catch (_) {}
+    sttConsented = !!on;
+  }
+
+  function writeSttDeferred() {
+    try {
+      localStorage.setItem(STT_DEFERRED_KEY, "1");
+      localStorage.setItem(STT_CONSENT_KEY, "0");
+    } catch (_) {}
+    sttConsented = false;
+  }
+
+  function writeAdPrivacyAccepted() {
+    try {
+      localStorage.setItem(AD_PRIVACY_KEY, "1");
+    } catch (_) {}
+  }
+
+  function adPrivacyCheckedIn(root) {
+    const sheet = root?.querySelector?.("[data-noco-ai-mic-consent]:not(.hidden)");
+    const box = sheet?.querySelector?.("[data-noco-ai-ad-privacy-check]");
+    return !!box?.checked;
+  }
+
+  function syncAdAllowButton(root) {
+    const sheet = root?.querySelector?.("[data-noco-ai-mic-consent]");
+    if (!sheet) return;
+    const box = sheet.querySelector("[data-noco-ai-ad-privacy-check]");
+    const btn = sheet.querySelector("[data-noco-ai-mic-allow]");
+    if (btn) btn.disabled = !(box?.checked);
+  }
+
+  function syncSttAllowButton(root) {
+    const sheet = root?.querySelector?.("[data-noco-ai-stt-consent]");
+    if (!sheet) return;
+    const box = sheet.querySelector("[data-noco-ai-stt-privacy-check]");
+    const btn = sheet.querySelector("[data-noco-ai-stt-allow]");
+    if (btn) btn.disabled = !(box?.checked);
   }
 
   function readWakePref() {
@@ -157,7 +222,7 @@
       if (tail.length >= 2) {
         window.setTimeout(() => {
           global.dispatchEvent?.(
-            new CustomEvent("noco-ai-voice-command", { detail: { text: tail, autoSend: true } })
+            new CustomEvent("noco-ai-voice-command", { detail: { text: tail, autoSend: false } })
           );
         }, h.isInNocoAI?.() ? 120 : 680);
       } else {
@@ -204,8 +269,24 @@
     return wakeEngine;
   }
 
+  let wakePausedForApp = false;
+  let resumeWakeTimer = null;
+
+  function pauseWakeForApp() {
+    wakePausedForApp = true;
+    stopWake();
+  }
+
+  function resumeWakeForApp() {
+    wakePausedForApp = false;
+    if (wakeEnabled && micConsented && !getHelpers().isInNocoAI?.()) {
+      window.setTimeout(startWakeLoop, 400);
+    }
+  }
+
   function startWakeLoop() {
     if (!wakeEnabled || !micConsented) return;
+    if (wakePausedForApp || getHelpers().isInNocoAI?.()) return;
     if (listeningDictation) return;
     const AD = global.NocoAudioDetection || global.NocoWakeEngine;
     if (!AD?.create) {
@@ -252,33 +333,8 @@
       }
     }
 
-    const SR = getSpeechRecognition();
-    if (!SR) return false;
-
-    return new Promise((resolve) => {
-      const probe = new SR();
-      probe.lang = "de-DE";
-      probe.continuous = false;
-      probe.interimResults = false;
-      let done = false;
-      const finish = (ok) => {
-        if (done) return;
-        done = true;
-        try {
-          probe.stop();
-        } catch (_) {}
-        resolve(!!ok);
-      };
-      probe.onresult = () => finish(true);
-      probe.onerror = (e) => finish(e.error !== "not-allowed");
-      probe.onend = () => finish(false);
-      try {
-        probe.start();
-        window.setTimeout(() => finish(true), 2200);
-      } catch (_) {
-        finish(false);
-      }
-    });
+    getHelpers().showToast?.("Mikrofon-Zugriff nicht verfuegbar — HTTPS oder Live Server nutzen");
+    return false;
   }
 
   function runPendingMicStart() {
@@ -302,22 +358,62 @@
 
   async function handleMicAllow(root, allowBtn) {
     if (!allowBtn || allowBtn.disabled) return;
+    if (!adPrivacyCheckedIn(root)) {
+      getHelpers().showToast?.("Bitte Datenschutz fuer NOCO AD bestaetigen");
+      return;
+    }
     allowBtn.disabled = true;
-    allowBtn.textContent = "Mikro wird freigeschaltet …";
+    allowBtn.textContent = "NOCO AD wird aktiviert …";
     const ok = await requestMicPermission();
     allowBtn.disabled = false;
+    syncAdAllowButton(root);
     if (ok) {
+      writeAdPrivacyAccepted();
       writeMicConsent(true);
       setWakeEnabled(true);
       hideMicConsent(root);
-      getHelpers().showToast?.("Mikro aktiv — NOCO AD 1.0 · 🎤 = Diktat");
+      getHelpers().showToast?.("NOCO AD aktiv — Hey Noko hoert nur Aktivierungswoerter");
       syncWakeToggle(root);
-      runPendingMicStart();
+      global.NocoAI?.showAdIntroIfNeeded?.(root);
+      const pending = pendingMicStart;
+      pendingMicStart = null;
+      if (pending?.kind === "dictation") {
+        showSttConsentIfNeeded(root || consentRoot, { force: true });
+      }
     } else {
-      allowBtn.textContent = "Mikrofon erlauben";
+      allowBtn.textContent = "NOCO AD aktivieren";
       pendingMicStart = null;
       getHelpers().showToast?.("Mikro blockiert — in iPhone/Android Einstellungen erlauben");
     }
+  }
+
+  async function handleSttAllow(root, allowBtn) {
+    if (!allowBtn || allowBtn.disabled) return;
+    const sheet = root?.querySelector?.("[data-noco-ai-stt-consent]:not(.hidden)");
+    const box = sheet?.querySelector?.("[data-noco-ai-stt-privacy-check]");
+    if (!box?.checked) {
+      getHelpers().showToast?.("Bitte Diktat-Hinweise (Browser) bestaetigen");
+      return;
+    }
+    allowBtn.disabled = true;
+    allowBtn.textContent = "Wird vorbereitet …";
+    let micOk = micConsented;
+    if (!micOk) {
+      micOk = await requestMicPermission();
+      if (micOk) sttMicReady = true;
+    }
+    allowBtn.disabled = false;
+    syncSttAllowButton(root);
+    if (!micOk) {
+      allowBtn.textContent = "Diktat-Hinweise akzeptieren";
+      pendingMicStart = null;
+      getHelpers().showToast?.("Mikro fuer Diktat blockiert — Einstellungen pruefen");
+      return;
+    }
+    writeSttConsent(true);
+    hideSttConsent(root);
+    getHelpers().showToast?.("Diktat 🎤 — Browser-Spracherkennung, nicht NOCO AD");
+    runPendingMicStart();
   }
 
   function allowMicClick(event) {
@@ -335,15 +431,50 @@
     return !readMicConsent();
   }
 
+  function hideSttConsent(root) {
+    const scope = root || consentRoot;
+    scope?.querySelectorAll?.("[data-noco-ai-stt-consent]")?.forEach((el) => {
+      el.classList.add("hidden");
+      el.setAttribute("aria-hidden", "true");
+    });
+    scope?.classList?.remove?.("noco-ai-stt-prompt");
+    document.body.classList.remove("noco-ai-stt-open");
+  }
+
+  function showSttConsentIfNeeded(root, options = {}) {
+    const force = !!options.force;
+    if (!root) return;
+    if (!hasSpeechRecognition()) {
+      getHelpers().showToast?.("Browser-Spracherkennung nicht verfuegbar");
+      return;
+    }
+    if (!force && readSttConsent()) return;
+    if (!force && readSttDeferred()) return;
+    hideMicConsent(root);
+    consentRoot = root;
+    const sheet = root.querySelector("[data-noco-ai-stt-consent]");
+    if (!sheet) return;
+    sheet.classList.remove("hidden");
+    sheet.setAttribute("aria-hidden", "false");
+    root.classList.add("noco-ai-stt-prompt");
+    document.body.classList.add("noco-ai-stt-open");
+    const box = sheet.querySelector("[data-noco-ai-stt-privacy-check]");
+    const allowBtn = sheet.querySelector("[data-noco-ai-stt-allow]");
+    if (box) box.checked = false;
+    if (allowBtn) allowBtn.textContent = "Diktat-Hinweise akzeptieren";
+    syncSttAllowButton(root);
+  }
+
   function showMicConsentIfNeeded(root, options = {}) {
     const force = !!options.force;
     if (!root) return;
     if (!isSupported()) {
-      getHelpers().showToast?.("Spracheingabe wird hier nicht unterstuetzt (HTTPS/localhost noetig)");
+      getHelpers().showToast?.("NOCO AD wird hier nicht unterstuetzt (HTTPS/localhost noetig)");
       return;
     }
     if (!force && readMicConsent()) return;
     if (!force && readMicDeferred()) return;
+    hideSttConsent(root);
     consentRoot = root;
     const sheet = root.querySelector("[data-noco-ai-mic-consent]");
     if (!sheet) return;
@@ -351,11 +482,21 @@
     sheet.setAttribute("aria-hidden", "false");
     root.classList.add("noco-ai-mic-prompt");
     document.body.classList.add("noco-ai-mic-open");
+    const box = sheet.querySelector("[data-noco-ai-ad-privacy-check]");
     const allowBtn = sheet.querySelector("[data-noco-ai-mic-allow]");
-    if (allowBtn) {
-      allowBtn.disabled = false;
-      allowBtn.textContent = "Mikrofon erlauben";
-    }
+    if (box) box.checked = false;
+    if (allowBtn) allowBtn.textContent = "NOCO AD aktivieren";
+    syncAdAllowButton(root);
+  }
+
+  function wireSttPrivacyGates(root) {
+    if (!root || root.dataset.nocoSttPrivacyWired === "1") return;
+    root.dataset.nocoSttPrivacyWired = "1";
+    const sheet = root.querySelector("[data-noco-ai-stt-consent]");
+    const box = sheet?.querySelector("[data-noco-ai-stt-privacy-check]");
+    if (!box) return;
+    box.addEventListener("change", () => syncSttAllowButton(root));
+    syncSttAllowButton(root);
   }
 
   function initMicConsentUI() {
@@ -379,7 +520,7 @@
           pendingMicStart = null;
           writeMicDeferred();
           hideMicConsent(root);
-          getHelpers().showToast?.("Mikro: spaeter — tippe 🎤 zum Freigeben");
+          getHelpers().showToast?.("NOCO AD: spaeter — Aktivierungswort in Einstellungen");
           return;
         }
         await handleMicAllow(root, allowBtn);
@@ -397,6 +538,45 @@
     });
   }
 
+  function initSttConsentUI() {
+    if (global.__nocoSttConsentUI) return;
+    global.__nocoSttConsentUI = true;
+
+    document.addEventListener(
+      "click",
+      async (event) => {
+        const laterBtn = event.target.closest("[data-noco-ai-stt-later]");
+        const allowBtn = event.target.closest("[data-noco-ai-stt-allow]");
+        if (!laterBtn && !allowBtn) return;
+        const sheet = event.target.closest("[data-noco-ai-stt-consent]");
+        if (!sheet || sheet.classList.contains("hidden")) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const root = sheet.closest("[data-noco-ai-root]") || consentRoot;
+        if (laterBtn) {
+          pendingMicStart = null;
+          writeSttDeferred();
+          hideSttConsent(root);
+          getHelpers().showToast?.("Diktat: spaeter — oder NOCO AD nutzen");
+          return;
+        }
+        await handleSttAllow(root, allowBtn);
+      },
+      false
+    );
+
+    document.addEventListener("click", (event) => {
+      const sheet = event.target.closest?.("[data-noco-ai-stt-consent]");
+      if (!sheet || sheet.classList.contains("hidden")) return;
+      if (event.target !== sheet) return;
+      const root = sheet.closest("[data-noco-ai-root]") || consentRoot;
+      writeSttDeferred();
+      hideSttConsent(root);
+    });
+  }
+
   function syncWakeToggle(root) {
     const toggle = root?.querySelector?.("[data-noco-ai-wake-toggle]");
     if (!toggle) return;
@@ -410,9 +590,13 @@
       getHelpers().showToast?.("Spracherkennung nicht verfuegbar — Browser aktualisieren");
       return false;
     }
-    if (!micConsented) {
-      showMicConsentIfNeeded(options.root || consentRoot, { force: true });
-      getHelpers().showToast?.("Zuerst Mikrofon erlauben");
+    if (!readSttConsent()) {
+      showSttConsentIfNeeded(options.root || consentRoot, { force: true });
+      getHelpers().showToast?.("Zuerst Diktat-Hinweise (Browser) bestaetigen");
+      return false;
+    }
+    if (!micConsented && !sttMicReady) {
+      getHelpers().showToast?.("Mikro fuer Diktat nicht bereit — 🎤 nochmal tippen");
       return false;
     }
     stopDictation();
@@ -446,9 +630,11 @@
     dictationRecognition.onerror = () => stopDictation();
     dictationRecognition.onend = () => {
       listeningDictation = false;
-      if (wakeEnabled) {
-        setStatus("NOCO AD 1.0 — Hey Noco · NOCO · AI", "wake");
+      if (wakeEnabled && !getHelpers().isInNocoAI?.()) {
+        setStatus("NOCO AD 1.0 — Hey Noko · NOCO · AI", "wake");
         window.setTimeout(startWakeLoop, 500);
+      } else if (getHelpers().isInNocoAI?.()) {
+        setStatus("", "");
       } else setStatus("", "");
     };
 
@@ -474,6 +660,7 @@
       document.body.classList.add("noco-ai-wake-on");
     } else {
       stopWake();
+      stopDictation();
       wakeEngine?.release?.();
       wakeEngine = null;
       if (!wakeEnabled) document.body.classList.remove("noco-ai-wake-on");
@@ -495,6 +682,15 @@
   }
 
   function toggleMicDictation(btn, getInput, onSubmit, root) {
+    if (!getHelpers().isInNocoAI?.()) {
+      getHelpers().showToast?.("Diktat nur in NOCO AI — Hey Noko (NOCO AD) oeffnet die App");
+      return;
+    }
+    if (!readSttConsent()) {
+      pendingMicStart = { kind: "dictation", btn, getInput, onSubmit, root: root || consentRoot };
+      showSttConsentIfNeeded(root || consentRoot, { force: true });
+      return;
+    }
     if (listeningDictation) {
       stopDictation();
       return;
@@ -533,9 +729,22 @@
           getHelpers().showToast?.("Spracheingabe nicht unterstuetzt");
           return;
         }
-        if (!micConsented) {
-          pendingMicStart = { btn, getInput, onSubmit, root: root || consentRoot };
-          showMicConsentIfNeeded(root || consentRoot, { force: true });
+        if (!readSttConsent()) {
+          pendingMicStart = { kind: "dictation", btn, getInput, onSubmit, root: root || consentRoot };
+          showSttConsentIfNeeded(root || consentRoot, { force: true });
+          return;
+        }
+        if (!micConsented && !sttMicReady) {
+          pendingMicStart = { kind: "dictation", btn, getInput, onSubmit, root: root || consentRoot };
+          void requestMicPermission().then((ok) => {
+            if (!ok) {
+              pendingMicStart = null;
+              getHelpers().showToast?.("Mikro fuer Diktat blockiert");
+              return;
+            }
+            sttMicReady = true;
+            toggleMicDictation(btn, getInput, onSubmit, root || consentRoot);
+          });
           return;
         }
         toggleMicDictation(btn, getInput, onSubmit, root || consentRoot);
@@ -571,9 +780,12 @@
   function init(helpersFactory) {
     getHelpers = typeof helpersFactory === "function" ? helpersFactory : () => helpersFactory || {};
     initMicConsentUI();
+    initSttConsentUI();
     bindGlobalWakeLifecycle();
     const fileProto = global.location?.protocol === "file:";
     micConsented = readMicConsent();
+    sttConsented = readSttConsent();
+    if (micConsented) sttMicReady = true;
     const prefOn = readWakePref();
     wakeEnabled = micConsented && prefOn !== false && !fileProto;
     if (micConsented && prefOn === false) wakeEnabled = false;
@@ -585,8 +797,13 @@
   }
 
   function resumeWakeListening() {
-    if (!micConsented || !wakeEnabled) return;
-    window.setTimeout(startWakeLoop, 400);
+    if (!micConsented || !wakeEnabled || wakePausedForApp) return;
+    if (getHelpers().isInNocoAI?.()) return;
+    if (resumeWakeTimer) window.clearTimeout(resumeWakeTimer);
+    resumeWakeTimer = window.setTimeout(() => {
+      resumeWakeTimer = null;
+      startWakeLoop();
+    }, 800);
   }
 
   function applyWakeSettings(cfg = {}) {
@@ -635,13 +852,16 @@
   }
 
   initMicConsentUI();
+  initSttConsentUI();
 
   global.NocoAIVoice = {
     init,
     isSupported,
     needsMicPrompt,
+    needsSttPrompt: () => hasSpeechRecognition() && !readSttConsent(),
     allowMicClick,
     hasMicConsent,
+    hasSttConsent: () => sttConsented || readSttConsent(),
     isListening: () => listeningWake || listeningDictation,
     getWakeEnabled,
     setWakeEnabled,
@@ -649,12 +869,17 @@
     stopDictation,
     stopAll,
     resumeWakeListening,
+    pauseWakeForApp,
+    resumeWakeForApp,
     applyWakeSettings,
     bindStatusElement,
     bindMicButton,
     bindWakeToggle,
     showMicConsentIfNeeded,
     hideMicConsent,
+    showSttConsentIfNeeded,
+    hideSttConsent,
+    wireSttPrivacyGates,
     parseWakeTranscript,
     requestMicPermission,
     hasSpeechRecognition,
